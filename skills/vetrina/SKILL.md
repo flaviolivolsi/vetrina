@@ -109,9 +109,12 @@ serve time so the page stays self-contained:
 ```
 
 It gives you the frame classes (`v-wrap`, `v-kicker`, `v-headline`, `v-standfirst`,
-`v-meta`, `v-stats`/`v-stat`, `v-section`, `v-card` with `is-urgent`/`is-warn`/`is-ok`/
-`is-idle`, `v-table`, `v-details`, `v-chips`) and layout primitives that collapse on their
-own. Override any `--v-*` token on `:root` to match the host project.
+`v-meta`, `v-stats`/`v-stat` holding `v-stat-label`, `v-stat-num` and `v-stat-qual`,
+`v-section`, `v-card` with `is-urgent`/`is-warn`/`is-ok`/`is-idle`, `v-table`, `v-details`,
+`v-chips`) and layout primitives that collapse on their own. Plain `p`, `pre` and `code`
+are already styled, so reach for the element before hand-rolling one: a `div` full of
+aligned columns loses its line breaks, a `pre` does not. Override any `--v-*` token on
+`:root` to match the host project.
 
 The reason this matters: **hand-rolled layouts fail on phones and they fail silently.** A
 table or a wide card sized by its content will push the whole page sideways, and you will

@@ -286,6 +286,14 @@ body {
   gap: var(--v-5) var(--v-6);
 }
 
+/* A tile stacks whatever it is given. The three classes below are how a tile is
+   written, but a page that reaches for a bare <b> and <span> is asking for the
+   same thing, and inline elements with no rule against them run together: the
+   number ends up glued to the front of its own caption. The element decides the
+   role, so the order inside the tile does not matter. */
+.v-stat > * { display: block; }
+.v-stat > :first-child { margin-block-start: 0; }
+
 .v-stat-label {
   font-size: var(--v-t-1);
   letter-spacing: .16em;
@@ -293,8 +301,10 @@ body {
   color: var(--v-fg-3);
 }
 
-.v-stat-num {
+.v-stat-num,
+.v-stat > :is(b, strong):not([class]) {
   font-size: clamp(var(--v-t-7), 4vw, var(--v-t-8));
+  font-weight: inherit; /* a <b> at this size reads as shouting, not as a number */
   letter-spacing: -0.03em;
   line-height: 1.05;
   margin-block-start: var(--v-2);
@@ -307,7 +317,8 @@ body {
   margin-inline-start: 0.15em;
 }
 
-.v-stat-qual {
+.v-stat-qual,
+.v-stat > :is(span, small, p, div):not([class]) {
   font-family: var(--v-prose);
   font-size: var(--v-t-2);
   color: var(--v-fg-3);
