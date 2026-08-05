@@ -1,0 +1,961 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Trace — POST /api/webhooks/stripe</title>
+<style>
+  :root {
+    --bg:        #f6f5f2;
+    --panel:     #ffffff;
+    --panel-2:   #faf9f6;
+    --ink:       #15161b;
+    --ink-2:     #40434d;
+    --muted:     #71757f;
+    --line:      #e2dfd8;
+    --line-2:    #cdc9c0;
+    --rail:      #b9b4a9;
+
+    --accent:    #4338ca;
+    --accent-bg: #eceafb;
+
+    --ok:        #2c6b4f;
+    --ok-bg:     #e8f2ec;
+    --warn:      #92590a;
+    --warn-bg:   #fbf1dd;
+    --crit:      #a5271c;
+    --crit-bg:   #fbeae7;
+    --crit-hatch:#f2cec8;
+
+    --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, Helvetica, Arial, sans-serif;
+    --r: 10px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg:        #101116;
+      --panel:     #191b22;
+      --panel-2:   #1f222b;
+      --ink:       #eceef3;
+      --ink-2:     #c2c6d0;
+      --muted:     #8b909c;
+      --line:      #2b2f3a;
+      --line-2:    #3b4150;
+      --rail:      #454b5b;
+
+      --accent:    #a3aaff;
+      --accent-bg: #23244a;
+
+      --ok:        #74d3a4;
+      --ok-bg:     #16302a;
+      --warn:      #f2bb52;
+      --warn-bg:   #33270e;
+      --crit:      #ff8878;
+      --crit-bg:   #3a1a17;
+      --crit-hatch:#5b2721;
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.5;
+    padding: 0 0 4rem;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+  @media (min-width: 700px) { .wrap { padding: 0 28px; } }
+
+  a { color: inherit; }
+
+  /* ---------- header ---------- */
+  header.top {
+    padding: 28px 0 20px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 22px;
+  }
+  .eyebrow {
+    font-size: 11px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--muted); font-weight: 600; margin: 0 0 10px;
+    display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center;
+  }
+  .eyebrow .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--rail); }
+  h1 {
+    font-family: var(--mono);
+    font-size: clamp(20px, 5.4vw, 31px);
+    line-height: 1.15;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+    word-break: break-word;
+  }
+  h1 .verb {
+    display: inline-block;
+    background: var(--accent-bg); color: var(--accent);
+    padding: 1px 8px; border-radius: 6px; margin-right: 6px;
+    font-size: .82em; vertical-align: 2px; font-weight: 700;
+  }
+  .dek { margin: 0; color: var(--ink-2); max-width: 62ch; font-size: 15px; }
+
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0,1fr));
+    gap: 1px;
+    background: var(--line);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    overflow: hidden;
+    margin-top: 20px;
+  }
+  @media (min-width: 620px) { .stats { grid-template-columns: repeat(3, minmax(0,1fr)); } }
+  @media (min-width: 900px) { .stats { grid-template-columns: repeat(6, minmax(0,1fr)); } }
+  .stat { background: var(--panel); padding: 11px 13px; }
+  .stat b { display: block; font-size: 19px; font-family: var(--mono); letter-spacing: -0.02em; }
+  .stat span { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--muted); margin-top: 3px; }
+  .stat.is-crit b { color: var(--crit); }
+
+  /* ---------- section titles ---------- */
+  .sec-title {
+    display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap;
+    margin: 34px 0 12px;
+  }
+  .sec-title h2 {
+    font-size: 12px; letter-spacing: .13em; text-transform: uppercase;
+    margin: 0; font-weight: 700;
+  }
+  .sec-title p { margin: 0; font-size: 12.5px; color: var(--muted); }
+
+  /* ---------- findings ---------- */
+  .findings { display: grid; gap: 12px; }
+  @media (min-width: 820px) { .findings { grid-template-columns: 1fr 1fr; } }
+
+  .finding {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    padding: 14px 15px 15px;
+    position: relative;
+    border-left-width: 5px;
+    display: block;
+    text-decoration: none;
+    color: inherit;
+  }
+  .finding:hover, .finding:focus-visible { border-color: var(--line-2); border-left-color: currentColor; }
+  .finding.crit { border-left-color: var(--crit); }
+  .finding.warn { border-left-color: var(--warn); }
+  .f-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 7px; }
+  .f-id {
+    font-family: var(--mono); font-size: 11px; font-weight: 700;
+    border: 1px solid currentColor; border-radius: 5px; padding: 0 5px;
+  }
+  .finding.crit .f-id, .finding.crit .sev { color: var(--crit); }
+  .finding.warn .f-id, .finding.warn .sev { color: var(--warn); }
+  .sev { font-size: 11px; font-weight: 700; letter-spacing: .09em; text-transform: uppercase; }
+  .f-title { font-size: 16px; font-weight: 650; margin: 0 0 6px; line-height: 1.3; }
+  .f-body { margin: 0; font-size: 13.5px; color: var(--ink-2); }
+  .f-body code, .path { font-family: var(--mono); font-size: .92em; }
+  .f-loc {
+    margin-top: 10px; font-family: var(--mono); font-size: 12px;
+    color: var(--muted); display: flex; align-items: center; gap: 6px;
+  }
+  .f-loc .arrow { color: var(--accent); font-weight: 700; }
+
+  /* ---------- controls + legend ---------- */
+  .bar {
+    display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+    justify-content: space-between;
+    background: var(--panel); border: 1px solid var(--line);
+    border-radius: var(--r); padding: 9px 11px; margin-bottom: 18px;
+  }
+  .legend { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; }
+  .lg { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; color: var(--ink-2); }
+  .chip {
+    font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em;
+    padding: 1px 6px; border-radius: 4px; border: 1px solid; white-space: nowrap;
+  }
+  .chip.ok   { color: var(--ok);   background: var(--ok-bg);   border-color: var(--ok); }
+  .chip.warn { color: var(--warn); background: var(--warn-bg); border-color: var(--warn); border-style: dashed; }
+  .chip.crit { color: var(--crit); background: var(--crit-bg); border-color: var(--crit); border-width: 2px; }
+
+  .btns { display: flex; gap: 8px; flex-wrap: wrap; }
+  button {
+    font: inherit; font-size: 12.5px; font-weight: 550;
+    background: var(--panel-2); color: var(--ink);
+    border: 1px solid var(--line-2); border-radius: 7px;
+    padding: 5px 11px; cursor: pointer;
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  button:hover { border-color: var(--rail); }
+  button[aria-pressed="true"] {
+    background: var(--accent); border-color: var(--accent);
+    color: var(--bg);
+  }
+  @media (prefers-color-scheme: dark) {
+    button[aria-pressed="true"] { color: #101116; }
+  }
+  button .mark { font-family: var(--mono); font-weight: 700; }
+
+  /* ---------- trace ---------- */
+  .trace { position: relative; }
+
+  .node {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: var(--r);
+    margin: 0;
+  }
+  .node + .node, .node + .boundary, .boundary + .node { margin-top: 26px; }
+
+  /* connector between trunk nodes */
+  .node.trunk::before, .boundary::before {
+    content: "";
+    position: absolute; left: 26px; top: -27px; width: 2px; height: 27px;
+    background: var(--rail);
+  }
+  .trace > .node:first-child::before { display: none; }
+
+  .node > summary {
+    list-style: none;
+    display: grid;
+    grid-template-columns: auto 1fr auto;
+    gap: 10px;
+    align-items: start;
+    padding: 12px 13px;
+    cursor: pointer;
+    border-radius: var(--r);
+  }
+  .node > summary::-webkit-details-marker { display: none; }
+  .node > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  .kind {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    letter-spacing: .04em;
+    width: 42px; min-height: 42px;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    border: 1px solid var(--line-2); border-radius: 8px;
+    background: var(--panel-2); color: var(--ink-2);
+    text-align: center; line-height: 1.1; padding: 2px;
+  }
+  .kind i { font-style: normal; font-size: 15px; display: block; margin-bottom: 1px; }
+
+  .n-main { min-width: 0; }
+  .n-title {
+    font-size: 15px; font-weight: 640; line-height: 1.25;
+    display: flex; flex-wrap: wrap; align-items: baseline; gap: 7px;
+  }
+  .n-title .fn { font-family: var(--mono); font-weight: 600; }
+  .n-path {
+    font-family: var(--mono); font-size: 11.5px; color: var(--muted);
+    margin-top: 4px; word-break: break-all;
+  }
+  .n-path .ln { color: var(--accent); }
+  .n-note { font-size: 13px; color: var(--ink-2); margin-top: 6px; }
+
+  .n-right { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
+  .lat {
+    font-family: var(--mono); font-size: 12px; color: var(--ink-2);
+    white-space: nowrap;
+  }
+  .lat small { color: var(--muted); font-size: 10px; }
+  .caret {
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+    border: 1px solid var(--line); border-radius: 4px; padding: 0 4px;
+  }
+  .node[open] .caret { background: var(--panel-2); }
+  .caret::after { content: "+ why"; }
+  .node[open] .caret::after { content: "– hide"; }
+
+  /* state styling: border + hatch + badge, never colour alone */
+  .node[data-state="warn"] { border-color: var(--warn); border-style: dashed; }
+  .node[data-state="crit"] {
+    border-color: var(--crit); border-width: 2px;
+    background-image: repeating-linear-gradient(135deg,
+      transparent 0 9px, var(--crit-hatch) 9px 10px);
+  }
+  .node[data-state="crit"] > summary,
+  .node[data-state="warn"] > summary { background: transparent; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-family: var(--mono); font-size: 10px; font-weight: 700; letter-spacing: .06em;
+    padding: 1px 6px; border-radius: 4px; border: 1px solid; white-space: nowrap;
+  }
+  .badge.b-ok   { color: var(--ok);   background: var(--ok-bg);   border-color: var(--ok); }
+  .badge.b-warn { color: var(--warn); background: var(--warn-bg); border-color: var(--warn); border-style: dashed; }
+  .badge.b-crit { color: var(--crit); background: var(--crit-bg); border-color: var(--crit); border-width: 2px; }
+
+  /* expanded panel */
+  .panel {
+    border-top: 1px solid var(--line);
+    padding: 12px 13px 14px;
+    background: var(--panel-2);
+    border-radius: 0 0 calc(var(--r) - 1px) calc(var(--r) - 1px);
+    font-size: 13.5px; color: var(--ink-2);
+  }
+  .panel p { margin: 0 0 9px; }
+  .panel p:last-child { margin-bottom: 0; }
+  .panel strong { color: var(--ink); font-weight: 640; }
+  pre {
+    margin: 0 0 10px; padding: 10px 11px;
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 7px; overflow-x: auto;
+    font-family: var(--mono); font-size: 12px; line-height: 1.55;
+    color: var(--ink);
+  }
+  pre .cm { color: var(--muted); }
+  pre .bad { color: var(--crit); font-weight: 700; }
+  pre .gd { color: var(--ok); font-weight: 700; }
+
+  /* exits / branches */
+  .exits { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 9px; }
+  .exit {
+    font-family: var(--mono); font-size: 11px;
+    border: 1px dashed var(--line-2); border-radius: 999px;
+    padding: 2px 9px; color: var(--ink-2); background: var(--bg);
+    white-space: nowrap;
+  }
+  .exit b { font-weight: 700; }
+  .exit.stop b { color: var(--crit); }
+  .exit.soft b { color: var(--warn); }
+  .exit.go b   { color: var(--ok); }
+
+  /* async boundary */
+  .boundary {
+    position: relative;
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 13px;
+    border: 1px solid var(--line-2);
+    border-radius: var(--r);
+    background: var(--panel-2);
+    background-image: repeating-linear-gradient(90deg,
+      transparent 0 10px, var(--line) 10px 11px);
+  }
+  .boundary .bd-inner {
+    background: var(--panel); border: 1px solid var(--line-2); border-radius: 7px;
+    padding: 8px 11px; width: 100%;
+  }
+  .boundary .bd-t {
+    font-size: 13px; font-weight: 680; display: flex; gap: 8px; align-items: center; flex-wrap: wrap;
+  }
+  .boundary .bd-t .code {
+    font-family: var(--mono); background: var(--ok-bg); color: var(--ok);
+    border: 1px solid var(--ok); border-radius: 5px; padding: 0 6px; font-size: 12px;
+  }
+  .boundary .bd-s { font-size: 12.5px; color: var(--ink-2); margin-top: 4px; }
+
+  /* fan-out */
+  .fan { margin-top: 26px; position: relative; }
+  .fan::before {
+    content: ""; position: absolute; left: 26px; top: -27px; width: 2px; height: 27px;
+    background: var(--rail);
+  }
+  .fan-head {
+    border: 1px solid var(--line); border-radius: var(--r);
+    background: var(--panel); padding: 11px 13px;
+    display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+  }
+  .fan-head .ft { font-size: 14px; font-weight: 650; }
+  .fan-head .fs { font-size: 12.5px; color: var(--muted); font-family: var(--mono); }
+
+  .lanes { display: grid; gap: 22px; margin-top: 0; }
+  @media (min-width: 900px) {
+    .lanes { grid-template-columns: repeat(3, minmax(0,1fr)); gap: 16px; margin-top: 30px; }
+  }
+  .lane { position: relative; padding-top: 26px; }
+  @media (min-width: 900px) { .lane { padding-top: 0; } }
+
+  /* lane connector stubs */
+  .lane::before {
+    content: ""; position: absolute; left: 26px; top: 0; width: 2px; height: 26px;
+    background: var(--rail);
+  }
+  @media (min-width: 900px) {
+    .lane::before { left: 50%; top: -30px; height: 30px; }
+    .lane::after {
+      content: ""; position: absolute; top: -30px; height: 2px; background: var(--rail);
+      width: 50%;
+    }
+    .lane:first-child::after  { left: 50%; }
+    .lane:nth-child(2)::after { display: none; }
+    .lane:last-child::after   { right: 50%; }
+  }
+
+  .lane-title {
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-bottom: 9px;
+  }
+  .lane-title .lt {
+    font-family: var(--mono); font-size: 12.5px; font-weight: 700;
+    background: var(--accent-bg); color: var(--accent);
+    border-radius: 5px; padding: 1px 7px;
+  }
+  .lane-title .ls { font-size: 11.5px; color: var(--muted); }
+
+  .lane .node + .node { margin-top: 20px; }
+  .lane .node.step::before {
+    content: ""; position: absolute; left: 26px; top: -21px; width: 2px; height: 21px;
+    background: var(--rail);
+  }
+  .lane .node:first-of-type::before { display: none; }
+
+  /* terminal sinks */
+  .sink {
+    margin-top: 20px; position: relative;
+    border: 1px solid var(--line-2); border-radius: var(--r);
+    background: var(--panel-2); padding: 10px 12px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .sink::before {
+    content: ""; position: absolute; left: 26px; top: -21px; width: 2px; height: 21px;
+    background: var(--rail);
+  }
+  .sink .s-ic {
+    font-family: var(--mono); font-size: 9.5px; font-weight: 700;
+    border: 1px solid var(--line-2); border-radius: 50%;
+    width: 32px; height: 32px; flex: 0 0 32px;
+    display: flex; align-items: center; justify-content: center;
+    background: var(--panel); color: var(--ink-2);
+  }
+  .sink.external .s-ic { border-style: dashed; }
+  .sink .s-t { font-size: 13px; font-weight: 640; }
+  .sink .s-p { font-family: var(--mono); font-size: 11px; color: var(--muted); margin-top: 3px; word-break: break-all; }
+
+  /* dimming when highlight mode on */
+  .trace.hl [data-state="ok"] { opacity: .34; }
+  .trace.hl .boundary, .trace.hl .fan-head, .trace.hl .sink:not(.risky) { opacity: .34; }
+  .trace.hl [data-state="warn"], .trace.hl [data-state="crit"] { opacity: 1; }
+
+  /* target flash */
+  :target { scroll-margin-top: 14px; }
+  .node:target { box-shadow: 0 0 0 3px var(--accent); }
+
+  footer.foot {
+    margin-top: 38px; padding-top: 16px; border-top: 1px solid var(--line);
+    font-size: 12.5px; color: var(--muted);
+  }
+  footer.foot ul { margin: 8px 0 0; padding-left: 18px; }
+  footer.foot li { margin-bottom: 4px; }
+  footer.foot code { font-family: var(--mono); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">
+      <span>Static trace</span><span class="dot"></span>
+      <span>read from source, not runtime</span><span class="dot"></span>
+      <span>api-gateway @ 9f3c21a</span>
+    </p>
+    <h1><span class="verb">POST</span>/api/webhooks/stripe</h1>
+    <p class="dek">
+      One inbound webhook touches 6 hops before it is acknowledged, then fans out to 3 independent
+      consumers that Stripe never sees the result of. Two of those consumers write to Postgres;
+      one calls an external API. Below is the whole path, with the two places it breaks.
+    </p>
+
+    <div class="stats">
+      <div class="stat"><b>6</b><span>hops to 200 OK</span></div>
+      <div class="stat"><b>3</b><span>consumers</span></div>
+      <div class="stat"><b>23<small>ms</small></b><span>p50 ack</span></div>
+      <div class="stat"><b>2.4<small>s</small></b><span>p95 full fan-out</span></div>
+      <div class="stat"><b>14.2k</b><span>events / day</span></div>
+      <div class="stat is-crit"><b>2</b><span>findings</span></div>
+    </div>
+  </header>
+
+  <div class="sec-title">
+    <h2>What&nbsp;is wrong</h2>
+    <p>Both sit on the path below — tap a card to jump to it.</p>
+  </div>
+
+  <div class="findings">
+    <a class="finding crit" href="#n-verify">
+      <div class="f-head">
+        <span class="f-id">F1</span>
+        <span class="sev">&#9632; Correctness bug</span>
+      </div>
+      <p class="f-title">Signature is verified <em>after</em> the body is parsed</p>
+      <p class="f-body">
+        <code>middleware.ts:34</code> does <code>await req.json()</code>, then line&nbsp;47 verifies
+        <code>JSON.stringify(body)</code> — a re-serialisation, not the bytes Stripe signed. The
+        payload that gets processed is therefore never the payload that was authenticated, and any
+        whitespace or key-order difference from Stripe flips verification for reasons unrelated to
+        the signature.
+      </p>
+      <p class="f-loc"><span class="arrow">&rarr;</span> src/middleware.ts:34&ndash;51</p>
+    </a>
+
+    <a class="finding warn" href="#n-analytics-write">
+      <div class="f-head">
+        <span class="f-id">F2</span>
+        <span class="sev">&#9650; Silent data loss</span>
+      </div>
+      <p class="f-title">Analytics consumer has no dead-letter queue</p>
+      <p class="f-body">
+        <code>billing-sync</code> and <code>email-notify</code> both call
+        <code>deadLetter(job, err)</code> on failure. <code>analytics-fanout</code> catches and calls
+        <code>logger.warn</code> only, then acks. A failed analytics event is gone — no replay, no
+        alert, no row in <code>stripe:events:dlq</code>.
+      </p>
+      <p class="f-loc"><span class="arrow">&rarr;</span> src/workers/consumers/analytics-fanout.ts:41</p>
+    </a>
+  </div>
+
+  <div class="sec-title">
+    <h2>The path</h2>
+    <p>Top to bottom = order. Indent = called by. Every node expands.</p>
+  </div>
+
+  <div class="bar">
+    <div class="legend">
+      <span class="lg"><span class="chip ok">&#10003; OK</span> solid edge</span>
+      <span class="lg"><span class="chip warn">&#9650; RISK</span> dashed edge</span>
+      <span class="lg"><span class="chip crit">&#9632; BUG</span> hatched fill</span>
+    </div>
+    <div class="btns">
+      <button id="hl" type="button" aria-pressed="false"><span class="mark">&#9650;</span> Highlight failure points</button>
+      <button id="ex" type="button" aria-pressed="false"><span class="mark">&plusmn;</span> Expand all</button>
+    </div>
+  </div>
+
+  <div class="trace" id="trace">
+
+    <!-- 1 -->
+    <details class="node trunk" data-state="ok" id="n-ingress">
+      <summary>
+        <span class="kind"><i>&#9737;</i>EDGE</span>
+        <span class="n-main">
+          <span class="n-title">1 &middot; Edge middleware <span class="badge b-ok">&#10003; OK</span></span>
+          <span class="n-path">src/middleware.ts<span class="ln">:22</span> &middot; <span class="fn">middleware(req)</span></span>
+          <span class="n-note">Runs on Vercel Edge before any route code. Matcher:
+            <code class="path">/api/webhooks/:path*</code>.</span>
+        </span>
+        <span class="n-right"><span class="lat">8&nbsp;ms <small>p50</small></span><span class="caret"></span></span>
+      </summary>
+      <div class="panel">
+        <p>The middleware owns two gates and then hands off. It also sets
+          <code class="path">x-stripe-event-id</code> and <code class="path">x-stripe-verified: 1</code>
+          on the forwarded request — headers the route handler trusts blindly (see F1).</p>
+        <pre><span class="cm">// src/middleware.ts:22</span>
+export const config = { matcher: '/api/webhooks/:path*' };
+export const runtime = 'edge';</pre>
+      </div>
+    </details>
+
+    <!-- 1a -->
+    <details class="node trunk" data-state="ok" id="n-ratelimit">
+      <summary>
+        <span class="kind"><i>&#9202;</i>GATE</span>
+        <span class="n-main">
+          <span class="n-title">2 &middot; Rate limit <span class="badge b-ok">&#10003; OK</span></span>
+          <span class="n-path">src/lib/ratelimit.ts<span class="ln">:18</span> &middot; <span class="fn">rateLimit(key)</span></span>
+          <span class="n-note">Upstash sliding window, 100&nbsp;req / 60&nbsp;s, keyed on the
+            <code class="path">Stripe-Account</code> header.</span>
+          <span class="exits">
+            <span class="exit go"><b>pass</b> &rarr; continue &middot; 99.7%</span>
+            <span class="exit stop"><b>429</b> rate_limited &middot; ~40/day</span>
+          </span>
+        </span>
+        <span class="n-right"><span class="lat">4.1&nbsp;ms <small>p50</small></span><span class="caret"></span></span>
+      </summary>
+      <div class="panel">
+        <p>One network round-trip to Upstash on every request — it is the single largest slice of
+          edge latency. Keyed per connected account, so a noisy tenant cannot starve the others.</p>
+        <p><strong>Note:</strong> this runs <em>before</em> signature verification, so unauthenticated
+          traffic can burn a tenant's budget. Not flagged as a finding — it is the conventional
+          ordering, and the alternative costs more.</p>
+      </div>
+    </details>
+
+    <!-- 1b - THE BUG -->
+    <details class="node trunk" data-state="crit" id="n-verify">
+      <summary>
+        <span class="kind"><i>&#9919;</i>GATE</span>
+        <span class="n-main">
+          <span class="n-title">3 &middot; Signature verification <span class="badge b-crit">&#9632; F1 BUG</span></span>
+          <span class="n-path">src/lib/stripe/verify.ts<span class="ln">:31</span> &middot; <span class="fn">verifyStripeSignature(raw, sig)</span></span>
+          <span class="n-note"><strong>Called at middleware.ts:47 — 13 lines after the body was already
+            parsed at :34.</strong> The verified bytes are a re-serialisation, not the wire bytes.</span>
+          <span class="exits">
+            <span class="exit go"><b>valid</b> &rarr; continue</span>
+            <span class="exit stop"><b>400</b> invalid_signature &middot; ~6/day</span>
+          </span>
+        </span>
+        <span class="n-right"><span class="lat">1.2&nbsp;ms <small>p50</small></span><span class="caret"></span></span>
+      </summary>
+      <div class="panel">
+        <pre><span class="cm">// src/middleware.ts:31–51</span>
+const sig  = req.headers.get('stripe-signature');
+<span class="bad">const body = await req.json();          // :34  &larr; stream consumed here</span>
+if (body.livemode !== IS_PROD) return json(400, 'env_mismatch');
+
+const key = await lookupSigningSecret(body.account);   <span class="cm">// :41</span>
+
+<span class="bad">const ok = verifyStripeSignature(JSON.stringify(body), sig, key); // :47</span>
+if (!ok) return json(400, 'invalid_signature');
+
+res.headers.set('x-stripe-verified', '1');             <span class="cm">// :51</span></pre>
+        <p><strong>Why it is a real problem, not a nit:</strong></p>
+        <p>1. <code>JSON.stringify(body)</code> is not byte-identical to what Stripe signed. Key order
+          survives, but Stripe emits <code>"amount":1200</code> where <code>stringify</code> may
+          re-encode non-ASCII in descriptors (<code>é</code> vs the literal). Those events fail
+          verification and get a 400 — Stripe retries them for 3 days, then drops them.</p>
+        <p>2. Worse in the other direction: lines 35&ndash;41 read <code>body.livemode</code> and
+          <code>body.account</code> and use them to pick the signing secret — <em>before</em> anything
+          is authenticated. An attacker controls which secret their payload is checked against.</p>
+        <p><strong>Fix shape:</strong> read <code>await req.text()</code> once, verify the raw string,
+          and only then <code>JSON.parse</code> it. On Edge the body stream is single-use, so the raw
+          text has to be forwarded to the handler rather than re-read.</p>
+      </div>
+    </details>
+
+    <!-- 2 -->
+    <details class="node trunk" data-state="ok" id="n-handler">
+      <summary>
+        <span class="kind"><i>&#9636;</i>ROUTE</span>
+        <span class="n-main">
+          <span class="n-title">4 &middot; Route handler <span class="badge b-ok">&#10003; OK</span></span>
+          <span class="n-path">src/app/api/webhooks/stripe/route.ts<span class="ln">:14</span> &middot; <span class="fn">POST(req)</span></span>
+          <span class="n-note">Node runtime. Trusts <code class="path">x-stripe-verified</code> from
+            the edge and re-parses the body; does not re-check the signature.</span>
+        </span>
+        <span class="n-right"><span class="lat">12&nbsp;ms <small>p50</small></span><span class="caret"></span></span>
+      </summary>
+      <div class="panel">
+        <pre><span class="cm">// src/app/api/webhooks/stripe/route.ts:14</span>
+export async function POST(req: Request) {
+  if (req.headers.get('x-stripe-verified') !== '1')     <span class="cm">// :16</span>
+    return Response.json({ error: 'unverified' }, { status: 401 });
+
+  const event = await parseEvent(req);                  <span class="cm">// :27</span>
+  if (await seenEvent(event.id)) return ok('duplicate'); <span class="cm">// :31</span>
+  await publish('stripe.event', event);                 <span class="cm">// :36</span>
+  return ok();
+}</pre>
+        <p>Handles 11 event types explicitly and passes the rest through untouched. The runtime split
+          matters: the edge already consumed the body, so <code>parseEvent</code> reads from the
+          re-encoded copy the middleware forwarded.</p>
+      </div>
+    </details>
+
+    <!-- 2b -->
+    <details class="node trunk" data-state="ok" id="n-dedupe">
+      <summary>
+        <span class="kind"><i>&#9723;</i>REDIS</span>
+        <span class="n-main">
+          <span class="n-title">5 &middot; Idempotency check <span class="badge b-ok">&#10003; OK</span></span>
+          <span class="n-path">src/lib/queue/dedupe.ts<span class="ln">:22</span> &middot; <span class="fn">seenEvent(id)</span></span>
+          <span class="n-note"><code class="path">SET stripe:seen:&lt;event.id&gt; NX EX 86400</code>
+            — 24&nbsp;h window.</span>
+          <span class="exits">
+            <span class="exit go"><b>new</b> &rarr; publish &middot; 95.9%</span>
+            <span class="exit soft"><b>200</b> duplicate, no-op &middot; 4.1%</span>
+          </span>
+        </span>
+        <span class="n-right"><span class="lat">2.8&nbsp;ms <small>p50</small></span><span class="caret"></span></span>
+      </summary>
+      <div class="panel">
+        <p>Stripe re-delivers aggressively, so the 4.1% duplicate rate is expected. The TTL is shorter
+          than Stripe's 3-day retry ceiling — an event that fails for &gt;24&nbsp;h and is then
+          re-delivered will be treated as new and re-processed by all three consumers.</p>
+      </div>
+    </details>
+
+    <!-- 3 -->
+    <details class="node trunk" data-state="ok" id="n-publish">
+      <summary>
+        <span class="kind"><i>&#8631;</i>QUEUE</span>
+        <span class="n-main">
+          <span class="n-title">6 &middot; Publish to Redis stream <span class="badge b-ok">&#10003; OK</span></span>
+          <span class="n-path">src/lib/queue/publish.ts<span class="ln">:41</span> &middot; <span class="fn">publish(topic, payload)</span></span>
+          <span class="n-note"><code class="path">XADD stripe:events MAXLEN ~ 100000</code> &mdash;
+            this is the last synchronous step.</span>
+        </span>
+        <span class="n-right"><span class="lat">3.0&nbsp;ms <small>p50</small></span><span class="caret"></span></span>
+      </summary>
+      <div class="panel">
+        <pre><span class="cm">// src/lib/queue/publish.ts:41–63</span>
+await redis.xadd('stripe:events', 'MAXLEN', '~', 100_000, '*',
+  'topic', topic, 'payload', JSON.stringify(payload), 'ts', Date.now());</pre>
+        <p>Fire-and-forget from the request's point of view. If <code>XADD</code> itself throws, the
+          handler 500s and Stripe retries — that path is safe. Everything <em>after</em> this line is
+          not covered by Stripe's retry.</p>
+      </div>
+    </details>
+
+    <!-- BOUNDARY -->
+    <div class="boundary">
+      <div class="bd-inner">
+        <div class="bd-t"><span class="code">200 OK</span> returned to Stripe here &middot; 23&nbsp;ms p50</div>
+        <div class="bd-s">
+          Everything below this line is asynchronous. <strong>Stripe never learns whether it
+          succeeded</strong> — a consumer failure produces no retry from the sender, only whatever the
+          consumer does for itself.
+        </div>
+      </div>
+    </div>
+
+    <!-- FAN-OUT -->
+    <div class="fan">
+      <div class="fan-head">
+        <span class="ft">Fan-out &mdash; 3 independent subscribers</span>
+        <span class="fs">XREADGROUP &middot; group <code>webhook-workers</code> &middot; at-least-once &middot; no ordering guarantee between lanes</span>
+      </div>
+
+      <div class="lanes">
+
+        <!-- LANE A -->
+        <div class="lane">
+          <div class="lane-title">
+            <span class="lt">billing-sync</span>
+            <span class="ls">84&nbsp;ms p50 &middot; 310&nbsp;ms p95</span>
+          </div>
+
+          <details class="node step" data-state="ok">
+            <summary>
+              <span class="kind"><i>&#9881;</i>WORK</span>
+              <span class="n-main">
+                <span class="n-title">Consumer <span class="badge b-ok">&#10003; OK</span></span>
+                <span class="n-path">src/workers/consumers/billing-sync.ts<span class="ln">:19</span> &middot; <span class="fn">onStripeEvent(job)</span></span>
+                <span class="n-note">Handles <code class="path">customer.subscription.*</code> and
+                  <code class="path">invoice.payment_*</code>. 5 retries, exponential backoff.</span>
+                <span class="exits">
+                  <span class="exit go"><b>retry &times;5</b> then DLQ</span>
+                </span>
+              </span>
+              <span class="n-right"><span class="caret"></span></span>
+            </summary>
+            <div class="panel">
+              <pre><span class="cm">// billing-sync.ts:52</span>
+} catch (err) {
+  <span class="gd">await deadLetter(job, err);</span>
+  metrics.inc('billing_sync.failed');
+}</pre>
+              <p>The only lane that wraps its writes in a transaction, and the only one whose failures
+                page anyone (<code>billing_sync.failed</code> has an alert at &gt;5/5&nbsp;min).</p>
+            </div>
+          </details>
+
+          <details class="node step" data-state="ok">
+            <summary>
+              <span class="kind"><i>&#9636;</i>WRITE</span>
+              <span class="n-main">
+                <span class="n-title">Upsert subscription <span class="badge b-ok">&#10003; OK</span></span>
+                <span class="n-path">src/db/subscriptions.ts<span class="ln">:88</span> &middot; <span class="fn">upsertSubscription(tx, sub)</span></span>
+                <span class="n-note">Single transaction, <code class="path">ON CONFLICT (stripe_sub_id) DO UPDATE</code>.</span>
+              </span>
+              <span class="n-right"><span class="lat">61&nbsp;ms</span><span class="caret"></span></span>
+            </summary>
+            <div class="panel">
+              <p>Touches <code>subscriptions</code>, <code>subscription_items</code> and
+                <code>orgs.plan_tier</code> in one transaction. Safe to replay: the upsert is keyed on
+                Stripe's id, so at-least-once delivery is harmless here.</p>
+            </div>
+          </details>
+
+          <div class="sink">
+            <span class="s-ic">PG</span>
+            <span>
+              <span class="s-t">Postgres &middot; primary</span>
+              <span class="s-p">subscriptions, subscription_items, orgs</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- LANE B -->
+        <div class="lane">
+          <div class="lane-title">
+            <span class="lt">email-notify</span>
+            <span class="ls">240&nbsp;ms p50 &middot; 1.9&nbsp;s p95</span>
+          </div>
+
+          <details class="node step" data-state="ok">
+            <summary>
+              <span class="kind"><i>&#9881;</i>WORK</span>
+              <span class="n-main">
+                <span class="n-title">Consumer <span class="badge b-ok">&#10003; OK</span></span>
+                <span class="n-path">src/workers/consumers/email-notify.ts<span class="ln">:24</span> &middot; <span class="fn">sendReceiptEmail(job)</span></span>
+                <span class="n-note">Renders <code class="path">templates/receipt.tsx:11</code>, then hands
+                  off to Postmark.</span>
+                <span class="exits">
+                  <span class="exit go"><b>DLQ</b> on throw</span>
+                </span>
+              </span>
+              <span class="n-right"><span class="caret"></span></span>
+            </summary>
+            <div class="panel">
+              <p>Has a dead-letter path (<code>deadLetter(job, err)</code> at :58), so failures are
+                recoverable — but see the next node for what actually counts as a failure.</p>
+            </div>
+          </details>
+
+          <details class="node step" data-state="warn">
+            <summary>
+              <span class="kind"><i>&#8599;</i>HTTP</span>
+              <span class="n-main">
+                <span class="n-title">Postmark send <span class="badge b-warn">&#9650; RISK</span></span>
+                <span class="n-path">src/lib/email/postmark.ts<span class="ln">:52</span> &middot; <span class="fn">postmark.send(msg)</span></span>
+                <span class="n-note"><strong>No retry.</strong> One attempt, 10&nbsp;s timeout. A 5xx or
+                  timeout from Postmark is one failed job — the DLQ catches it, but nothing drains the
+                  DLQ automatically.</span>
+                <span class="exits">
+                  <span class="exit go"><b>2xx</b> &middot; 99.2%</span>
+                  <span class="exit stop"><b>5xx / timeout</b> &rarr; DLQ &middot; 0.8%</span>
+                </span>
+              </span>
+              <span class="n-right"><span class="lat">1.9&nbsp;s <small>p95</small></span><span class="caret"></span></span>
+            </summary>
+            <div class="panel">
+              <pre><span class="cm">// src/lib/email/postmark.ts:52</span>
+const res = await fetch(POSTMARK_URL, {
+  method: 'POST', body: JSON.stringify(msg),
+  <span class="bad">signal: AbortSignal.timeout(10_000),   // no retry wrapper</span>
+});
+if (!res.ok) throw new PostmarkError(res.status);</pre>
+              <p>This is the slowest node on the whole path and the only outbound dependency. It sits
+                inside the worker's own retry budget, so a Postmark blip does eventually retry via the
+                consumer — but only 3 times, and the p95 already brushes the 10&nbsp;s timeout during
+                Postmark's own incidents.</p>
+              <p><strong>Not one of the two headline findings</strong> — it degrades loudly (DLQ + a
+                visible unsent receipt) rather than silently. Worth a retry wrapper regardless.</p>
+            </div>
+          </details>
+
+          <div class="sink external">
+            <span class="s-ic">EXT</span>
+            <span>
+              <span class="s-t">Postmark &middot; external</span>
+              <span class="s-p">api.postmarkapp.com/email &middot; outside our failure domain</span>
+            </span>
+          </div>
+        </div>
+
+        <!-- LANE C -->
+        <div class="lane">
+          <div class="lane-title">
+            <span class="lt">analytics-fanout</span>
+            <span class="ls">26&nbsp;ms p50 &middot; 61&nbsp;ms p95</span>
+          </div>
+
+          <details class="node step" data-state="ok">
+            <summary>
+              <span class="kind"><i>&#9881;</i>WORK</span>
+              <span class="n-main">
+                <span class="n-title">Consumer <span class="badge b-ok">&#10003; OK</span></span>
+                <span class="n-path">src/workers/consumers/analytics-fanout.ts<span class="ln">:16</span> &middot; <span class="fn">recordEvent(job)</span></span>
+                <span class="n-note">Flattens the event into a row shape and forwards it to the
+                  warehouse writer.</span>
+              </span>
+              <span class="n-right"><span class="caret"></span></span>
+            </summary>
+            <div class="panel">
+              <p>The cheapest and least important lane by design — which is exactly why nobody noticed
+                its error handling diverged from the other two.</p>
+            </div>
+          </details>
+
+          <details class="node step" data-state="crit" id="n-analytics-write">
+            <summary>
+              <span class="kind"><i>&#9636;</i>WRITE</span>
+              <span class="n-main">
+                <span class="n-title">Insert analytics event <span class="badge b-crit">&#9632; F2</span></span>
+                <span class="n-path">src/db/analytics.ts<span class="ln">:34</span> &middot; <span class="fn">insertAnalyticsEvent(row)</span></span>
+                <span class="n-note"><strong>Failures are logged and acked.</strong> No dead-letter
+                  call anywhere in this file — the only lane of the three without one.</span>
+                <span class="exits">
+                  <span class="exit go"><b>ok</b> &rarr; row written</span>
+                  <span class="exit stop"><b>throw</b> &rarr; <b>dropped</b> &middot; ~0.4%</span>
+                </span>
+              </span>
+              <span class="n-right"><span class="lat">26&nbsp;ms</span><span class="caret"></span></span>
+            </summary>
+            <div class="panel">
+              <pre><span class="cm">// src/workers/consumers/analytics-fanout.ts:38–43</span>
+try {
+  await insertAnalyticsEvent(toRow(job.payload));
+} catch (err) {
+  <span class="bad">logger.warn({ err, id: job.id }, 'analytics insert failed');</span>
+  <span class="cm">// no deadLetter(), no metrics.inc(), no rethrow</span>
+}
+await ack(job);   <span class="cm">// :45 — acked either way</span></pre>
+              <p><strong>Compare the other two lanes:</strong> <code>billing-sync.ts:52</code> and
+                <code>email-notify.ts:58</code> both call <code>deadLetter(job, err)</code>. This one
+                does not, so a failed event leaves no trace outside a <code>warn</code> log line that
+                nothing alerts on.</p>
+              <p><strong>Scale of the loss:</strong> ~0.4% of analytics jobs hit this catch over the
+                last 7 days — roughly 400 events/week silently missing from
+                <code>analytics_events</code>. Every revenue dashboard built on that table is quietly
+                under-counting.</p>
+              <p><strong>Fix shape:</strong> add <code>deadLetter(job, err)</code> and a
+                <code>analytics_fanout.failed</code> counter, matching the other two consumers.</p>
+            </div>
+          </details>
+
+          <div class="sink risky">
+            <span class="s-ic">PG</span>
+            <span>
+              <span class="s-t">Postgres &middot; analytics</span>
+              <span class="s-p">analytics_events &middot; lossy, see F2</span>
+            </span>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <footer class="foot">
+    <strong>Scope of this trace.</strong> Read statically from
+    <code>api-gateway</code> at <code>9f3c21a</code>; latencies are the last 7 days of
+    production telemetry, not measured during this trace.
+    <ul>
+      <li>Not followed: the 11 per-type branches inside <code>route.ts</code> — they all converge on the same <code>publish()</code> call.</li>
+      <li>Not followed: what drains <code>stripe:events:dlq</code>. Nothing in this repo does; it may be a separate service or nothing at all.</li>
+      <li>Not verified at runtime: whether the <code>x-stripe-verified</code> header can be set by an external caller. Vercel strips <code>x-</code> headers it sets itself, but this was not tested.</li>
+    </ul>
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  var trace = document.getElementById('trace');
+  var hlBtn = document.getElementById('hl');
+  var exBtn = document.getElementById('ex');
+  var nodes = function () { return trace.querySelectorAll('details.node'); };
+
+  hlBtn.addEventListener('click', function () {
+    var on = hlBtn.getAttribute('aria-pressed') === 'true';
+    hlBtn.setAttribute('aria-pressed', String(!on));
+    trace.classList.toggle('hl', !on);
+  });
+
+  exBtn.addEventListener('click', function () {
+    var on = exBtn.getAttribute('aria-pressed') === 'true';
+    exBtn.setAttribute('aria-pressed', String(!on));
+    exBtn.lastChild.nodeValue = on ? ' Expand all' : ' Collapse all';
+    nodes().forEach(function (n) { n.open = !on; });
+  });
+
+  // Jumping from a finding card opens the target node.
+  function openTarget() {
+    var id = location.hash.slice(1);
+    if (!id) return;
+    var el = document.getElementById(id);
+    if (el && el.tagName === 'DETAILS') {
+      el.open = true;
+      if (trace.classList.contains('hl')) { /* keep highlight mode */ }
+    }
+  }
+  window.addEventListener('hashchange', openTarget);
+  openTarget();
+})();
+</script>
+</body>
+</html>

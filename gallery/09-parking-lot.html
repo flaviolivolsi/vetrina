@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The parking lot — five asides from one Officina session</title>
+<link rel="stylesheet" href="/_vetrina/kit.css">
+<style>
+  /* The kit has rows, not a card stack, and no treatment for a verbatim
+     quotation. Everything else here is the kit. */
+
+  .pl-stack { display: grid; gap: var(--v-3); }
+
+  /* This page should breathe more than a data page. The stack is the whole
+     page, so its rows get room a dense table would never get. */
+  .pl-card { padding-block: var(--v-6); }
+
+  /* Timestamp, elapsed, and what the agent was doing at that exact moment. */
+  .pl-when {
+    font-family: var(--v-prose);
+    font-size: var(--v-t-2);
+    line-height: 1.5;
+    color: var(--v-fg-3);
+    margin: var(--v-3) 0 0;
+  }
+  .pl-when .pl-clock {
+    font-family: var(--v-mono);
+    color: var(--v-fg-2);
+    letter-spacing: 0.02em;
+  }
+
+  /* The aside itself, in the reader's own words. Full-strength foreground
+     against the fg-2 and fg-3 of everything around it: this is the one line
+     on the card that is not the machine talking. */
+  .pl-aside {
+    font-family: var(--v-mono);
+    font-size: var(--v-t-4);
+    line-height: 1.6;
+    color: var(--v-fg);
+    max-width: 48ch;
+    margin: var(--v-4) 0 0;
+    overflow-wrap: anywhere;
+    text-wrap: pretty;
+  }
+  .pl-aside.is-lead {
+    font-size: clamp(var(--v-t-5), 3.6vw, var(--v-t-6));
+    line-height: 1.45;
+    letter-spacing: -0.015em;
+  }
+</style>
+</head>
+<body>
+<div class="v-wrap">
+
+  <header>
+    <p class="v-kicker">
+      <span><span class="v-dot" aria-hidden="true"></span> Officina</span>
+      <span>Parking lot</span>
+      <span>One session</span>
+    </p>
+
+    <h1 class="v-headline">Nobody ever came back to the backup question.</h1>
+
+    <p class="v-standfirst">
+      Five times last night you thought of something while the agent was busy and
+      typed it anyway. Two of those were quietly done as a side effect of other
+      work and never mentioned. One rested on a wrong premise, got checked, and
+      was closed. Two were answered by nobody, and neither of you noticed.
+      This is where each of them went.
+    </p>
+
+    <ul class="v-meta">
+      <li>Session 2026-08-03</li>
+      <li>20:41 – 23:58</li>
+      <li>214 turns</li>
+      <li>5 asides</li>
+      <li>officina / broker</li>
+    </ul>
+  </header>
+
+  <section class="v-stats" aria-label="Tally">
+    <div class="v-stat">
+      <div class="v-stat-label">Asides typed</div>
+      <div class="v-stat-num">5</div>
+      <div class="v-stat-qual">All of them mid-task, into output that was already scrolling.</div>
+    </div>
+    <div class="v-stat is-urgent">
+      <div class="v-stat-label">Still unanswered</div>
+      <div class="v-stat-num">2</div>
+      <div class="v-stat-qual">No reply, no follow-up, no trace after the turn they were typed in.</div>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Quietly done</div>
+      <div class="v-stat-num">2</div>
+      <div class="v-stat-qual">Handled as part of something else. Neither was said out loud.</div>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Dropped</div>
+      <div class="v-stat-num">1</div>
+      <div class="v-stat-qual">Premise was wrong. Checked six turns later and closed.</div>
+    </div>
+  </section>
+
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>The five asides</h2>
+      <span class="v-count">Verbatim</span>
+    </div>
+
+    <p class="v-section-note">
+      Ordered by what became of them, not by when you said them. The two
+      unanswered ones are first because nothing in the 74 and 153 turns that
+      followed them ever refers back. If this were the transcript, they would be
+      second and fourth, buried.
+    </p>
+
+    <div class="pl-stack">
+
+      <article class="v-card pl-card is-urgent v-rise">
+        <div class="v-card-head">
+          <span class="v-glyph" aria-hidden="true">▲</span>
+          <h3>Backups</h3>
+          <span class="v-tag">Still unanswered</span>
+        </div>
+
+        <p class="pl-when">
+          <span class="pl-clock">22:48</span> · 2h 07m in · while the agent was
+          rewriting the systemd unit <code>officina-broker@.service</code>
+        </p>
+
+        <p class="pl-aside is-lead">
+          “hang on. is anything actually backing this box up. like the whole
+          point is that everything lives here now and my laptop is a dumb
+          terminal, and i genuinely do not think i have ever tested a restore.
+          not once.”
+        </p>
+
+        <p>
+          Nothing happened. It landed between a unit-file diff and the eleven
+          lines of <code>journalctl</code> that came back from it. The agent
+          answered the diff. You did not repeat yourself. The session ran another
+          74 turns and ended.
+        </p>
+
+        <p class="v-why">
+          <b>This is the one.</b> Everything else on this page is about a machine
+          you could rebuild. This one is about the machine you would rebuild it
+          all <i>from</i> — one always-on box, canonical for every device, with a
+          restore path that has never been exercised.
+        </p>
+      </article>
+
+      <article class="v-card pl-card is-urgent v-rise">
+        <div class="v-card-head">
+          <span class="v-glyph" aria-hidden="true">▲</span>
+          <h3>What happens when it reboots</h3>
+          <span class="v-tag">Still unanswered</span>
+        </div>
+
+        <p class="pl-when">
+          <span class="pl-clock">21:37</span> · 0h 56m in · while the agent was
+          waiting on <code>tailscale status</code> after restarting the daemon
+        </p>
+
+        <p class="pl-aside">
+          “ok but what happens at 3am when this thing reboots on its own. does
+          tailscaled come up before the units that need the tailnet, or do they
+          all fail once, back off, and i wake up to a server i cannot ssh into
+          because im not in the same building as it”
+        </p>
+
+        <p>
+          The agent answered the question it had just been asked — why
+          <code>tailscale status</code> was returning nothing — and the next
+          block of output pushed this one off the screen. 153 turns to the end of
+          the session, no mention.
+        </p>
+
+        <p class="v-why">
+          Two minutes of work to settle:
+          <code>systemctl list-dependencies</code> on the three units, and one
+          <code>After=tailscaled.service</code> line if it is missing. Nobody
+          spent the two minutes, because nobody was looking at the question.
+        </p>
+      </article>
+
+      <article class="v-card pl-card is-dead v-rise">
+        <div class="v-card-head">
+          <span class="v-glyph" aria-hidden="true">✕</span>
+          <h3>Tailscale ACL</h3>
+          <span class="v-tag">Dropped — premise wrong</span>
+        </div>
+
+        <p class="pl-when">
+          <span class="pl-clock">21:04</span> · 0h 23m in · while the agent was
+          reading <code>acl.hujson</code> to add the new tag
+        </p>
+
+        <p class="pl-aside">
+          “wait does tag:phone have a path to every port on this box? because if
+          it does then the whole action whitelist is decoration and anything that
+          gets onto that phone gets the server”
+        </p>
+
+        <p>
+          Picked up six turns later and closed. The rule you had just read was
+          from the example policy pasted into the comment block at the top of the
+          file, not from the live one. The live grant is
+          <code>tag:phone → tag:server:443</code> and nothing else. The whitelist
+          is not the only thing standing there.
+        </p>
+
+        <p class="v-why">
+          Worth having asked. A wrong question that gets checked costs six turns.
+          A wrong assumption that never gets checked costs a weekend.
+        </p>
+      </article>
+
+      <article class="v-card pl-card is-ok v-rise">
+        <div class="v-card-head">
+          <span class="v-glyph" aria-hidden="true">✓</span>
+          <h3>Action whitelist</h3>
+          <span class="v-tag">Quietly done</span>
+        </div>
+
+        <p class="pl-when">
+          <span class="pl-clock">23:31</span> · 2h 50m in · while the agent was
+          splitting the action matcher out of <code>broker.py</code>
+        </p>
+
+        <p class="pl-aside">
+          “the whitelist should refuse anything with rm -rf in it even when the
+          path looks harmless, i dont trust my own globs at 11pm”
+        </p>
+
+        <p>
+          Already true by the time you typed it. The rewrite it landed in had
+          moved from substring matching to an explicit argv allowlist, so a bare
+          <code>rm</code> never reaches a shell at all, glob or no glob. Nobody
+          said so.
+        </p>
+
+        <p class="v-why">
+          Done, but you had no way to know it was done. It exists in the diff as
+          <code>_ARGV_ALLOW</code>, not in the conversation as an answer.
+        </p>
+      </article>
+
+      <article class="v-card pl-card is-ok v-rise">
+        <div class="v-card-head">
+          <span class="v-glyph" aria-hidden="true">✓</span>
+          <h3>Phone client and DNS</h3>
+          <span class="v-tag">Quietly done</span>
+        </div>
+
+        <p class="pl-when">
+          <span class="pl-clock">22:15</span> · 1h 34m in · while the agent was
+          chasing a reconnect loop in the phone client
+        </p>
+
+        <p class="pl-aside">
+          “does the phone client survive me changing dns on the home router.
+          because i am going to change it, probably this month, and i would
+          rather not find out then”
+        </p>
+
+        <p>
+          Yes, incidentally. The client dials the tailnet address
+          <code>100.86.x.x</code> directly and never resolves a name, and the
+          reconnect backoff added in that same fix — for an unrelated reason — is
+          what makes the switchover invisible rather than a five-second stall.
+        </p>
+
+        <p class="v-why">
+          The answer existed four minutes after you asked it, in a commit message
+          you did not read.
+        </p>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="v-section v-air">
+    <div class="v-section-head">
+      <h2>What is left</h2>
+    </div>
+    <p class="v-prose">
+      Three of the five are closed and two of those closed themselves without
+      telling you. The remaining two are both about the same fear from different
+      sides: the box is not there when you reach for it. One is answerable in two
+      minutes tonight. The other is a Sunday, and the longer it stays in the
+      parking lot the more it costs to find out.
+    </p>
+  </section>
+
+  <footer class="v-footer">
+    <p>
+      In the transcript these five lines sit at turns 18, 61, 103, 140 and 179,
+      between a unit-file diff, a stack trace and about 900 lines of
+      <code>journalctl</code>, in the order they were typed rather than the order
+      they matter. None of them is addressable. This page is the same session,
+      shaped like the thing it found.
+    </p>
+    <p>
+      Officina is real — one always-on Linux server as the canonical dev
+      environment, every device a terminal into it, joined by Tailscale. The
+      session and the asides above are a reconstruction, for demonstration.
+    </p>
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,1139 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>react-router v5 → v6 · migration report</title>
+<style>
+/* ---------------------------------------------------------------- tokens */
+:root{
+  color-scheme: light;
+  --plane:      #f9f9f7;
+  --surface:    #fcfcfb;
+  --sunken:     #f2f1ed;
+  --ink:        #0b0b0b;
+  --ink-2:      #52514e;
+  --ink-3:      #898781;
+  --rule:       #e1e0d9;
+  --rule-2:     #c3c2b7;
+  --ring:       rgba(11,11,11,.10);
+
+  /* status — fixed, never themed. always shipped with glyph + word label */
+  --st-blocked: #d03b3b;
+  --st-review:  #fab219;
+  --st-done:    #0ca30c;
+  --on-blocked: #fff;
+  --on-review:  #0b0b0b;
+  --on-done:    #fff;
+
+  --bar:        #2a78d6;   /* sequential, single hue */
+  --add:        #006300;
+  --del:        #b02525;
+  --add-bg:     rgba(12,163,12,.09);
+  --del-bg:     rgba(208,59,59,.09);
+
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --maxw: 1080px;
+}
+@media (prefers-color-scheme: dark){
+  :root:where(:not([data-theme="light"])){
+    color-scheme: dark;
+    --plane:   #0d0d0d;
+    --surface: #1a1a19;
+    --sunken:  #121211;
+    --ink:     #ffffff;
+    --ink-2:   #c3c2b7;
+    --ink-3:   #898781;
+    --rule:    #2c2c2a;
+    --rule-2:  #383835;
+    --ring:    rgba(255,255,255,.10);
+    --bar:     #3987e5;
+    --add:     #0ca30c;
+    --del:     #e06060;
+    --add-bg:  rgba(12,163,12,.13);
+    --del-bg:  rgba(208,59,59,.15);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --plane:#0d0d0d; --surface:#1a1a19; --sunken:#121211;
+  --ink:#fff; --ink-2:#c3c2b7; --ink-3:#898781;
+  --rule:#2c2c2a; --rule-2:#383835; --ring:rgba(255,255,255,.10);
+  --bar:#3987e5; --add:#0ca30c; --del:#e06060;
+  --add-bg:rgba(12,163,12,.13); --del-bg:rgba(208,59,59,.15);
+}
+
+/* ----------------------------------------------------------------- base */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--plane); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.5;
+  padding:0 max(16px, env(safe-area-inset-left)) 96px;
+  overflow-x:hidden;
+}
+.wrap{max-width:var(--maxw); margin:0 auto}
+h1,h2,h3{margin:0; line-height:1.2; font-weight:640; letter-spacing:-.015em}
+p{margin:0}
+code,.mono{font-family:var(--mono); font-size:.86em; font-variant-ligatures:none}
+
+/* --------------------------------------------------------------- header */
+header{padding:40px 0 24px}
+.eyebrow{
+  font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:640; margin-bottom:14px;
+}
+h1{font-size:clamp(28px,6.5vw,44px)}
+h1 .arrow{color:var(--ink-3); font-weight:400}
+.subtitle{margin-top:12px; color:var(--ink-2); font-size:clamp(15px,3.6vw,18px); max-width:62ch}
+.meta{
+  margin-top:20px; display:flex; flex-wrap:wrap; gap:6px 0;
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-2);
+}
+.meta span{padding-right:14px; margin-right:14px; border-right:1px solid var(--rule-2); white-space:nowrap}
+.meta span:last-child{border-right:0; margin-right:0; padding-right:0}
+
+/* ------------------------------------------------------------ theme btn */
+.themebtn{
+  position:fixed; top:10px; right:10px; z-index:50;
+  width:38px; height:38px; border-radius:50%;
+  background:var(--surface); border:1px solid var(--rule-2); color:var(--ink-2);
+  font-size:15px; cursor:pointer; line-height:1;
+}
+.themebtn:hover{color:var(--ink)}
+
+/* -------------------------------------------------------------- verdict */
+.verdict{
+  display:flex; gap:14px; align-items:flex-start;
+  background:var(--surface); border:1px solid var(--ring);
+  border-left:6px solid var(--st-blocked);
+  border-radius:4px; padding:18px 18px 18px 16px;
+}
+.verdict .vglyph{
+  flex:0 0 auto; width:26px; height:26px; margin-top:1px;
+  background:var(--st-blocked); color:var(--on-blocked);
+  display:grid; place-items:center; font-weight:800; font-size:16px;
+  border-radius:3px;  /* SQUARE = blocked */
+}
+.verdict h2{font-size:clamp(17px,4.2vw,21px)}
+.verdict p{margin-top:7px; color:var(--ink-2); font-size:15px; max-width:70ch}
+
+/* ------------------------------------------------------------- KPI row */
+.kpis{
+  margin-top:14px; display:grid; gap:10px;
+  grid-template-columns:repeat(auto-fit,minmax(168px,1fr));
+}
+.kpi{
+  background:var(--surface); border:1px solid var(--ring); border-radius:4px;
+  padding:14px 14px 13px; position:relative;
+}
+.kpi .top{display:flex; align-items:center; gap:8px; margin-bottom:9px}
+.kpi .lbl{
+  font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  font-weight:700; color:var(--ink-2);
+}
+.kpi .num{font-size:clamp(30px,7vw,38px); font-weight:660; letter-spacing:-.03em; line-height:1}
+.kpi .num small{font-size:.45em; font-weight:600; color:var(--ink-3); letter-spacing:0}
+.kpi .cap{margin-top:6px; font-size:12.5px; color:var(--ink-3); font-family:var(--mono)}
+
+/* shape-coded glyphs: SQUARE=blocked  DIAMOND=review  CIRCLE=done */
+.g{flex:0 0 auto; width:16px; height:16px; display:inline-grid; place-items:center;
+   font-size:10px; font-weight:800; line-height:1}
+.g.blocked{background:var(--st-blocked); color:var(--on-blocked); border-radius:2px}
+.g.review {background:var(--st-review);  color:var(--on-review);  transform:rotate(45deg); border-radius:2px}
+.g.review i{transform:rotate(-45deg); font-style:normal}
+.g.done   {background:var(--st-done);    color:var(--on-done);    border-radius:50%}
+.g.lg{width:22px; height:22px; font-size:13px}
+
+/* ------------------------------------------------------------- sections */
+section{margin-top:44px}
+.shead{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:6px}
+.shead h2{font-size:clamp(19px,4.6vw,24px)}
+.snum{font-family:var(--mono); font-size:13px; color:var(--ink-3)}
+.sdesc{color:var(--ink-2); font-size:14.5px; max-width:68ch; margin-bottom:18px}
+
+/* --------------------------------------------------------------- filter */
+.filters{
+  position:sticky; top:0; z-index:20; margin-top:34px;
+  display:flex; gap:7px; flex-wrap:wrap; align-items:center;
+  padding:10px 0; background:var(--plane);
+  border-bottom:1px solid var(--rule);
+}
+.filters .flabel{
+  font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:700; margin-right:3px;
+}
+.chip{
+  font:inherit; font-size:13px; font-weight:560;
+  display:inline-flex; align-items:center; gap:7px;
+  background:var(--surface); color:var(--ink-2);
+  border:1px solid var(--rule-2); border-radius:999px;
+  padding:6px 13px; cursor:pointer; white-space:nowrap;
+}
+.chip:hover{color:var(--ink)}
+.chip[aria-pressed="true"]{
+  background:var(--ink); color:var(--plane); border-color:var(--ink);
+}
+.chip[aria-pressed="true"]::before{content:"✓ "; font-weight:800}
+.chip .ct{font-family:var(--mono); font-size:11.5px; opacity:.72}
+
+/* ---------------------------------------------------------------- cards */
+.card{
+  background:var(--surface); border:1px solid var(--ring); border-radius:4px;
+  margin-top:12px; overflow:hidden;
+}
+.card[data-state="blocked"]{border-left:6px solid var(--st-blocked)}
+.card[data-state="review"] {border-left:6px dashed var(--st-review)}
+.card[data-state="done"]   {border-left:6px double var(--st-done)}
+
+.chead{padding:15px 16px; display:flex; gap:11px; align-items:flex-start; flex-wrap:wrap}
+.chead .idx{
+  font-family:var(--mono); font-size:12px; color:var(--ink-3);
+  border:1px solid var(--rule-2); border-radius:3px; padding:1px 5px; margin-top:2px;
+}
+.chead .body{flex:1 1 260px; min-width:0}
+.path{
+  font-family:var(--mono); font-size:13.5px; font-weight:600; color:var(--ink);
+  overflow-wrap:anywhere; line-height:1.35;
+}
+.path .dir{color:var(--ink-3); font-weight:400}
+.tagline{margin-top:7px; font-size:14.5px; color:var(--ink); max-width:70ch}
+.pill{
+  display:inline-flex; align-items:center; gap:6px; flex:0 0 auto;
+  font-size:10.5px; font-weight:750; letter-spacing:.09em; text-transform:uppercase;
+  border:1px solid var(--rule-2); border-radius:999px; padding:4px 10px 4px 7px;
+  color:var(--ink); background:var(--sunken); margin-top:1px;
+}
+
+.cbody{padding:0 16px 16px; border-top:1px solid var(--rule); padding-top:14px; margin-top:0}
+.kv{margin:0; font-size:14.5px}
+.kv dt{
+  font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; font-weight:700;
+  color:var(--ink-3); margin-top:14px;
+}
+.kv dt:first-child{margin-top:0}
+.kv dd{margin:5px 0 0; color:var(--ink-2); max-width:74ch}
+.kv dd strong{color:var(--ink); font-weight:640}
+.kv code{background:var(--sunken); padding:1px 5px; border-radius:3px; color:var(--ink)}
+
+.ask{
+  margin-top:14px; padding:11px 13px; background:var(--sunken);
+  border:1px solid var(--rule); border-radius:3px;
+  font-size:14px; color:var(--ink);
+}
+.ask b{
+  display:block; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); margin-bottom:5px;
+}
+
+/* ----------------------------------------------------------------- diff */
+details.diff{margin-top:14px; border:1px solid var(--rule); border-radius:3px; background:var(--sunken)}
+details.diff > summary{
+  list-style:none; cursor:pointer; padding:9px 12px;
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-2);
+  display:flex; align-items:center; gap:9px;
+}
+details.diff > summary::-webkit-details-marker{display:none}
+details.diff > summary::before{content:"▸"; color:var(--ink-3); font-size:11px}
+details.diff[open] > summary::before{content:"▾"}
+details.diff > summary:hover{color:var(--ink)}
+details.diff > summary .stat{margin-left:auto; color:var(--ink-3); white-space:nowrap}
+.diffbox{overflow-x:auto; border-top:1px solid var(--rule); background:var(--surface)}
+pre.d{
+  margin:0; padding:10px 0; font-family:var(--mono);
+  font-size:12.5px; line-height:1.62; min-width:max-content;
+  white-space:normal;   /* source newlines between .l blocks must not render */
+}
+pre.d .l{display:block; padding:0 14px 0 0; white-space:pre}
+pre.d .l::before{
+  display:inline-block; width:2.1ch; padding-left:9px; margin-right:5px;
+  color:var(--ink-3); font-weight:700;
+}
+pre.d .ctx::before{content:" "}
+pre.d .add{background:var(--add-bg); box-shadow:inset 3px 0 0 var(--add)}
+pre.d .add::before{content:"+"; color:var(--add)}
+pre.d .del{background:var(--del-bg); box-shadow:inset 3px 0 0 var(--del)}
+pre.d .del::before{content:"−"; color:var(--del)}
+pre.d .hunk{color:var(--ink-3)}
+pre.d .hunk::before{content:"@"}
+pre.d .c{color:var(--ink-3)}
+
+/* ---------------------------------------------------------------- tests */
+.tests{background:var(--surface); border:1px solid var(--ring); border-radius:4px; overflow:hidden}
+.tbar{display:flex; height:9px; background:var(--sunken)}
+.tbar i{display:block; height:100%}
+.tbar .pass{background:var(--st-done)}
+.tbar .fail{background:var(--st-blocked); box-shadow:inset 2px 0 0 var(--surface)}
+.tsum{
+  padding:14px 16px; display:flex; gap:10px 26px; flex-wrap:wrap; align-items:center;
+  border-bottom:1px solid var(--rule);
+}
+.tsum .n{font-family:var(--mono); font-size:14px; display:flex; align-items:center; gap:8px}
+.tsum .n b{font-size:19px; font-weight:660; letter-spacing:-.02em}
+.tsum .where{
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-3);
+  margin-left:auto; min-width:0; overflow-wrap:anywhere;
+}
+@media (max-width:600px){
+  .tsum .where{margin-left:0; flex:1 1 100%}
+}
+ul.tlist{margin:0; padding:6px 0; list-style:none}
+ul.tlist li{
+  display:flex; gap:11px; align-items:flex-start;
+  padding:9px 16px; font-size:14px; border-top:1px solid var(--rule);
+}
+ul.tlist li:first-child{border-top:0}
+ul.tlist .x{
+  flex:0 0 auto; font-family:var(--mono); font-weight:800; font-size:12px;
+  color:var(--on-blocked); background:var(--st-blocked);
+  width:17px; height:17px; display:grid; place-items:center; border-radius:2px; margin-top:2px;
+}
+ul.tlist .tn{flex:1 1 auto; min-width:0}
+ul.tlist .tn em{
+  display:block; font-style:normal; font-family:var(--mono); font-size:12.5px;
+  color:var(--ink-3); margin-top:3px;
+}
+ul.tlist .cause{
+  flex:0 0 auto; font-size:10.5px; font-weight:750; letter-spacing:.08em; text-transform:uppercase;
+  border:1px solid var(--rule-2); border-radius:999px; padding:3px 9px; color:var(--ink-2);
+  margin-top:1px; align-self:center;
+}
+
+/* ----------------------------------------------------------------- tally */
+.tally{
+  background:var(--surface); border:1px solid var(--ring); border-radius:4px;
+  padding:18px 16px 16px;
+}
+.tally figcaption{font-size:13.5px; color:var(--ink-2); margin-bottom:16px; max-width:68ch}
+.tally figcaption b{color:var(--ink); font-weight:640}
+.rows{display:grid; gap:9px}
+.row{display:grid; grid-template-columns:minmax(0,1fr); gap:4px}
+@media (min-width:640px){
+  .row{grid-template-columns:270px minmax(0,1fr); gap:14px; align-items:center}
+}
+.row .rl{font-family:var(--mono); font-size:12.5px; color:var(--ink-2); line-height:1.35}
+.row .rl b{color:var(--ink); font-weight:600}
+.track{display:flex; align-items:center; gap:9px; min-width:0}
+.track .fill{
+  height:12px; background:var(--bar);
+  border-radius:0 4px 4px 0;   /* rounded data-end, anchored to baseline */
+  min-width:3px;
+}
+.track .v{
+  font-family:var(--mono); font-size:12.5px; color:var(--ink-2);
+  font-variant-numeric:tabular-nums; white-space:nowrap;
+}
+.tally .foot{
+  margin-top:15px; padding-top:13px; border-top:1px solid var(--rule);
+  font-size:12.5px; color:var(--ink-3); font-family:var(--mono);
+}
+
+/* ------------------------------------------------------------ file list */
+details.files{
+  background:var(--surface); border:1px solid var(--ring); border-radius:4px;
+  margin-top:12px; overflow:hidden;
+}
+details.files > summary{
+  list-style:none; cursor:pointer; padding:14px 16px;
+  font-size:14.5px; display:flex; align-items:center; gap:10px;
+}
+details.files > summary::-webkit-details-marker{display:none}
+details.files > summary::before{content:"▸"; color:var(--ink-3); font-size:12px}
+details.files[open] > summary::before{content:"▾"}
+details.files > summary .hint{margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink-3)}
+table{width:100%; border-collapse:collapse; font-size:13px}
+.tscroll{overflow-x:auto; border-top:1px solid var(--rule)}
+th,td{text-align:left; padding:8px 16px; border-top:1px solid var(--rule); vertical-align:top}
+thead th{
+  border-top:0; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:700; background:var(--sunken);
+  position:sticky; top:0;
+}
+tbody td:first-child{font-family:var(--mono); font-size:12.5px; overflow-wrap:anywhere; min-width:230px}
+tbody td:first-child .dir{color:var(--ink-3)}
+td.tf{color:var(--ink-2); font-family:var(--mono); font-size:12px; min-width:190px}
+td.n{font-family:var(--mono); font-variant-numeric:tabular-nums; color:var(--ink-3); text-align:right; white-space:nowrap}
+
+/* ---------------------------------------------------------------- footer */
+.next{
+  margin-top:44px; background:var(--surface); border:1px solid var(--ring);
+  border-radius:4px; padding:18px 16px;
+}
+.next h2{font-size:19px; margin-bottom:14px}
+ol.steps{margin:0; padding-left:0; list-style:none; counter-reset:s}
+ol.steps li{
+  counter-increment:s; position:relative; padding:0 0 0 34px; margin-bottom:15px;
+  font-size:14.5px; color:var(--ink-2);
+}
+ol.steps li:last-child{margin-bottom:0}
+ol.steps li::before{
+  content:counter(s); position:absolute; left:0; top:0;
+  width:22px; height:22px; border-radius:50%; border:1px solid var(--rule-2);
+  display:grid; place-items:center; font-family:var(--mono); font-size:11.5px;
+  color:var(--ink-2); font-weight:700;
+}
+ol.steps li b{color:var(--ink); font-weight:640}
+.cmd{
+  display:block; margin-top:8px; background:var(--sunken); border:1px solid var(--rule);
+  border-radius:3px; padding:8px 11px; font-family:var(--mono); font-size:12.5px;
+  color:var(--ink); overflow-x:auto; white-space:pre;
+}
+.sig{margin-top:28px; font-size:12.5px; color:var(--ink-3); font-family:var(--mono); line-height:1.7}
+
+.hidden{display:none !important}
+:focus-visible{outline:2px solid var(--bar); outline-offset:2px; border-radius:2px}
+@media (prefers-reduced-motion:no-preference){
+  .card,.kpi{transition:opacity .12s ease}
+}
+</style>
+</head>
+<body>
+<button class="themebtn" id="tt" type="button" aria-label="Toggle light / dark">◐</button>
+
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">Agent run · task report · 2026-08-01</div>
+  <h1>react-router <span class="arrow">v5&nbsp;→</span> v6</h1>
+  <p class="subtitle">
+    41 files touched. Most of it was find-and-replace. Six places I had to decide something,
+    three I could not finish, and one test suite is red.
+  </p>
+  <div class="meta">
+    <span>branch chore/rr6-migration</span>
+    <span>3 commits · 9f2c1ab..4e7dd06</span>
+    <span>41 files</span>
+    <span>+612 −538</span>
+    <span>react-router-dom ^5.3.4 → ^6.26.2</span>
+  </div>
+</header>
+
+<!-- ============================================================ VERDICT -->
+<div class="verdict">
+  <div class="vglyph" aria-hidden="true">!</div>
+  <div>
+    <h2>Not mergeable yet — three things need you</h2>
+    <p>
+      The build does not compile: <code>UnsavedChangesPrompt.tsx</code> still imports the deleted
+      <code>&lt;Prompt&gt;</code>. Four auth tests fail. And I left two decisions unmade —
+      one about how the app mounts its router, one about redirect precedence.
+      Everything else is done and I'd merge it as-is.
+    </p>
+  </div>
+</div>
+
+<div class="kpis">
+  <div class="kpi">
+    <div class="top"><span class="g blocked" aria-hidden="true">!</span><span class="lbl">Blocked</span></div>
+    <div class="num">3</div>
+    <div class="cap">files unfinished</div>
+  </div>
+  <div class="kpi">
+    <div class="top"><span class="g review" aria-hidden="true"><i>?</i></span><span class="lbl">Judgement</span></div>
+    <div class="num">6</div>
+    <div class="cap">please review</div>
+  </div>
+  <div class="kpi">
+    <div class="top"><span class="g done" aria-hidden="true">✓</span><span class="lbl">Mechanical</span></div>
+    <div class="num">32</div>
+    <div class="cap">no review needed</div>
+  </div>
+  <div class="kpi">
+    <div class="top"><span class="g blocked" aria-hidden="true">!</span><span class="lbl">Tests</span></div>
+    <div class="num">212<small> / 216</small></div>
+    <div class="cap">4 failing, 1 suite</div>
+  </div>
+</div>
+
+<!-- ============================================================== TESTS -->
+<section id="tests">
+  <div class="shead">
+    <h2>What is still broken</h2>
+    <span class="snum">4 failures · all in one file</span>
+  </div>
+  <p class="sdesc">
+    Full suite run on the migration branch. The four failures are contained — same file, and
+    three of them share one cause I am fairly confident about.
+  </p>
+
+  <div class="tests">
+    <div class="tbar" role="img" aria-label="212 of 216 tests pass, 4 fail">
+      <i class="pass" style="width:98.15%"></i><i class="fail" style="width:1.85%"></i>
+    </div>
+    <div class="tsum">
+      <span class="n"><span class="g done" aria-hidden="true">✓</span><b>212</b> passed</span>
+      <span class="n"><span class="g blocked" aria-hidden="true">!</span><b>4</b> failed</span>
+      <span class="where">src/features/auth/__tests__/authRedirect.test.tsx</span>
+    </div>
+    <ul class="tlist">
+      <li>
+        <span class="x" aria-hidden="true">✕</span>
+        <span class="tn">redirects an unauthenticated visitor to /login
+          <em>expected state.referrer to be defined — received undefined</em></span>
+        <span class="cause">rename</span>
+      </li>
+      <li>
+        <span class="x" aria-hidden="true">✕</span>
+        <span class="tn">returns the user to the page they asked for after login
+          <em>expected "/projects/814" — received "/"</em></span>
+        <span class="cause">rename</span>
+      </li>
+      <li>
+        <span class="x" aria-hidden="true">✕</span>
+        <span class="tn">keeps ?invite=… across the login bounce
+          <em>cannot read property "search" of undefined</em></span>
+        <span class="cause">rename</span>
+      </li>
+      <li>
+        <span class="x" aria-hidden="true">✕</span>
+        <span class="tn">does not bounce while the session is still loading
+          <em>expected 0 navigations — received 1 (to /login)</em></span>
+        <span class="cause">real bug</span>
+      </li>
+    </ul>
+    <div style="padding:15px 16px; border-top:1px solid var(--rule)">
+      <dl class="kv">
+        <dt>My read on it</dt>
+        <dd>
+          <strong>Failures 1–3 are one rename.</strong> When I rewrote <code>PrivateRoute</code> I followed the
+          v6 docs and put the return location in <code>state.from</code>. The v5 code called it
+          <code>state.referrer</code>, and both the tests and <code>LoginForm.tsx:47</code> still read that key.
+          Pick one name and change three places. I did not do it because I could not tell whether
+          <code>referrer</code> is load-bearing anywhere outside the repo (analytics, a saved link).
+        </dd>
+        <dd style="margin-top:10px">
+          <strong>Failure 4 is a genuine regression I introduced.</strong> The v5 wrapper returned
+          <code>null</code> from its render prop while <code>status === 'loading'</code>. My layout-route version
+          renders the <code>&lt;Navigate&gt;</code> on first paint, so a slow session fetch now bounces the
+          user to <code>/login</code> and back. Fix is a loading branch in
+          <code>RequireAuth.tsx</code> — see the judgement card below.
+        </dd>
+      </dl>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================= FILTER -->
+<div class="filters" role="group" aria-label="Filter files by state">
+  <span class="flabel">Show</span>
+  <button class="chip" type="button" data-f="all" aria-pressed="true">All <span class="ct">41</span></button>
+  <button class="chip" type="button" data-f="blocked" aria-pressed="false">
+    <span class="g blocked" aria-hidden="true">!</span>Blocked <span class="ct">3</span></button>
+  <button class="chip" type="button" data-f="review" aria-pressed="false">
+    <span class="g review" aria-hidden="true"><i>?</i></span>Judgement <span class="ct">6</span></button>
+  <button class="chip" type="button" data-f="done" aria-pressed="false">
+    <span class="g done" aria-hidden="true">✓</span>Mechanical <span class="ct">32</span></button>
+</div>
+
+<!-- ============================================================ BLOCKED -->
+<section id="blocked" data-sec="blocked">
+  <div class="shead">
+    <h2>Left for you</h2>
+    <span class="snum">3 files · nothing I can do without a decision</span>
+  </div>
+  <p class="sdesc">
+    Each of these has a <code>TODO(rr6)</code> marker at the line noted. The original v5 code is
+    still in the file, commented out, so nothing is lost.
+  </p>
+
+  <!-- B1 -->
+  <article class="card" data-state="blocked">
+    <div class="chead">
+      <span class="idx">B1</span>
+      <div class="body">
+        <div class="path"><span class="dir">src/components/forms/</span>UnsavedChangesPrompt.tsx</div>
+        <p class="tagline">Untouched. It is a wrapper around <code>&lt;Prompt&gt;</code>, which v6 deleted outright.</p>
+      </div>
+      <span class="pill"><span class="g blocked" aria-hidden="true">!</span>Breaks the build</span>
+    </div>
+    <div class="cbody">
+      <dl class="kv">
+        <dt>Why I stopped</dt>
+        <dd>
+          There is no v6 replacement for <code>&lt;Prompt&gt;</code> at all. The nearest thing,
+          <code>useBlocker</code>, only exists on a data router. Writing a substitute means choosing a
+          UX (native <code>confirm()</code> vs. the app's own modal) and I'd be guessing.
+        </dd>
+        <dt>Current state</dt>
+        <dd>
+          File is byte-identical to <code>main</code>. <code>tsc --noEmit</code> reports 2 errors, both here.
+          <strong>This is the only reason the branch does not compile.</strong>
+        </dd>
+        <dt>Blast radius</dt>
+        <dd>Imported by 7 components — checkout, onboarding, the 3 settings forms, report builder, invite flow.</dd>
+      </dl>
+      <div class="ask">
+        <b>Decision needed</b>
+        Same decision as B2: move the app to <code>createBrowserRouter</code> and use <code>useBlocker</code>,
+        or drop unsaved-changes guards and rely on <code>beforeunload</code> only.
+      </div>
+      <details class="diff">
+        <summary>the line tsc trips on <span class="stat">1 hunk</span></summary>
+        <div class="diffbox"><pre class="d"><span class="l hunk">@ src/components/forms/UnsavedChangesPrompt.tsx:1</span>
+<span class="l ctx">import { useCallback } from 'react';</span>
+<span class="l ctx">import { Prompt } from 'react-router-dom';</span>
+<span class="l c">      ^^^^^^  TS2305: Module '"react-router-dom"' has no exported member 'Prompt'.</span>
+<span class="l ctx"></span>
+<span class="l ctx">export function UnsavedChangesPrompt({ when, message }: Props) {</span>
+<span class="l ctx">  return &lt;Prompt when={when} message={message} /&gt;;</span>
+<span class="l c">          ^^^^^^  TS2749: 'Prompt' refers to a value, but is being used as a type.</span>
+<span class="l ctx">}</span></pre></div>
+      </details>
+    </div>
+  </article>
+
+  <!-- B2 -->
+  <article class="card" data-state="blocked">
+    <div class="chead">
+      <span class="idx">B2</span>
+      <div class="body">
+        <div class="path"><span class="dir">src/features/onboarding/</span>OnboardingWizard.tsx</div>
+        <p class="tagline">Converted, but the navigation guard is switched off. <code>history.block</code> has no v6 equivalent on a <code>&lt;BrowserRouter&gt;</code>.</p>
+      </div>
+      <span class="pill"><span class="g blocked" aria-hidden="true">!</span>Silent data loss</span>
+    </div>
+    <div class="cbody">
+      <dl class="kv">
+        <dt>Why I stopped</dt>
+        <dd>
+          <code>useBlocker</code> exists in 6.26 but throws unless the tree is mounted under a
+          <em>data router</em>. This app mounts <code>&lt;BrowserRouter&gt;</code> in
+          <code>src/app/Root.tsx:18</code>. Switching to <code>createBrowserRouter</code> is a much
+          larger change than the migration you asked for — it rewrites <code>Root.tsx</code>,
+          <code>AppRoutes.tsx</code> and all 11 test helpers that mount <code>&lt;MemoryRouter&gt;</code>.
+          That is a call for you, not me.
+        </dd>
+        <dt>Current state</dt>
+        <dd>
+          Everything else in the file is migrated and passing. The guard <code>useEffect</code> is
+          commented out at <strong>lines 34–58</strong> under <code>// TODO(rr6)</code>.
+          <strong>A user can currently navigate out of a half-filled wizard and lose all of it,
+          with no warning.</strong>
+        </dd>
+      </dl>
+      <div class="ask">
+        <b>Decision needed</b>
+        Adopt <code>createBrowserRouter</code> app-wide (≈ 1 day, unblocks B1 and J4 too), or accept the
+        regression and ship without the guard?
+      </div>
+      <details class="diff">
+        <summary>what I disabled <span class="stat">−19 / +4</span></summary>
+        <div class="diffbox"><pre class="d"><span class="l hunk">@@ -31,22 +31,7 @@ export function OnboardingWizard() {</span>
+<span class="l ctx">  const isDirty = step > 0 &amp;&amp; !submitted;</span>
+<span class="l ctx"></span>
+<span class="l del">  useEffect(() =&gt; {</span>
+<span class="l del">    if (!isDirty) return;</span>
+<span class="l del">    const unblock = history.block((location, action) =&gt; {</span>
+<span class="l del">      if (action === 'REPLACE') return undefined;</span>
+<span class="l del">      return 'You have an unfinished setup step. Leave anyway?';</span>
+<span class="l del">    });</span>
+<span class="l del">    return unblock;</span>
+<span class="l del">  }, [history, isDirty]);</span>
+<span class="l add">  // TODO(rr6): no v6 equivalent for history.block on &lt;BrowserRouter&gt;.</span>
+<span class="l add">  // useBlocker() requires createBrowserRouter — see Root.tsx:18.</span>
+<span class="l add">  // Guard is OFF. Users can lose wizard state by navigating away.</span>
+<span class="l add">  void isDirty;</span></pre></div>
+      </details>
+    </div>
+  </article>
+
+  <!-- B3 -->
+  <article class="card" data-state="blocked">
+    <div class="chead">
+      <span class="idx">B3</span>
+      <div class="body">
+        <div class="path"><span class="dir">src/routes/</span>LegacyRedirects.tsx</div>
+        <p class="tagline">10 of 14 redirects converted. The other 4 overlap, and v6 changed which one wins.</p>
+      </div>
+      <span class="pill"><span class="g blocked" aria-hidden="true">!</span>Would change URLs</span>
+    </div>
+    <div class="cbody">
+      <dl class="kv">
+        <dt>Why I stopped</dt>
+        <dd>
+          v5 <code>&lt;Switch&gt;</code> matched <strong>top to bottom, first wins</strong>. v6
+          <code>&lt;Routes&gt;</code> ranks by <strong>specificity</strong> and ignores source order.
+          Ten of these patterns are disjoint so the translation is safe. Four overlap, and for those
+          the ordering in the file <em>is</em> the spec — a mechanical conversion would silently
+          re-point live URLs and I would not be able to tell you which ones.
+        </dd>
+        <dt>The four</dt>
+        <dd>
+          <code>/p/new</code> vs <code>/p/:id</code> · <code>/reports/latest</code> vs
+          <code>/reports/:year/:month</code>. In v5 the literal came first and won. In v6 the literal
+          also wins on specificity — but only if I am reading the ranking rules right, and
+          <code>/reports/latest</code> currently sits <em>below</em> the param route in the file, which
+          means today it is dead code and something else already handles it.
+        </dd>
+        <dt>Current state</dt>
+        <dd>10 converted to <code>&lt;Route element={&lt;Navigate replace /&gt;} /&gt;</code>. The 4 are commented out
+          at <strong>lines 61–78</strong> with the v5 original above them.</dd>
+      </dl>
+      <div class="ask">
+        <b>Decision needed</b>
+        Confirm intended precedence for those 4 pairs. Fastest check: hit
+        <code>/p/new</code> and <code>/reports/latest</code> on production and tell me where they land.
+      </div>
+    </div>
+  </article>
+</section>
+
+<!-- ========================================================== JUDGEMENT -->
+<section id="review" data-sec="review">
+  <div class="shead">
+    <h2>Check my judgement</h2>
+    <span class="snum">6 files · I chose something you might not have</span>
+  </div>
+  <p class="sdesc">
+    These compile and (mostly) pass. But each one had more than one defensible translation and I
+    picked one. Two of them change runtime behaviour on purpose.
+  </p>
+
+  <!-- J1 -->
+  <article class="card" data-state="review">
+    <div class="chead">
+      <span class="idx">J1</span>
+      <div class="body">
+        <div class="path"><span class="dir">src/routes/</span>PrivateRoute.tsx <span class="dir">→</span> RequireAuth.tsx</div>
+        <p class="tagline">Turned the render-prop route wrapper into a layout route that renders <code>&lt;Outlet /&gt;</code>. Renamed the file.</p>
+      </div>
+      <span class="pill"><span class="g review" aria-hidden="true"><i>?</i></span>Behaviour change</span>
+    </div>
+    <div class="cbody">
+      <dl class="kv">
+        <dt>What changed</dt>
+        <dd>
+          v6 has no way for a component to wrap a <code>&lt;Route&gt;</code>, so the guard becomes a parent
+          route. <strong>The auth check now runs once per subtree instead of once per route.</strong>
+          Call sites went from 9 sibling <code>&lt;PrivateRoute&gt;</code>s to one nested block.
+        </dd>
+        <dt>Why look</dt>
+        <dd>
+          Two knock-ons. (a) I renamed the redirect state key <code>referrer</code> → <code>from</code>,
+          which is what breaks 3 of the 4 tests. (b) I did not port the
+          <code>status === 'loading'</code> branch, which is the 4th failure — the <code>&lt;Navigate&gt;</code>
+          fires before the session resolves.
+        </dd>
+      </dl>
+      <details class="diff">
+        <summary>src/routes/RequireAuth.tsx <span class="stat">−21 / +16</span></summary>
+        <div class="diffbox"><pre class="d"><span class="l hunk">@@ -1,24 +1,19 @@</span>
+<span class="l del">import { Route, Redirect } from 'react-router-dom';</span>
+<span class="l add">import { Navigate, Outlet, useLocation } from 'react-router-dom';</span>
+<span class="l ctx"></span>
+<span class="l del">export function PrivateRoute({ component: C, ...rest }) {</span>
+<span class="l del">  const { user, status } = useSession();</span>
+<span class="l del">  return (</span>
+<span class="l del">    &lt;Route {...rest} render={props =&gt; {</span>
+<span class="l del">      if (status === 'loading') return null;</span>
+<span class="l del">      if (!user) return (</span>
+<span class="l del">        &lt;Redirect to={{</span>
+<span class="l del">          pathname: '/login',</span>
+<span class="l del">          state: { referrer: props.location },</span>
+<span class="l del">        }} /&gt;</span>
+<span class="l del">      );</span>
+<span class="l del">      return &lt;C {...props} /&gt;;</span>
+<span class="l del">    }} /&gt;</span>
+<span class="l del">  );</span>
+<span class="l del">}</span>
+<span class="l add">export function RequireAuth() {</span>
+<span class="l add">  const { user } = useSession();</span>
+<span class="l add">  const location = useLocation();</span>
+<span class="l add"></span>
+<span class="l add">  if (!user) {</span>
+<span class="l add">    return &lt;Navigate to="/login" replace state={{ from: location }} /&gt;;</span>
+<span class="l add">  }</span>
+<span class="l add">  return &lt;Outlet /&gt;;</span>
+<span class="l add">}</span>
+<span class="l c">  ! the `status === 'loading'` early return is gone — see failing test 4</span></pre></div>
+      </details>
+      <details class="diff">
+        <summary>src/routes/AppRoutes.tsx — how call sites changed <span class="stat">−11 / +9</span></summary>
+        <div class="diffbox"><pre class="d"><span class="l hunk">@@ -38,13 +38,11 @@</span>
+<span class="l del">&lt;PrivateRoute exact path="/projects"     component={ProjectList} /&gt;</span>
+<span class="l del">&lt;PrivateRoute       path="/projects/:id" component={ProjectDetail} /&gt;</span>
+<span class="l del">&lt;PrivateRoute       path="/billing"      component={Billing} /&gt;</span>
+<span class="l del">&lt;PrivateRoute       path="/team"         component={Team} /&gt;</span>
+<span class="l add">&lt;Route element={&lt;RequireAuth /&gt;}&gt;</span>
+<span class="l add">  &lt;Route path="projects"     element={&lt;ProjectList /&gt;} /&gt;</span>
+<span class="l add">  &lt;Route path="projects/:id" element={&lt;ProjectDetail /&gt;} /&gt;</span>
+<span class="l add">  &lt;Route path="billing"      element={&lt;Billing /&gt;} /&gt;</span>
+<span class="l add">  &lt;Route path="team"         element={&lt;Team /&gt;} /&gt;</span>
+<span class="l add">&lt;/Route&gt;</span></pre></div>
+      </details>
+    </div>
+  </article>
+
+  <!-- J2 -->
+  <article class="card" data-state="review">
+    <div class="chead">
+      <span class="idx">J2</span>
+      <div class="body">
+        <div class="path"><span class="dir">src/features/billing/</span>CheckoutFlow.tsx</div>
+        <p class="tagline">The second <code>history.block</code>. I replaced it partially rather than leaving it, because checkout is money.</p>
+      </div>
+      <span class="pill"><span class="g review" aria-hidden="true"><i>?</i></span>Known gap</span>
+    </div>
+    <div class="cbody">
+      <dl class="kv">
+        <dt>What changed</dt>
+        <dd>
+          <code>beforeunload</code> now covers tab close and reload. An explicit
+          <code>confirmLeave()</code> guard covers the two in-app exits I could find
+          (the header logo and the "back to plans" link).
+        </dd>
+        <dt>Why look — this is a real regression</dt>
+        <dd>
+          <strong>The browser Back button is no longer guarded.</strong> In v5,
+          <code>history.block</code> caught it. A user mid-payment who hits Back now loses the form
+          with no prompt. I judged partial coverage better than none; you may disagree and prefer
+          to bundle this into the B2 decision.
+        </dd>
+      </dl>
+      <details class="diff">
+        <summary>src/features/billing/CheckoutFlow.tsx <span class="stat">−9 / +14</span></summary>
+        <div class="diffbox"><pre class="d"><span class="l hunk">@@ -72,9 +72,14 @@ export function CheckoutFlow() {</span>
+<span class="l del">  useEffect(() =&gt; {</span>
+<span class="l del">    if (!hasCardDetails) return;</span>
+<span class="l del">    return history.block('Leave checkout? Your card details will be cleared.');</span>
+<span class="l del">  }, [history, hasCardDetails]);</span>
+<span class="l add">  // Partial replacement for history.block (removed in v6).</span>
+<span class="l add">  // Covers: tab close, reload.   NOT covered: browser Back.</span>
+<span class="l add">  useEffect(() =&gt; {</span>
+<span class="l add">    if (!hasCardDetails) return;</span>
+<span class="l add">    const onUnload = (e: BeforeUnloadEvent) =&gt; { e.preventDefault(); };</span>
+<span class="l add">    window.addEventListener('beforeunload', onUnload);</span>
+<span class="l add">    return () =&gt; window.removeEventListener('beforeunload', onUnload);</span>
+<span class="l add">  }, [hasCardDetails]);</span>
+<span class="l add"></span>
+<span class="l add">  const confirmLeave = useCallback((to: string) =&gt; {</span>
+<span class="l add">    if (hasCardDetails &amp;&amp; !window.confirm(LEAVE_MSG)) return;</span>
+<span class="l add">    navigate(to);</span>
+<span class="l add">  }, [hasCardDetails, navigate]);</span></pre></div>
+      </details>
+    </div>
+  </article>
+
+  <!-- J3 -->
+  <article class="card" data-state="review">
+    <div class="chead">
+      <span class="idx">J3</span>
+      <div class="body">
+        <div class="path"><span class="dir">src/features/search/</span>SearchResults.tsx</div>
+        <p class="tagline">Filter changes now <code>replace</code> the history entry instead of pushing one.</p>
+      </div>
+      <span class="pill"><span class="g review" aria-hidden="true"><i>?</i></span>Deliberate change</span>
+    </div>
+    <div class="cbody">
+      <dl class="kv">
+        <dt>What changed</dt>
+        <dd>
+          v5 called <code>history.push</code> on every filter change, so each keystroke in the query
+          box added a history entry. I used <code>navigate(url, { replace: true })</code>.
+        </dd>
+        <dt>Why look</dt>
+        <dd>
+          <strong>Back now leaves the search page entirely</strong> instead of stepping back one filter
+          at a time. I think the old behaviour was a bug (30 taps of Back to escape a search), but it
+          is a change users will notice, and it was not in scope. Trivial to revert — drop
+          <code>{ replace: true }</code> on line 88.
+        </dd>
+      </dl>
+      <details class="diff">
+        <summary>src/features/search/SearchResults.tsx <span class="stat">−4 / +5</span></summary>
+        <div class="diffbox"><pre class="d"><span class="l hunk">@@ -84,7 +84,8 @@ const applyFilters = (next: Filters) =&gt; {</span>
+<span class="l ctx">  const qs = serialize(next);</span>
+<span class="l del">  history.push({ pathname: '/search', search: qs, state: { from: 'filters' } });</span>
+<span class="l add">  navigate({ pathname: '/search', search: qs },</span>
+<span class="l add">           { state: { from: 'filters' }, replace: true });</span>
+<span class="l c">           ^^^^^^^^^^^^^^ deliberate: stops one history entry per keystroke</span></pre></div>
+      </details>
+    </div>
+  </article>
+
+  <!-- J4 -->
+  <article class="card" data-state="review">
+    <div class="chead">
+      <span class="idx">J4</span>
+      <div class="body">
+        <div class="path"><span class="dir">src/features/dashboard/</span>DashboardLayout.tsx</div>
+        <p class="tagline">Dropped <code>match.path</code> string-building in favour of relative child paths and <code>&lt;Outlet /&gt;</code>.</p>
+      </div>
+      <span class="pill"><span class="g review" aria-hidden="true"><i>?</i></span>Nested routes</span>
+    </div>
+    <div class="cbody">
+      <dl class="kv">
+        <dt>What changed</dt>
+        <dd>
+          Nine <code>&lt;Link to={`${match.url}/reports`}&gt;</code> became
+          <code>&lt;Link to="reports"&gt;</code>; the inner <code>&lt;Switch&gt;</code> became an
+          <code>&lt;Outlet /&gt;</code> with the children hoisted into <code>AppRoutes.tsx</code>.
+        </dd>
+        <dt>Why look</dt>
+        <dd>
+          Relative links resolve against the <strong>route</strong> path, not the current URL.
+          Today <code>DashboardLayout</code> is mounted at exactly one place
+          (<code>/dashboard/*</code>) so it is equivalent. If anyone ever mounts it a second time
+          the links follow the mount point — which is probably what you want, but it is a
+          different mental model from v5 and worth knowing before someone reuses this component.
+        </dd>
+        <dt>Also</dt>
+        <dd>
+          I added an <code>index</code> route so bare <code>/dashboard</code> renders
+          <code>&lt;Overview /&gt;</code>. In v5 it rendered the shell with an empty body. Judged a fix.
+        </dd>
+      </dl>
+    </div>
+  </article>
+
+  <!-- J5 -->
+  <article class="card" data-state="review">
+    <div class="chead">
+      <span class="idx">J5</span>
+      <div class="body">
+        <div class="path"><span class="dir">src/features/settings/</span>SettingsTabs.tsx</div>
+        <p class="tagline"><code>useRouteMatch({ path, exact })</code> → <code>useResolvedPath</code> + <code>useMatch({ end: true })</code>.</p>
+      </div>
+      <span class="pill"><span class="g review" aria-hidden="true"><i>?</i></span>Near-equivalent</span>
+    </div>
+    <div class="cbody">
+      <dl class="kv">
+        <dt>Why look</dt>
+        <dd>
+          <code>end: true</code> and v5's <code>exact</code> are close but not identical around trailing
+          slashes: <code>/settings/profile/</code> matched under v5 <code>exact</code> and does
+          <em>not</em> match under <code>end: true</code>. This drives which tab renders as active,
+          so worst case a tab looks unselected on a bookmarked trailing-slash URL. No test covers it.
+        </dd>
+      </dl>
+      <details class="diff">
+        <summary>src/features/settings/SettingsTabs.tsx <span class="stat">−6 / +7</span></summary>
+        <div class="diffbox"><pre class="d"><span class="l hunk">@@ -19,10 +19,11 @@ function Tab({ to, label }: TabProps) {</span>
+<span class="l del">  const match = useRouteMatch({ path: to, exact: true });</span>
+<span class="l add">  const resolved = useResolvedPath(to);</span>
+<span class="l add">  const match = useMatch({ path: resolved.pathname, end: true });</span>
+<span class="l ctx"></span>
+<span class="l ctx">  return (</span>
+<span class="l del">    &lt;Link to={to} className={match ? 'tab tab--on' : 'tab'}&gt;{label}&lt;/Link&gt;</span>
+<span class="l add">    &lt;Link to={to} className={match ? 'tab tab--on' : 'tab'}&gt;{label}&lt;/Link&gt;</span>
+<span class="l ctx">  );</span></pre></div>
+      </details>
+    </div>
+  </article>
+
+  <!-- J6 -->
+  <article class="card" data-state="review">
+    <div class="chead">
+      <span class="idx">J6</span>
+      <div class="body">
+        <div class="path"><span class="dir">src/app/</span>AppRoutes.tsx</div>
+        <p class="tagline">Flattened three levels of <code>&lt;Switch&gt;</code>-inside-<code>&lt;Route&gt;</code> into one nested v6 tree. Removed every <code>exact</code>.</p>
+      </div>
+      <span class="pill"><span class="g review" aria-hidden="true"><i>?</i></span>Largest single file</span>
+    </div>
+    <div class="cbody">
+      <dl class="kv">
+        <dt>What changed</dt>
+        <dd>
+          This is where most of the <code>+612</code> lives: 46 routes rewritten,
+          <code>component=</code> → <code>element=</code>, all paths made relative to their parent,
+          <code>exact</code> deleted (v6 matches the full path by default), and the three
+          route-splitting components collapsed into one tree.
+        </dd>
+        <dt>Why look</dt>
+        <dd>
+          It is the file where a wrong nesting level is invisible until someone hits a URL.
+          I sanity-checked 12 paths by hand against the v5 tree; the other 34 I did not.
+          <strong>The routing tests only cover 9 of the 46.</strong> If you review one file
+          on this branch, review this one.
+        </dd>
+      </dl>
+      <details class="diff">
+        <summary>src/app/AppRoutes.tsx — representative hunk <span class="stat">−18 / +13</span></summary>
+        <div class="diffbox"><pre class="d"><span class="l hunk">@@ -12,26 +12,21 @@ export function AppRoutes() {</span>
+<span class="l del">&lt;Switch&gt;</span>
+<span class="l del">  &lt;Route exact path="/" component={Home} /&gt;</span>
+<span class="l del">  &lt;Route path="/dashboard" render={() =&gt; (</span>
+<span class="l del">    &lt;DashboardLayout&gt;</span>
+<span class="l del">      &lt;Switch&gt;</span>
+<span class="l del">        &lt;Route exact path="/dashboard"         component={Overview} /&gt;</span>
+<span class="l del">        &lt;Route exact path="/dashboard/reports" component={Reports} /&gt;</span>
+<span class="l del">        &lt;Route path="/dashboard/reports/:id"   component={ReportViewer} /&gt;</span>
+<span class="l del">      &lt;/Switch&gt;</span>
+<span class="l del">    &lt;/DashboardLayout&gt;</span>
+<span class="l del">  )} /&gt;</span>
+<span class="l del">  &lt;Route component={NotFound} /&gt;</span>
+<span class="l del">&lt;/Switch&gt;</span>
+<span class="l add">&lt;Routes&gt;</span>
+<span class="l add">  &lt;Route path="/" element={&lt;Home /&gt;} /&gt;</span>
+<span class="l add">  &lt;Route path="dashboard" element={&lt;DashboardLayout /&gt;}&gt;</span>
+<span class="l add">    &lt;Route index            element={&lt;Overview /&gt;} /&gt;</span>
+<span class="l add">    &lt;Route path="reports"   element={&lt;Reports /&gt;} /&gt;</span>
+<span class="l add">    &lt;Route path="reports/:id" element={&lt;ReportViewer /&gt;} /&gt;</span>
+<span class="l add">  &lt;/Route&gt;</span>
+<span class="l add">  &lt;Route path="*" element={&lt;NotFound /&gt;} /&gt;</span>
+<span class="l add">&lt;/Routes&gt;</span></pre></div>
+      </details>
+    </div>
+  </article>
+</section>
+
+<!-- ========================================================= MECHANICAL -->
+<section id="done" data-sec="done">
+  <div class="shead">
+    <h2>Mechanical</h2>
+    <span class="snum">32 files · 122 call sites · nothing decided</span>
+  </div>
+  <p class="sdesc">
+    One-to-one substitutions with a documented v6 equivalent. I would not spend review time here;
+    the tally is there so you can confirm nothing surprising is in the pile.
+  </p>
+
+  <figure class="tally" style="margin:0">
+    <figcaption>
+      Call sites changed, by transform. <b>Every one of these has an exact v6 counterpart</b> —
+      no interpretation involved.
+    </figcaption>
+    <div class="rows">
+      <div class="row"><div class="rl"><b>component=</b> → <b>element=</b><br>&lt;Route&gt; props</div>
+        <div class="track"><span class="fill" style="width:100%"></span><span class="v">46</span></div></div>
+      <div class="row"><div class="rl"><b>useHistory()</b> → <b>useNavigate()</b><br>21 files</div>
+        <div class="track"><span class="fill" style="width:73.9%"></span><span class="v">34</span></div></div>
+      <div class="row"><div class="rl"><b>&lt;Switch&gt;</b> → <b>&lt;Routes&gt;</b></div>
+        <div class="track"><span class="fill" style="width:23.9%"></span><span class="v">11</span></div></div>
+      <div class="row"><div class="rl"><b>&lt;Redirect&gt;</b> → <b>&lt;Navigate replace&gt;</b></div>
+        <div class="track"><span class="fill" style="width:19.6%"></span><span class="v">9</span></div></div>
+      <div class="row"><div class="rl"><b>history.goBack()</b> → <b>navigate(-1)</b></div>
+        <div class="track"><span class="fill" style="width:15.2%"></span><span class="v">7</span></div></div>
+      <div class="row"><div class="rl"><b>activeClassName</b> → <b>className={fn}</b><br>&lt;NavLink&gt;</div>
+        <div class="track"><span class="fill" style="width:13.0%"></span><span class="v">6</span></div></div>
+      <div class="row"><div class="rl"><b>useRouteMatch()</b> → <b>useMatch()</b></div>
+        <div class="track"><span class="fill" style="width:10.9%"></span><span class="v">5</span></div></div>
+      <div class="row"><div class="rl"><b>withRouter()</b> HOC → hooks</div>
+        <div class="track"><span class="fill" style="width:8.7%"></span><span class="v">4</span></div></div>
+    </div>
+    <div class="foot">
+      Also: removed <code>@types/react-router-dom</code> (v6 ships its own types) and dropped
+      <code>react-router-config</code>, which has no v6 release.
+    </div>
+  </figure>
+
+  <details class="files">
+    <summary>All 32 mechanical files <span class="hint">tap to expand</span></summary>
+    <div class="tscroll">
+    <table>
+      <thead><tr><th scope="col">File</th><th scope="col">Transform</th><th scope="col" style="text-align:right">Sites</th></tr></thead>
+      <tbody>
+        <tr><td><span class="dir">src/app/</span>App.tsx</td><td class="tf">Switch → Routes</td><td class="n">3</td></tr>
+        <tr><td><span class="dir">src/app/</span>Root.tsx</td><td class="tf">Redirect → Navigate</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/components/modals/</span>ConfirmDialog.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/components/nav/</span>Breadcrumbs.tsx</td><td class="tf">useRouteMatch → useMatch</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/components/nav/</span>Sidebar.tsx</td><td class="tf">NavLink activeClassName</td><td class="n">4</td></tr>
+        <tr><td><span class="dir">src/components/nav/</span>TopBar.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/components/table/</span>DataTableRow.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/features/admin/</span>AdminRoutes.tsx</td><td class="tf">Switch → Routes, element=</td><td class="n">8</td></tr>
+        <tr><td><span class="dir">src/features/admin/</span>FeatureFlags.tsx</td><td class="tf">useParams typing</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/features/admin/</span>UserAdmin.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">3</td></tr>
+        <tr><td><span class="dir">src/features/auth/</span>ForgotPassword.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/features/auth/</span>LoginForm.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/features/auth/</span>ResetPassword.tsx</td><td class="tf">useHistory, useParams</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/features/auth/</span>SignupForm.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/features/billing/</span>InvoiceList.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/features/billing/</span>PlanPicker.tsx</td><td class="tf">withRouter → hooks</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/features/notifications/</span>NotificationList.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/features/profile/</span>AvatarUpload.tsx</td><td class="tf">history.goBack → navigate(-1)</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/features/profile/</span>ProfilePage.tsx</td><td class="tf">withRouter → hooks</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/features/projects/</span>NewProjectPage.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/features/projects/</span>ProjectCard.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/features/projects/</span>ProjectDetail.tsx</td><td class="tf">useParams typing</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/features/projects/</span>ProjectList.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/features/reports/</span>ReportExport.tsx</td><td class="tf">history.goBack → navigate(-1)</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/features/reports/</span>ReportViewer.tsx</td><td class="tf">useHistory, useParams</td><td class="n">3</td></tr>
+        <tr><td><span class="dir">src/features/team/</span>InviteMember.tsx</td><td class="tf">useHistory → useNavigate</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/features/team/</span>TeamMembers.tsx</td><td class="tf">NavLink activeClassName</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/hooks/</span>useGoBack.ts</td><td class="tf">history.goBack → navigate(-1)</td><td class="n">4</td></tr>
+        <tr><td><span class="dir">src/hooks/</span>useQueryParams.ts</td><td class="tf">useLocation().search</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/pages/</span>Home.tsx</td><td class="tf">Redirect → Navigate</td><td class="n">1</td></tr>
+        <tr><td><span class="dir">src/pages/</span>NotFound.tsx</td><td class="tf">Redirect → Navigate</td><td class="n">2</td></tr>
+        <tr><td><span class="dir">src/test-utils/</span>renderWithRouter.tsx</td><td class="tf">MemoryRouter initialEntries</td><td class="n">11</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </details>
+</section>
+
+<!-- =============================================================== NEXT -->
+<div class="next">
+  <h2>If you have twenty minutes</h2>
+  <ol class="steps">
+    <li><b>Answer the router question.</b> Data router or not? It decides B1, B2, and the browser-Back
+      gap in J2 all at once. Nothing else here is blocked on anything.</li>
+    <li><b>Pick a name: <code>referrer</code> or <code>from</code>.</b> Three test failures disappear.
+      Two files to touch: <code>RequireAuth.tsx:9</code>, <code>LoginForm.tsx:47</code>.
+      <span class="cmd">rg -n "state\.(referrer|from)" src/</span></li>
+    <li><b>Restore the loading branch in <code>RequireAuth.tsx</code>.</b> That is the 4th failure and a
+      real bounce bug users would hit on a cold session.</li>
+    <li><b>Read <code>src/app/AppRoutes.tsx</code>.</b> 46 routes rewritten, 9 covered by tests. It is
+      the highest-risk file on the branch.
+      <span class="cmd">git diff 9f2c1ab..4e7dd06 -- src/app/AppRoutes.tsx</span></li>
+    <li><b>Then the rest can go in.</b> The 32 mechanical files and the other four judgement calls
+      are, as far as I can tell, correct and boring.
+      <span class="cmd">npx tsc --noEmit && npx vitest run</span></li>
+  </ol>
+</div>
+
+<p class="sig">
+  Generated at the end of the run · counts from <code>git diff --stat</code> and
+  <code>vitest run --reporter=verbose</code> · every <code>TODO(rr6)</code> marker in the tree is
+  represented on this page.
+</p>
+
+</div>
+
+<script>
+(function () {
+  // ---- theme toggle (prefers-color-scheme is the default; this overrides) --
+  var tt = document.getElementById('tt');
+  tt.addEventListener('click', function () {
+    var isDark = matchMedia('(prefers-color-scheme: dark)').matches;
+    var cur = document.documentElement.getAttribute('data-theme') || (isDark ? 'dark' : 'light');
+    var next = cur === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    tt.setAttribute('aria-label', 'Switch to ' + (next === 'dark' ? 'light' : 'dark'));
+  });
+
+  // ---- state filter ------------------------------------------------------
+  var chips = Array.prototype.slice.call(document.querySelectorAll('.chip'));
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.card[data-state]'));
+  var secs  = Array.prototype.slice.call(document.querySelectorAll('section[data-sec]'));
+
+  function apply(f) {
+    cards.forEach(function (c) {
+      c.classList.toggle('hidden', f !== 'all' && c.getAttribute('data-state') !== f);
+    });
+    secs.forEach(function (s) {
+      s.classList.toggle('hidden', f !== 'all' && s.getAttribute('data-sec') !== f);
+    });
+    chips.forEach(function (b) {
+      b.setAttribute('aria-pressed', String(b.getAttribute('data-f') === f));
+    });
+  }
+
+  chips.forEach(function (b) {
+    b.addEventListener('click', function () { apply(b.getAttribute('data-f')); });
+  });
+
+  // ---- expand every diff with "e" ---------------------------------------
+  document.addEventListener('keydown', function (e) {
+    if (e.key !== 'e' || e.metaKey || e.ctrlKey || e.altKey) return;
+    var t = e.target.tagName;
+    if (t === 'INPUT' || t === 'TEXTAREA') return;
+    var ds = document.querySelectorAll('details');
+    var anyClosed = Array.prototype.some.call(ds, function (d) { return !d.open; });
+    Array.prototype.forEach.call(ds, function (d) { d.open = anyClosed; });
+  });
+})();
+</script>
+</body>
+</html>

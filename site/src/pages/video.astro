@@ -1,0 +1,94 @@
+---
+// Fonts and brand tokens must be imported here, not @imported inside
+// <style>. Astro only rewrites fontsource's relative url() asset paths
+// for stylesheets that go through the module graph.
+import '@fontsource/azeret-mono/400.css';
+import '@fontsource/azeret-mono/500.css';
+import '@fontsource/dm-mono/400.css';
+import '@fontsource/dm-mono/500.css';
+import '../styles/brand.css';
+
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vetrina, the announcement cut</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<meta name="color-scheme" content="dark" />
+<meta property="og:image" content="/og.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<!-- Not launched. The film demos actions, which are specced and not built, so
+     this must not be indexed until that ships. Remove at launch. -->
+<meta name="robots" content="noindex, nofollow" />
+<style>
+*{box-sizing:border-box}
+body{margin:0;background:var(--ground);color:var(--fg);font-family:var(--mono);font-size:14px;line-height:1.6}
+.wrap{max-width:1320px;margin-inline:auto;padding:clamp(1.5rem,4vw,3rem) clamp(1.15rem,4vw,2.5rem) 5rem}
+.kicker{font-size:10.5px;letter-spacing:.24em;text-transform:uppercase;color:var(--faint);margin:0 0 1.3rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap}
+.dot{width:5px;height:5px;border-radius:50%;background:var(--live)}
+h1{font-family:var(--display);font-size:clamp(2rem,5vw,3.2rem);font-weight:600;letter-spacing:-.02em;margin:0 0 .6rem;line-height:1.04}
+.sub{color:var(--muted);max-width:74ch;margin:0 0 2rem;font-size:14px}
+.stage{background:#000;border:1px solid var(--hair);line-height:0}
+video{width:100%;display:block;aspect-ratio:16/9;background:#000}
+.bar{display:flex;flex-wrap:wrap;gap:.6rem 1.5rem;align-items:center;padding:1rem .1rem 0;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
+.bar a{color:var(--muted);text-decoration:none;border-bottom:1px solid var(--hair);padding-bottom:2px}
+.bar a:hover{color:var(--live);border-color:var(--live)}
+
+.beats{margin-top:2.4rem;border-top:1px solid var(--hair);padding-top:1.4rem;display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,215px),1fr));gap:1px;background:var(--hair)}
+.beat{background:var(--ground);padding:.9rem .85rem}
+.beat b{display:block;font-size:10.5px;letter-spacing:.2em;color:var(--faint);font-weight:400}
+.beat span{display:block;font-family:var(--display);font-size:17px;color:var(--fg);margin-top:.35rem;line-height:1.3}
+.beat em{display:block;font-style:normal;font-size:12px;color:var(--muted);margin-top:.3rem;line-height:1.5}
+
+h2{font-family:var(--display);font-size:clamp(1.5rem,3vw,2.1rem);font-weight:600;margin:0 0 .5rem;letter-spacing:-.015em}
+.sec{margin-top:4rem;border-top:1px solid var(--hair);padding-top:2rem}
+.sec p{color:var(--muted);max-width:74ch;margin:0 0 1.8rem;font-size:13.5px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,330px),1fr));gap:1.5rem}
+.cut{border:1px solid var(--hair);background:var(--surface)}
+.cut header{padding:.85rem 1rem;border-bottom:1px solid var(--hair);display:flex;align-items:baseline;gap:.75rem}
+.cut header b{font-size:11px;letter-spacing:.2em;color:var(--live)}
+.cut header span{font-family:var(--display);font-size:18px;color:var(--fg)}
+.cut .meta{padding:.85rem 1rem 1rem}
+.cut .hook{font-size:12px;color:var(--fg);line-height:1.55;padding-bottom:.7rem;border-bottom:1px solid var(--hair);margin-bottom:.7rem}
+.cut .note{font-size:12px;color:var(--muted);line-height:1.55}
+.note-warn{margin-top:2.6rem;border-left:2px solid var(--st-warn);padding-left:1.2rem;max-width:74ch;color:var(--muted);font-size:13.5px}
+.note-warn b{color:var(--fg)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="kicker"><span class="dot"></span><span>Announcement cut</span><span>·</span><span>30s · 1920×1080 · 30fps</span><span>·</span><span>no audio yet</span></p>
+  <h1>Vetrina, the post.</h1>
+  <p class="sub">
+    The announcement cut. It opens inside one conversation as it piles up: three tasks
+    and two of your own mid-flight asides, interleaved, with a counter that only goes up. Then it names
+    the mechanism: chat only ever grows, a page is rewritten in place. This is the half no session
+    dashboard addresses, because the problem was never knowing where the agents are.
+  </p>
+
+  <div class="stage">
+    <video src="/full-E.mp4" poster="/frame0-E.jpg" controls playsinline preload="metadata"></video>
+  </div>
+
+  <div class="bar">
+    <span>Judge it muted and at speed, which is how it autoplays</span>
+    <a href="/full-E.mp4" download>Download mp4</a>
+    <a href="/">Landing page</a>
+  </div>
+
+  <div class="beats">
+    <div class="beat"><b>00:00</b><span>The pile</span><em>One conversation. Three tasks and two of your own asides, interleaved. The counter only goes up.</em></div>
+    <div class="beat"><b>00:03</b><span>Chat only ever grows</span><em>The problem, named.</em></div>
+    <div class="beat"><b>00:05</b><span>A page is rewritten in place</span><em>The mechanism, named.</em></div>
+    <div class="beat"><b>00:08</b><span>The window, empty</span><em>Nothing published yet. Write an HTML file into ~/vetrina.</em></div>
+    <div class="beat"><b>00:11</b><span>Agents publish</span><em>Six pages, five repos, newest first, each arrival pushing the rest down.</em></div>
+    <div class="beat"><b>00:19</b><span>The fleet</span><em>Four agents fine, one blocked. Now you know which.</em></div>
+    <div class="beat"><b>00:25</b><span>The command</span><em>npx vetrina-cli</em></div>
+  </div>
+
+
+</div>
+</body>
+</html>

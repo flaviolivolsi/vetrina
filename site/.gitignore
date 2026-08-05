@@ -1,0 +1,9 @@
+dist/
+.astro/
+node_modules/
+
+# Generated from gallery/ and evidence/ by scripts/make-thumbs.mjs at build
+# time. The repo keeps one copy of every page, not three.
+public/gallery/
+public/thumb-gallery/
+public/demos/

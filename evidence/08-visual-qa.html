@@ -1,0 +1,1055 @@
+<!doctype html>
+<html lang="en" data-bp="360" data-filter="all">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Visual QA — Halo 2.0 rollout across 7 pages</title>
+<style>
+/* ============================================================
+   TOKENS
+   ============================================================ */
+:root{
+  --bg:#f5f5f2;
+  --surface:#ffffff;
+  --surface-2:#fbfbf9;
+  --ink:#15181e;
+  --ink-2:#3d434f;
+  --muted:#666d7c;
+  --line:#e0e0da;
+  --line-2:#cfcfc7;
+  --accent:#2f4fd0;
+  --accent-soft:#e7ebfb;
+  --ok:#1a6f45;
+  --ok-soft:#e2f2e9;
+  --bad:#b8242b;
+  --bad-soft:#fbe6e6;
+  --warn:#8a5a00;
+
+  /* wireframe palette */
+  --wfbg:#ffffff;
+  --wfink:#171a21;
+  --wfbox:#f0f1f3;
+  --wfline:#dcdee3;
+  --chrome:#f2f2ef;
+
+  --shadow:0 1px 0 rgba(20,22,28,.04), 0 6px 20px -12px rgba(20,22,28,.35);
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0e1014;
+    --surface:#161920;
+    --surface-2:#1b1f27;
+    --ink:#e9ebf0;
+    --ink-2:#c2c7d2;
+    --muted:#949cab;
+    --line:#262b34;
+    --line-2:#333944;
+    --accent:#8aa6ff;
+    --accent-soft:#1c2440;
+    --ok:#5ecf94;
+    --ok-soft:#12281e;
+    --bad:#ff7b7b;
+    --bad-soft:#2c1618;
+    --warn:#e8b45c;
+
+    --wfbg:#10131a;
+    --wfink:#cfd5e0;
+    --wfbox:#1b202a;
+    --wfline:#2b313d;
+    --chrome:#1a1e26;
+
+    --shadow:0 1px 0 rgba(0,0,0,.4), 0 8px 24px -14px rgba(0,0,0,.9);
+  }
+}
+
+/* per-breakpoint frame geometry */
+html[data-bp="360"]  { --ar:360/760;  --cap:140px; --wffs:6.8cqw; }
+html[data-bp="768"]  { --ar:768/1000; --cap:250px; --wffs:4.5cqw; }
+html[data-bp="1440"] { --ar:1440/900; --cap:400px; --wffs:3.05cqw; }
+
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,p,figure,dl,dd{margin:0}
+button{font:inherit;color:inherit}
+a{color:var(--accent)}
+.wrap{max-width:1180px;margin:0 auto;padding:0 14px}
+@media (min-width:760px){ .wrap{padding:0 24px} }
+.sr{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0}
+.mono{font-family:var(--mono)}
+
+/* ============================================================
+   MASTHEAD
+   ============================================================ */
+.mast{padding:26px 0 18px;border-bottom:1px solid var(--line)}
+.eyebrow{
+  font:600 11px/1 var(--mono); letter-spacing:.14em; text-transform:uppercase;
+  color:var(--muted); display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+}
+.eyebrow .sep{width:3px;height:3px;border-radius:50%;background:var(--line-2)}
+h1{font-size:clamp(21px,4.6vw,30px);line-height:1.18;letter-spacing:-.02em;margin:10px 0 0;max-width:20ch}
+.sub{color:var(--muted);margin-top:8px;font-size:14px;max-width:62ch}
+.runmeta{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.runmeta span{
+  font:500 11.5px/1 var(--mono); color:var(--ink-2);
+  background:var(--surface); border:1px solid var(--line);
+  padding:5px 8px; border-radius:5px;
+}
+
+/* scoreboard */
+.score{margin-top:18px;display:flex;flex-direction:column;gap:8px}
+.scorebar{display:flex;height:12px;border-radius:3px;overflow:hidden;border:1px solid var(--line-2)}
+.seg{display:block}
+.seg.pass{width:66.7%;background:var(--ok)}
+.seg.fail{
+  width:33.3%;background:var(--bad);
+  background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.55) 0 2px,transparent 2px 5px);
+}
+.scorekey{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted)}
+.scorekey b{color:var(--ink);font-variant-numeric:tabular-nums}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:-1px;margin-right:6px;border:1px solid var(--line-2)}
+.swatch.pass{background:var(--ok)}
+.swatch.fail{background:var(--bad);background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.55) 0 2px,transparent 2px 5px)}
+
+/* ============================================================
+   TRIAGE
+   ============================================================ */
+.section-head{
+  display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;
+  margin:26px 0 12px;
+}
+.section-head h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;font-family:var(--mono);color:var(--muted)}
+.section-head .hint{font-size:12.5px;color:var(--muted)}
+
+.triage{display:grid;gap:10px;grid-template-columns:1fr}
+@media (min-width:720px){ .triage{grid-template-columns:repeat(3,1fr)} }
+.tcard{
+  display:block;text-decoration:none;color:inherit;
+  background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--bad);
+  border-radius:9px;padding:12px 13px;box-shadow:var(--shadow);
+  transition:transform .12s ease, border-color .12s ease;
+}
+.tcard:hover{transform:translateY(-2px);border-color:var(--line-2);border-left-color:var(--bad)}
+.tcard .tnum{
+  display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;
+  background:var(--bad);color:#fff;font:700 12px/1 var(--mono);
+}
+@media (prefers-color-scheme:dark){ .tcard .tnum{color:#2c1618} }
+.tcard .trow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tcard .tsev{font:600 10.5px/1 var(--mono);letter-spacing:.09em;text-transform:uppercase;color:var(--bad);border:1px solid currentColor;border-radius:99px;padding:3px 6px}
+.tcard h3{font-size:15px;margin-top:9px;letter-spacing:-.01em}
+.tcard p{font-size:13px;color:var(--muted);margin-top:4px}
+.tcard .go{display:inline-flex;align-items:center;gap:5px;margin-top:9px;font:600 12px/1 var(--sans);color:var(--accent)}
+.tcard .where{font-family:var(--mono);font-size:11.5px;color:var(--ink-2);margin-top:7px;word-break:break-all}
+
+/* ============================================================
+   CONTROLS (sticky)
+   ============================================================ */
+.controls{
+  position:sticky;top:0;z-index:20;background:var(--bg);
+  border-bottom:1px solid var(--line);
+  margin-top:26px;padding:9px 0;
+}
+.controls-in{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.ctl{display:flex;align-items:center;gap:8px;min-width:0}
+.ctl-label{font:600 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);white-space:nowrap}
+.seg-ctl{display:flex;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:2px;gap:2px}
+.seg-ctl button{
+  background:none;border:0;border-radius:6px;padding:6px 9px;cursor:pointer;
+  font:600 12px/1 var(--mono);color:var(--muted);white-space:nowrap;
+}
+.seg-ctl button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg-ctl button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.bpnote{font:500 11.5px/1 var(--mono);color:var(--muted)}
+
+/* ============================================================
+   PAGE ROWS
+   ============================================================ */
+.rows{padding-bottom:40px}
+.prow{
+  background:var(--surface);border:1px solid var(--line);border-radius:12px;
+  margin-top:14px;box-shadow:var(--shadow);overflow:hidden;scroll-margin-top:78px;
+}
+.prow[data-status="fail"]{border-color:var(--line-2)}
+.prow[data-status="fail"]::before{content:"";display:block;height:3px;background:var(--bad);
+  background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.5) 0 3px,transparent 3px 7px)}
+.prow[data-status="pass"]::before{content:"";display:block;height:3px;background:var(--ok)}
+html[data-filter="issues"] .prow[data-status="pass"]{display:none}
+.prow.flash{animation:flash 1.1s ease}
+@keyframes flash{0%,40%{background:var(--accent-soft)}100%{background:var(--surface)}}
+
+.phead{display:flex;flex-wrap:wrap;gap:10px 12px;align-items:center;padding:12px 13px;border-bottom:1px solid var(--line)}
+.pidx{font:600 11px/1 var(--mono);color:var(--muted);width:22px}
+.pname{font-size:16px;font-weight:650;letter-spacing:-.01em}
+.purl{font:500 11.5px/1.35 var(--mono);color:var(--muted);word-break:break-all}
+.pheadmain{flex:1 1 220px;min-width:0}
+.pill{display:inline-flex;align-items:center;gap:6px;font:600 11.5px/1 var(--mono);padding:5px 9px;border-radius:99px;border:1px solid;white-space:nowrap}
+.pill.pass{color:var(--ok);border-color:var(--ok);background:var(--ok-soft)}
+.pill.fail{color:var(--bad);border-color:var(--bad);background:var(--bad-soft)}
+.ic{width:12px;height:12px;flex:none;fill:currentColor}
+
+/* per-breakpoint result chips */
+.bpm{display:flex;gap:4px}
+.bpc{
+  display:inline-flex;align-items:center;gap:4px;cursor:pointer;
+  background:var(--surface-2);border:1px solid var(--line);border-radius:6px;
+  padding:5px 7px;font:600 11px/1 var(--mono);color:var(--muted);
+}
+.bpc[data-r="fail"]{color:var(--bad);border-color:var(--bad)}
+.bpc[data-r="pass"]{color:var(--ok)}
+.bpc[aria-current="true"]{outline:2px solid var(--accent);outline-offset:1px;background:var(--surface)}
+.bpc:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+
+/* body: compare + notes */
+.pbody{display:grid;grid-template-columns:1fr;gap:14px;padding:14px 13px}
+@media (min-width:940px){
+  .pbody{grid-template-columns:minmax(0,1fr) minmax(300px,400px);gap:18px}
+  .compare{align-self:center}
+  .notes{align-self:start}
+}
+
+.compare{
+  display:grid;grid-template-columns:1fr 1fr;gap:10px;align-items:start;
+  max-width:calc(var(--cap) * 2 + 46px);margin-inline:auto;width:100%;
+}
+@media (min-width:560px){ .compare{gap:16px} }
+.shot{display:flex;flex-direction:column;align-items:center;gap:7px;min-width:0}
+.slot{width:100%;display:flex;justify-content:center}
+.shotcap{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center}
+.shotcap .k{font:700 10px/1 var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.shotcap .v{font-size:11.5px;color:var(--ink-2)}
+.shotcap .v b{font-weight:600}
+.shot .tagfail{
+  display:inline-flex;align-items:center;gap:4px;font:700 9.5px/1 var(--mono);letter-spacing:.08em;
+  color:var(--bad);border:1px solid var(--bad);border-radius:99px;padding:3px 6px;white-space:nowrap;
+}
+
+/* ============================================================
+   WIREFRAME FRAME
+   ============================================================ */
+.wf{
+  --r:4px; --gap:.55em; --pad:.85em;
+  width:min(100%,var(--cap));
+  border:1px solid var(--line-2);border-radius:7px;overflow:hidden;background:var(--wfbg);
+}
+.wf[data-v="after"]{--r:.55em; --gap:.85em; --pad:1.05em}
+.wf[data-v="after"].flagged{border-color:var(--bad);box-shadow:0 0 0 2px var(--bad-soft)}
+.chrome{display:flex;align-items:center;gap:3px;padding:4px 6px;background:var(--chrome);border-bottom:1px solid var(--wfline)}
+.chrome i{width:4px;height:4px;border-radius:50%;background:var(--wfline);flex:none}
+.chrome .url{
+  margin-left:4px;font:500 8px/1.4 var(--mono);color:var(--muted);
+  overflow:hidden;white-space:nowrap;text-overflow:ellipsis;
+}
+.vp{position:relative;aspect-ratio:var(--ar);overflow:hidden;container-type:inline-size;background:var(--wfbg)}
+.pg{font-size:var(--wffs);padding:var(--pad);display:flex;flex-direction:column;gap:var(--gap)}
+
+/* primitives */
+.t{display:block;height:.5em;border-radius:2px;background:var(--wfink);opacity:.22;width:var(--w,100%);flex:none}
+.t.h1{height:1.15em;opacity:.82;border-radius:3px}
+.t.h2{height:.78em;opacity:.6}
+.t.h3{height:.62em;opacity:.5}
+.wf[data-v="before"] .t.h1{height:.9em}
+.wf[data-v="before"] .t.h2{height:.66em}
+.row{display:flex;align-items:center;gap:.4em}
+.col{display:flex;flex-direction:column;gap:.4em;min-width:0}
+.sp{flex:1}
+.nav{display:flex;align-items:center;gap:.45em;padding-bottom:.5em;border-bottom:1px solid var(--wfline)}
+.wf[data-v="before"] .nav{padding-bottom:.35em}
+.dot{width:.9em;height:.9em;border-radius:var(--r);background:var(--wfink);opacity:.75;flex:none}
+.btn{height:1.25em;border-radius:var(--r);background:var(--wfink);opacity:.78;width:var(--w,30%);flex:none}
+.btn.ghost{background:none;border:1px solid var(--wfink);opacity:.4}
+.chip{height:.85em;width:var(--w,26%);border-radius:99px;border:1px solid var(--wfink);opacity:.45;flex:none}
+.bx{
+  border-radius:var(--r);background:var(--wfbox);border:1px solid var(--wfline);
+  padding:.55em;display:flex;flex-direction:column;gap:.35em;min-width:0;
+}
+.wf[data-v="before"] .bx{background:none}
+.sq{width:1.1em;height:1.1em;border-radius:var(--r);background:var(--wfink);opacity:.35;flex:none}
+.ph{
+  height:2.6em;border-radius:var(--r);border:1px solid var(--wfline);
+  background:repeating-linear-gradient(45deg,var(--wfbox) 0 4px,transparent 4px 8px);
+}
+.grid{display:grid;gap:.5em}
+.g3{grid-template-columns:repeat(3,1fr)}
+.g2{grid-template-columns:repeat(2,1fr)}
+html[data-bp="360"] .g3,html[data-bp="360"] .g2{grid-template-columns:1fr}
+html[data-bp="768"] .g3{grid-template-columns:repeat(2,1fr)}
+.strip{display:flex;gap:.4em}
+.lg{flex:1;height:.7em;border-radius:2px;background:var(--wfink);opacity:.16}
+.cut{
+  display:flex;align-items:center;gap:.3em;color:var(--wfink);opacity:.45;
+  font:700 .55em/1 var(--mono);letter-spacing:.2em;justify-content:center;
+}
+.cut::before,.cut::after{content:"";flex:1;height:1px;background:var(--wfline)}
+
+/* table */
+.tbl{display:flex;flex-direction:column;gap:.28em;border:1px solid var(--wfline);border-radius:var(--r);padding:.35em}
+.tr{display:grid;grid-template-columns:1.5fr 1fr 1fr 1fr;gap:.3em;align-items:center}
+.td{height:.42em;border-radius:2px;background:var(--wfink);opacity:.2}
+.tr.th .td{opacity:.55;height:.5em}
+.tbl-stack{display:none}
+
+/* form */
+.fld{display:flex;flex-direction:column;gap:.22em}
+.lbl{height:.38em;width:var(--w,38%);border-radius:2px;background:var(--wfink);opacity:.5}
+.inp{height:1.35em;border-radius:var(--r);border:1px solid var(--wfline);background:var(--wfbox)}
+.inp.ta{height:2.6em}
+
+/* headings gutter (blog post) */
+.hd{display:flex;align-items:center;gap:.35em}
+.lvl{
+  font:700 .5em/1 var(--mono);letter-spacing:.04em;color:var(--wfink);opacity:.85;
+  border:1px solid var(--wfline);border-radius:2px;padding:.15em .25em;flex:none;
+}
+.ind1{margin-left:1em}
+.ind2{margin-left:2.1em}
+.rung{
+  margin-left:1em;display:flex;align-items:center;gap:.3em;
+  font:700 .48em/1 var(--mono);color:var(--bad);
+}
+.rung::before{content:"";width:1.6em;height:0;border-top:1px dashed var(--bad)}
+
+/* timeline */
+.tl{display:flex;flex-direction:column;gap:.6em;padding-left:.7em;border-left:2px solid var(--wfline)}
+
+/* variant visibility */
+.only-after{display:none}
+.wf[data-v="after"] .only-after{display:var(--d,flex)}
+.wf[data-v="after"] .only-before{display:none}
+html[data-bp="360"] .only-nonarrow{display:none}
+html:not([data-bp="360"]) .only-narrow{display:none}
+html:not([data-bp="1440"]) .only-wide{display:none}
+
+/* ---- defect annotations ---- */
+.flag{
+  position:absolute;z-index:3;display:grid;place-items:center;
+  width:15px;height:15px;border-radius:50%;background:var(--bad);color:#fff;
+  font:700 9.5px/1 var(--mono);border:2px solid var(--wfbg);
+}
+@media (prefers-color-scheme:dark){ .flag{color:#2c1618} }
+.note{
+  position:absolute;z-index:3;
+  font:700 8.5px/1 var(--mono);color:#fff;background:var(--bad);
+  padding:3px 4px;border-radius:3px;white-space:nowrap;
+}
+@media (prefers-color-scheme:dark){ .note{color:#2c1618} }
+
+/* 1 — pricing overflow (360 only, after only) */
+.ovf{display:none}
+.hscroll{display:none}
+html[data-bp="360"] .wf[data-v="before"] .tbl-stack{display:flex;flex-direction:column;gap:.35em}
+html[data-bp="360"] .wf[data-v="before"] .tbl-wide{display:none}
+html[data-bp="360"] .wf[data-v="after"] .tbl-wide{width:152%;min-width:152%;border-color:var(--bad);border-style:dashed}
+html[data-bp="360"] .wf[data-v="after"] .ovf{display:block;position:absolute;inset:0;pointer-events:none;z-index:2}
+html[data-bp="360"] .wf[data-v="after"] .ovf .edge{position:absolute;top:0;bottom:0;right:0;border-right:2px dashed var(--bad)}
+html[data-bp="360"] .wf[data-v="after"] .ovf .flag{right:3px;top:52%}
+html[data-bp="360"] .wf[data-v="after"] .ovf .note{right:20px;top:52%}
+html[data-bp="360"] .wf[data-v="after"] .hscroll{
+  display:block;position:absolute;left:6%;right:6%;bottom:4px;height:4px;border-radius:99px;
+  background:var(--wfline);z-index:3;
+}
+html[data-bp="360"] .wf[data-v="after"] .hscroll::after{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:62%;border-radius:99px;background:var(--bad);
+}
+
+/* 2 — heading skip (after only, all breakpoints) */
+.wf[data-v="after"] .skipflag{display:flex;position:relative;align-items:center}
+.wf[data-v="after"] .skipflag .flag{position:static;margin-right:.3em}
+
+/* 3 — low-contrast labels (after only) */
+.wf[data-v="after"] .lo .lbl{opacity:.13;outline:1px dotted var(--bad);outline-offset:1px}
+.ratio{display:none}
+.wf[data-v="after"] .ratio{
+  display:inline-block;font:700 .46em/1 var(--mono);color:var(--bad);
+  border:1px solid var(--bad);border-radius:2px;padding:.15em .25em;
+}
+
+/* ============================================================
+   NOTES PANEL
+   ============================================================ */
+.notes{display:flex;flex-direction:column;gap:10px;min-width:0}
+.nblock{background:var(--surface-2);border:1px solid var(--line);border-radius:9px;padding:11px 12px}
+.nblock.bad{border-color:var(--bad);background:var(--bad-soft)}
+.nhead{display:flex;align-items:center;gap:7px;margin-bottom:8px}
+.nhead .tnum{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--bad);color:#fff;font:700 11px/1 var(--mono);flex:none}
+@media (prefers-color-scheme:dark){ .nhead .tnum{color:#2c1618} }
+.nhead h4{margin:0;font-size:13.5px;letter-spacing:-.01em}
+.nblock h5{margin:0 0 6px;font:600 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+dl.kv{display:grid;grid-template-columns:auto 1fr;gap:5px 10px;font-size:12.5px;margin:0}
+dl.kv dt{font:600 10.5px/1.5 var(--mono);color:var(--muted);text-transform:uppercase;letter-spacing:.05em;white-space:nowrap}
+dl.kv dd{margin:0;color:var(--ink-2);min-width:0;overflow-wrap:anywhere}
+dl.kv dd code,code{font-family:var(--mono);font-size:11.5px;background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 4px}
+.fix{margin-top:9px;padding-top:9px;border-top:1px dashed var(--line-2);font-size:12.5px;color:var(--ink-2)}
+.fix b{font:600 10.5px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ok);display:block;margin-bottom:4px}
+ul.chg{margin:0;padding-left:16px;font-size:12.5px;color:var(--ink-2);display:flex;flex-direction:column;gap:4px}
+ul.chg code{font-size:11px}
+
+/* contrast demo swatches */
+.cdemo{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.cchip{border-radius:6px;padding:6px 8px;font:600 11px/1.3 var(--mono);border:1px solid var(--line-2);text-align:center}
+.cchip small{display:block;font-weight:400;font-size:9.5px;opacity:.9;margin-top:3px}
+.cchip.fail-c{background:#F4F5F7;color:#868B94}
+.cchip.pass-c{background:#F4F5F7;color:#5F6672}
+.cchip.old-c{background:#FFFFFF;color:#4B5160}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+footer{border-top:1px solid var(--line);padding:20px 0 44px;color:var(--muted);font-size:12.5px}
+footer h2{font:600 10.5px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:10px}
+pre{
+  margin:0 0 10px;background:var(--surface);border:1px solid var(--line);border-radius:8px;
+  padding:10px 11px;overflow-x:auto;font-family:var(--mono);font-size:11.5px;line-height:1.7;color:var(--ink-2);
+}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-top:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+</style>
+</head>
+<body>
+
+<svg class="sr" aria-hidden="true" focusable="false">
+  <symbol id="i-check" viewBox="0 0 16 16"><path d="M8 0a8 8 0 100 16A8 8 0 008 0zm4.1 5.9l-4.9 5.3a.9.9 0 01-1.3.04L3.6 8.9a.9.9 0 011.2-1.3l1.6 1.5 4.3-4.6a.9.9 0 011.4 1.4z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 16 16"><path d="M7.1 1.3L.4 13a1 1 0 00.9 1.5h13.4a1 1 0 00.9-1.5L8.9 1.3a1 1 0 00-1.8 0zM8 5c.5 0 .9.4.8.9l-.2 3.2a.6.6 0 01-1.2 0L7.2 6c0-.5.3-.9.8-.9zm0 5.6a.9.9 0 110 1.8.9.9 0 010-1.8z"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 16 16"><path d="M8.7 2.3l5 5c.4.4.4 1 0 1.4l-5 5a1 1 0 01-1.4-1.4L10.6 9H2a1 1 0 010-2h8.6L7.3 3.7a1 1 0 011.4-1.4z"/></symbol>
+</svg>
+
+<!-- ===================== MASTHEAD ===================== -->
+<header class="mast">
+  <div class="wrap">
+    <p class="eyebrow">
+      <span>Visual QA · run 47</span><span class="sep"></span>
+      <span>arcwave.dev</span><span class="sep"></span>
+      <span>2026-08-01 14:12 CEST</span>
+    </p>
+    <h1>Halo 2.0 design system applied to 7 marketing pages</h1>
+    <p class="sub">Every page re-rendered at three viewport widths and diffed against the pre-rollout build (v1.4 “Slate”). Four pages came through clean. Three did not — jump straight to them below.</p>
+    <div class="runmeta">
+      <span>branch feat/halo-2-rollout</span>
+      <span>commit 9c41ea2</span>
+      <span>24 files · +1318 −964</span>
+      <span>21 checks in 1m 48s</span>
+    </div>
+
+    <div class="score">
+      <div class="scorebar" role="img" aria-label="14 of 21 checks passed, 7 failed">
+        <span class="seg pass"></span><span class="seg fail"></span>
+      </div>
+      <div class="scorekey">
+        <span><i class="swatch pass"></i><b>14</b> checks passed</span>
+        <span><i class="swatch fail"></i><b>7</b> checks failed</span>
+        <span><b>4</b> pages clean · <b>3</b> pages with findings</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ===================== TRIAGE ===================== -->
+<div class="wrap">
+  <div class="section-head">
+    <h2>Findings</h2>
+    <span class="hint">3 problems, all introduced by the rollout — none pre-existing.</span>
+  </div>
+  <div class="triage">
+
+    <a class="tcard" href="#p-pricing" data-jump="p-pricing">
+      <span class="trow"><span class="tnum">1</span><span class="tsev">High · layout</span></span>
+      <h3>Comparison table scrolls sideways</h3>
+      <p>20px of horizontal overflow at 360px. Fails at every width below 380px.</p>
+      <p class="where">table.plan-matrix</p>
+      <span class="go">Pricing <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+    </a>
+
+    <a class="tcard" href="#p-post" data-jump="p-post">
+      <span class="trow"><span class="tnum">2</span><span class="tsev">Medium · semantics</span></span>
+      <h3>Heading outline skips h2 → h4</h3>
+      <p>Three step headings re-tagged to h4 for size. Screen-reader outline loses a level.</p>
+      <p class="where">article.post-body h4.step-heading</p>
+      <span class="go">Blog post <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+    </a>
+
+    <a class="tcard" href="#p-contact" data-jump="p-contact">
+      <span class="trow"><span class="tnum">3</span><span class="tsev">High · WCAG AA</span></span>
+      <h3>Form labels at 3.10:1 contrast</h3>
+      <p>Needs 4.5:1. Five labels fail on the new raised surface; token is shared.</p>
+      <p class="where">form#contact-form label.field-label</p>
+      <span class="go">Contact <svg class="ic" aria-hidden="true"><use href="#i-arrow"/></svg></span>
+    </a>
+
+  </div>
+</div>
+
+<!-- ===================== CONTROLS ===================== -->
+<div class="controls">
+  <div class="wrap controls-in">
+    <div class="ctl">
+      <span class="ctl-label" id="bplbl">Viewport</span>
+      <div class="seg-ctl" role="group" aria-labelledby="bplbl">
+        <button type="button" data-setbp="360" aria-pressed="true">360</button>
+        <button type="button" data-setbp="768" aria-pressed="false">768</button>
+        <button type="button" data-setbp="1440" aria-pressed="false">1440</button>
+      </div>
+      <span class="bpnote" id="bpnote">360 × 760 · phone</span>
+    </div>
+    <div class="ctl">
+      <span class="ctl-label" id="filbl">Show</span>
+      <div class="seg-ctl" role="group" aria-labelledby="filbl">
+        <button type="button" data-filter="all" aria-pressed="true">All 7</button>
+        <button type="button" data-filter="issues" aria-pressed="false">Needs attention 3</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== WIREFRAME TEMPLATES ===================== -->
+<template id="wf-home"><div class="pg">
+  <div class="nav"><span class="dot"></span><span class="t" style="--w:11%"></span><span class="t" style="--w:13%"></span><span class="t only-nonarrow" style="--w:9%"></span><span class="sp"></span><span class="btn" style="--w:20%"></span></div>
+  <span class="chip only-after" style="--d:block;--w:34%"></span>
+  <span class="t h1" style="--w:92%"></span>
+  <span class="t h1" style="--w:58%"></span>
+  <span class="t" style="--w:80%"></span>
+  <span class="t" style="--w:52%"></span>
+  <div class="row"><span class="btn" style="--w:34%"></span><span class="btn ghost" style="--w:28%"></span></div>
+  <div class="ph"></div>
+  <div class="grid g3">
+    <div class="bx"><span class="sq"></span><span class="t" style="--w:66%"></span><span class="t" style="--w:92%"></span></div>
+    <div class="bx"><span class="sq"></span><span class="t" style="--w:72%"></span><span class="t" style="--w:88%"></span></div>
+    <div class="bx"><span class="sq"></span><span class="t" style="--w:60%"></span><span class="t" style="--w:90%"></span></div>
+  </div>
+  <div class="strip"><span class="lg"></span><span class="lg"></span><span class="lg"></span><span class="lg"></span><span class="lg"></span></div>
+</div></template>
+
+<template id="wf-pricing"><div class="pg">
+  <div class="nav"><span class="dot"></span><span class="t" style="--w:11%"></span><span class="t" style="--w:13%"></span><span class="sp"></span><span class="btn" style="--w:20%"></span></div>
+  <span class="t h1" style="--w:64%"></span>
+  <span class="t" style="--w:86%"></span>
+  <div class="grid g3 only-nonarrow">
+    <div class="bx"><span class="t h3" style="--w:48%"></span><span class="t h2" style="--w:62%"></span><span class="t" style="--w:90%"></span><span class="t" style="--w:74%"></span><span class="btn" style="--w:100%"></span></div>
+    <div class="bx"><span class="t h3" style="--w:52%"></span><span class="t h2" style="--w:58%"></span><span class="t" style="--w:88%"></span><span class="t" style="--w:80%"></span><span class="btn" style="--w:100%"></span></div>
+    <div class="bx"><span class="t h3" style="--w:44%"></span><span class="t h2" style="--w:66%"></span><span class="t" style="--w:92%"></span><span class="t" style="--w:70%"></span><span class="btn" style="--w:100%"></span></div>
+  </div>
+  <div class="cut only-narrow">plans</div>
+  <span class="t h2" style="--w:46%"></span>
+  <div class="tbl tbl-wide">
+    <div class="tr th"><span class="td" style="--w:100%"></span><span class="td"></span><span class="td"></span><span class="td"></span></div>
+    <div class="tr"><span class="td"></span><span class="td"></span><span class="td"></span><span class="td"></span></div>
+    <div class="tr"><span class="td"></span><span class="td"></span><span class="td"></span><span class="td"></span></div>
+    <div class="tr"><span class="td"></span><span class="td"></span><span class="td"></span><span class="td"></span></div>
+    <div class="tr"><span class="td"></span><span class="td"></span><span class="td"></span><span class="td"></span></div>
+    <div class="tr"><span class="td"></span><span class="td"></span><span class="td"></span><span class="td"></span></div>
+  </div>
+  <div class="tbl-stack">
+    <div class="bx"><span class="t h3" style="--w:52%"></span><span class="t" style="--w:88%"></span></div>
+    <div class="bx"><span class="t h3" style="--w:46%"></span><span class="t" style="--w:80%"></span></div>
+    <div class="bx"><span class="t h3" style="--w:58%"></span><span class="t" style="--w:84%"></span></div>
+  </div>
+  <div class="ovf"><span class="edge"></span><span class="flag">1</span><span class="note">+20px</span></div>
+  <span class="hscroll"></span>
+</div></template>
+
+<template id="wf-docs"><div class="pg">
+  <div class="nav"><span class="dot"></span><span class="t" style="--w:13%"></span><span class="sp"></span><span class="inp only-nonarrow" style="width:34%"></span><span class="btn" style="--w:16%"></span></div>
+  <div class="inp only-narrow"></div>
+  <div class="row" style="align-items:flex-start;gap:.6em">
+    <div class="col only-nonarrow" style="flex:0 0 26%">
+      <span class="t h3" style="--w:70%"></span>
+      <span class="t" style="--w:90%"></span><span class="t" style="--w:76%"></span><span class="t" style="--w:84%"></span>
+      <span class="t h3" style="--w:60%"></span>
+      <span class="t" style="--w:88%"></span><span class="t" style="--w:70%"></span>
+    </div>
+    <div class="col" style="flex:1">
+      <span class="t h1" style="--w:70%"></span>
+      <span class="t" style="--w:94%"></span><span class="t" style="--w:82%"></span>
+      <span class="t h2" style="--w:52%"></span>
+      <div class="bx"><span class="t" style="--w:80%"></span><span class="t" style="--w:64%"></span></div>
+      <span class="t h2" style="--w:46%"></span>
+      <span class="t" style="--w:92%"></span><span class="t" style="--w:74%"></span>
+      <div class="bx"><span class="t" style="--w:70%"></span><span class="t" style="--w:88%"></span></div>
+    </div>
+    <div class="col only-wide" style="flex:0 0 18%">
+      <span class="t h3" style="--w:80%"></span>
+      <span class="t" style="--w:92%"></span><span class="t" style="--w:70%"></span><span class="t" style="--w:84%"></span>
+    </div>
+  </div>
+</div></template>
+
+<template id="wf-blog"><div class="pg">
+  <div class="nav"><span class="dot"></span><span class="t" style="--w:11%"></span><span class="t" style="--w:13%"></span><span class="sp"></span><span class="btn" style="--w:18%"></span></div>
+  <span class="t h1" style="--w:48%"></span>
+  <div class="bx"><div class="ph"></div><span class="t h2" style="--w:76%"></span><span class="t" style="--w:90%"></span></div>
+  <div class="grid g3">
+    <div class="bx"><div class="ph"></div><span class="t h3" style="--w:82%"></span><span class="t" style="--w:60%"></span></div>
+    <div class="bx"><div class="ph"></div><span class="t h3" style="--w:70%"></span><span class="t" style="--w:56%"></span></div>
+    <div class="bx"><div class="ph"></div><span class="t h3" style="--w:88%"></span><span class="t" style="--w:62%"></span></div>
+    <div class="bx only-nonarrow"><div class="ph"></div><span class="t h3" style="--w:74%"></span><span class="t" style="--w:58%"></span></div>
+    <div class="bx only-nonarrow"><div class="ph"></div><span class="t h3" style="--w:86%"></span><span class="t" style="--w:64%"></span></div>
+    <div class="bx only-wide"><div class="ph"></div><span class="t h3" style="--w:78%"></span><span class="t" style="--w:54%"></span></div>
+  </div>
+</div></template>
+
+<template id="wf-post"><div class="pg">
+  <div class="nav"><span class="dot"></span><span class="t" style="--w:11%"></span><span class="t" style="--w:13%"></span><span class="sp"></span><span class="btn" style="--w:18%"></span></div>
+  <div class="hd"><span class="lvl">H1</span><span class="t h1" style="--w:78%"></span></div>
+  <div class="row"><span class="sq" style="border-radius:50%"></span><span class="t" style="--w:44%"></span></div>
+  <span class="t" style="--w:96%"></span><span class="t" style="--w:88%"></span>
+  <div class="hd"><span class="lvl">H2</span><span class="t h2" style="--w:62%"></span></div>
+  <span class="t" style="--w:92%"></span>
+
+  <!-- BEFORE: h3 steps -->
+  <div class="col only-before ind1" style="gap:.5em">
+    <div class="hd"><span class="lvl">H3</span><span class="t h3" style="--w:58%"></span></div>
+    <span class="t" style="--w:86%"></span>
+    <div class="hd"><span class="lvl">H3</span><span class="t h3" style="--w:52%"></span></div>
+    <span class="t" style="--w:80%"></span>
+    <div class="hd"><span class="lvl">H3</span><span class="t h3" style="--w:60%"></span></div>
+    <span class="t" style="--w:74%"></span>
+  </div>
+
+  <!-- AFTER: h4 steps, one rung missing -->
+  <div class="col only-after" style="--d:flex;gap:.5em">
+    <div class="rung">no h3</div>
+    <div class="hd ind2 skipflag"><span class="flag">2</span><span class="lvl">H4</span><span class="t h3" style="--w:52%"></span></div>
+    <span class="t ind2" style="--w:80%"></span>
+    <div class="hd ind2"><span class="lvl">H4</span><span class="t h3" style="--w:46%"></span></div>
+    <span class="t ind2" style="--w:74%"></span>
+    <div class="hd ind2"><span class="lvl">H4</span><span class="t h3" style="--w:56%"></span></div>
+    <span class="t ind2" style="--w:68%"></span>
+  </div>
+
+  <div class="ph"></div>
+</div></template>
+
+<template id="wf-changelog"><div class="pg">
+  <div class="nav"><span class="dot"></span><span class="t" style="--w:11%"></span><span class="t" style="--w:13%"></span><span class="sp"></span><span class="btn" style="--w:18%"></span></div>
+  <span class="t h1" style="--w:52%"></span>
+  <span class="t" style="--w:78%"></span>
+  <div class="tl">
+    <div class="col"><div class="row"><span class="chip" style="--w:22%"></span><span class="t" style="--w:30%"></span></div><span class="t" style="--w:92%"></span><span class="t" style="--w:70%"></span></div>
+    <div class="col"><div class="row"><span class="chip" style="--w:22%"></span><span class="t" style="--w:26%"></span></div><span class="t" style="--w:88%"></span><span class="t" style="--w:64%"></span></div>
+    <div class="col"><div class="row"><span class="chip" style="--w:22%"></span><span class="t" style="--w:32%"></span></div><span class="t" style="--w:94%"></span><span class="t" style="--w:58%"></span></div>
+    <div class="col only-nonarrow"><div class="row"><span class="chip" style="--w:22%"></span><span class="t" style="--w:28%"></span></div><span class="t" style="--w:82%"></span><span class="t" style="--w:66%"></span></div>
+  </div>
+</div></template>
+
+<template id="wf-contact"><div class="pg">
+  <div class="nav"><span class="dot"></span><span class="t" style="--w:11%"></span><span class="t" style="--w:13%"></span><span class="sp"></span><span class="btn" style="--w:18%"></span></div>
+  <span class="t h1" style="--w:56%"></span>
+  <span class="t" style="--w:84%"></span>
+  <div class="row" style="align-items:flex-start;gap:.7em">
+    <div class="bx lo" style="flex:1.6">
+      <div class="row" style="justify-content:space-between"><span class="t h3" style="--w:40%"></span><span class="ratio">3.10:1</span></div>
+      <div class="fld"><span class="lbl" style="--w:34%"></span><span class="inp"></span></div>
+      <div class="fld"><span class="lbl" style="--w:40%"></span><span class="inp"></span></div>
+      <div class="fld only-nonarrow"><span class="lbl" style="--w:30%"></span><span class="inp"></span></div>
+      <div class="fld"><span class="lbl" style="--w:26%"></span><span class="inp ta"></span></div>
+      <span class="btn" style="--w:44%"></span>
+    </div>
+    <div class="bx only-nonarrow" style="flex:1">
+      <span class="sq"></span><span class="t" style="--w:80%"></span><span class="t" style="--w:66%"></span><span class="t" style="--w:74%"></span>
+    </div>
+  </div>
+</div></template>
+
+<!-- ===================== PAGE ROWS ===================== -->
+<main class="wrap rows">
+  <div class="section-head">
+    <h2>Page by page</h2>
+    <span class="hint">Before = v1.4 “Slate”. After = Halo 2.0. Frame width tracks the selected viewport.</span>
+  </div>
+
+  <!-- 1 HOME -->
+  <article class="prow" id="p-home" data-status="pass">
+    <header class="phead">
+      <span class="pidx">01</span>
+      <div class="pheadmain">
+        <div class="pname">Home</div>
+        <div class="purl">https://arcwave.dev/</div>
+      </div>
+      <div class="bpm" role="group" aria-label="Result by viewport">
+        <button type="button" class="bpc" data-setbp="360" data-r="pass">360<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+        <button type="button" class="bpc" data-setbp="768" data-r="pass">768<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+        <button type="button" class="bpc" data-setbp="1440" data-r="pass">1440<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+      </div>
+      <span class="pill pass"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Clean 3/3</span>
+    </header>
+    <div class="pbody">
+      <div class="compare">
+        <figure class="shot">
+          <div class="slot" data-page="home" data-v="before" data-url="arcwave.dev/" data-alt="Wireframe of the home page before the rollout: tight navigation bar, small two-line headline, two square buttons, a media block and three bordered feature cards."></div>
+          <figcaption class="shotcap"><span class="k">Before</span><span class="v">v1.4 <b>Slate</b></span></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="slot" data-page="home" data-v="after" data-url="arcwave.dev/" data-alt="Wireframe of the home page after the rollout: same structure with an added eyebrow pill, a larger headline, wider spacing and rounded filled feature cards. No defects marked."></div>
+          <figcaption class="shotcap"><span class="k">After</span><span class="v">Halo <b>2.0</b></span></figcaption>
+        </figure>
+      </div>
+      <div class="notes">
+        <div class="nblock">
+          <h5>What changed</h5>
+          <ul class="chg">
+            <li>Hero <code>h1</code> 36px/1.15 → 44px/1.1, tracking −0.02em</li>
+            <li>Section rhythm 48px → 64px (<code>--halo-space-section</code>)</li>
+            <li>Card radius 4px → 12px, border swapped for <code>--halo-surface-raised</code> fill</li>
+            <li>New eyebrow pill above the headline</li>
+          </ul>
+          <div class="fix"><b>Verified</b>CLS 0.00 at all three widths · no horizontal overflow · LCP element unchanged (<code>h1</code>, 1.42s at 1440).</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 2 PRICING -->
+  <article class="prow" id="p-pricing" data-status="fail">
+    <header class="phead">
+      <span class="pidx">02</span>
+      <div class="pheadmain">
+        <div class="pname">Pricing</div>
+        <div class="purl">https://arcwave.dev/pricing</div>
+      </div>
+      <div class="bpm" role="group" aria-label="Result by viewport">
+        <button type="button" class="bpc" data-setbp="360" data-r="fail">360<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span class="sr">failed</span></button>
+        <button type="button" class="bpc" data-setbp="768" data-r="pass">768<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+        <button type="button" class="bpc" data-setbp="1440" data-r="pass">1440<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+      </div>
+      <span class="pill fail"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg>Finding 1</span>
+    </header>
+    <div class="pbody">
+      <div class="compare">
+        <figure class="shot">
+          <div class="slot" data-page="pricing" data-v="before" data-url="arcwave.dev/pricing" data-alt="Wireframe of the pricing page before the rollout. At 360px the comparison table is replaced by a stacked list of cards that fits the viewport."></div>
+          <figcaption class="shotcap"><span class="k">Before</span><span class="v">stacked card list ≤ 599px</span></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="slot flagged-slot" data-page="pricing" data-v="after" data-url="arcwave.dev/pricing" data-alt="Wireframe of the pricing page after the rollout. At 360px the four-column comparison table runs past the right edge of the viewport, marked with a dashed edge line, a badge numbered one, a plus twenty pixel note and a horizontal scrollbar."></div>
+          <figcaption class="shotcap"><span class="k">After</span><span class="v">table min-width <b>348px</b></span><span class="tagfail">Finding 1 · &lt;380px</span></figcaption>
+        </figure>
+      </div>
+      <div class="notes">
+        <div class="nblock bad">
+          <div class="nhead"><span class="tnum">1</span><h4>Horizontal overflow on the plan matrix</h4></div>
+          <dl class="kv">
+            <dt>Where</dt><dd><code>section.plan-compare &gt; table.plan-matrix</code></dd>
+            <dt>Fails</dt><dd>360 × 760 only. First failing width <b>379px</b>; passes from 380px up.</dd>
+            <dt>Measured</dt><dd>viewport 360px · <code>document.scrollWidth</code> 380px → <b>20px</b> of sideways scroll</dd>
+            <dt>Maths</dt><dd>348px table min-width + 2 × 16px <code>padding-inline</code> = 380px</dd>
+            <dt>Cause</dt><dd>New <code>--halo-table-min: 348px</code> applied to <code>.plan-matrix</code>; the old <code>.plan-matrix--stacked</code> modifier (card list ≤ 599px) was dropped during the markup rewrite.</dd>
+          </dl>
+          <div class="fix"><b>Suggested fix</b>Restore the stacked variant under <code>@media (max-width:599px)</code>, or wrap the table in <code>.scroll-x</code> with <code>overscroll-behavior-inline: contain</code> so only the table scrolls, not the document.</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 3 DOCS -->
+  <article class="prow" id="p-docs" data-status="pass">
+    <header class="phead">
+      <span class="pidx">03</span>
+      <div class="pheadmain">
+        <div class="pname">Docs index</div>
+        <div class="purl">https://arcwave.dev/docs</div>
+      </div>
+      <div class="bpm" role="group" aria-label="Result by viewport">
+        <button type="button" class="bpc" data-setbp="360" data-r="pass">360<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+        <button type="button" class="bpc" data-setbp="768" data-r="pass">768<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+        <button type="button" class="bpc" data-setbp="1440" data-r="pass">1440<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+      </div>
+      <span class="pill pass"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Clean 3/3</span>
+    </header>
+    <div class="pbody">
+      <div class="compare">
+        <figure class="shot">
+          <div class="slot" data-page="docs" data-v="before" data-url="arcwave.dev/docs" data-alt="Wireframe of the docs index before the rollout: narrow sidebar of links beside a dense article column."></div>
+          <figcaption class="shotcap"><span class="k">Before</span><span class="v">240px sidebar</span></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="slot" data-page="docs" data-v="after" data-url="arcwave.dev/docs" data-alt="Wireframe of the docs index after the rollout: wider sidebar, roomier article column and, at 1440px only, an added table-of-contents rail on the right. No defects marked."></div>
+          <figcaption class="shotcap"><span class="k">After</span><span class="v">264px sidebar + TOC rail</span></figcaption>
+        </figure>
+      </div>
+      <div class="notes">
+        <div class="nblock">
+          <h5>What changed</h5>
+          <ul class="chg">
+            <li>Sidebar 240px → 264px, <code>position:sticky</code> from 768px up</li>
+            <li>TOC rail added at ≥ 1280px (new, not present in v1.4)</li>
+            <li>Search field promoted into the nav bar at ≥ 768px</li>
+          </ul>
+          <div class="fix"><b>Verified</b>Sidebar collapses to the inline search field at 360px · keyboard focus order unchanged · TOC rail does not steal focus.</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 4 BLOG INDEX -->
+  <article class="prow" id="p-blog" data-status="pass">
+    <header class="phead">
+      <span class="pidx">04</span>
+      <div class="pheadmain">
+        <div class="pname">Blog index</div>
+        <div class="purl">https://arcwave.dev/blog</div>
+      </div>
+      <div class="bpm" role="group" aria-label="Result by viewport">
+        <button type="button" class="bpc" data-setbp="360" data-r="pass">360<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+        <button type="button" class="bpc" data-setbp="768" data-r="pass">768<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+        <button type="button" class="bpc" data-setbp="1440" data-r="pass">1440<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+      </div>
+      <span class="pill pass"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Clean 3/3</span>
+    </header>
+    <div class="pbody">
+      <div class="compare">
+        <figure class="shot">
+          <div class="slot" data-page="blog" data-v="before" data-url="arcwave.dev/blog" data-alt="Wireframe of the blog index before the rollout: a featured post block above a tight grid of bordered post cards."></div>
+          <figcaption class="shotcap"><span class="k">Before</span><span class="v">v1.4 <b>Slate</b></span></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="slot" data-page="blog" data-v="after" data-url="arcwave.dev/blog" data-alt="Wireframe of the blog index after the rollout: same grid with rounder, filled cards and larger gaps. No defects marked."></div>
+          <figcaption class="shotcap"><span class="k">After</span><span class="v">Halo <b>2.0</b></span></figcaption>
+        </figure>
+      </div>
+      <div class="notes">
+        <div class="nblock">
+          <h5>What changed</h5>
+          <ul class="chg">
+            <li>Grid 3 columns ≥ 1200px, 2 ≥ 720px, 1 below — thresholds unchanged</li>
+            <li>Card gap 16px → 24px; thumbnail ratio held at 16:9</li>
+            <li>Post title clamped to 2 lines via <code>--halo-clamp-2</code></li>
+          </ul>
+          <div class="fix"><b>Verified</b>No card-height jitter at any width · thumbnails keep aspect-ratio so CLS stays 0.00.</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 5 BLOG POST -->
+  <article class="prow" id="p-post" data-status="fail">
+    <header class="phead">
+      <span class="pidx">05</span>
+      <div class="pheadmain">
+        <div class="pname">Blog post</div>
+        <div class="purl">https://arcwave.dev/blog/shipping-design-tokens-without-a-rewrite</div>
+      </div>
+      <div class="bpm" role="group" aria-label="Result by viewport">
+        <button type="button" class="bpc" data-setbp="360" data-r="fail">360<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span class="sr">failed</span></button>
+        <button type="button" class="bpc" data-setbp="768" data-r="fail">768<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span class="sr">failed</span></button>
+        <button type="button" class="bpc" data-setbp="1440" data-r="fail">1440<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span class="sr">failed</span></button>
+      </div>
+      <span class="pill fail"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg>Finding 2</span>
+    </header>
+    <div class="pbody">
+      <div class="compare">
+        <figure class="shot">
+          <div class="slot" data-page="post" data-v="before" data-url="arcwave.dev/blog/shipping-design-tokens…" data-alt="Wireframe of the blog post before the rollout. Gutter tags read H1, H2, then three H3 step headings, each indented one level under the H2."></div>
+          <figcaption class="shotcap"><span class="k">Before</span><span class="v">h1 → h2 → <b>h3</b></span></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="slot flagged-slot" data-page="post" data-v="after" data-url="arcwave.dev/blog/shipping-design-tokens…" data-alt="Wireframe of the blog post after the rollout. Gutter tags read H1, H2, then three H4 step headings indented two levels, with a dashed marker labelled no h3 showing the missing level and a badge numbered two."></div>
+          <figcaption class="shotcap"><span class="k">After</span><span class="v">h1 → h2 → <b>h4</b></span><span class="tagfail">Finding 2 · all widths</span></figcaption>
+        </figure>
+      </div>
+      <div class="notes">
+        <div class="nblock bad">
+          <div class="nhead"><span class="tnum">2</span><h4>Heading outline skips a level</h4></div>
+          <dl class="kv">
+            <dt>Where</dt><dd><code>article.post-body h4.step-heading</code> — 3 occurrences, all directly under <code>h2#migrating-your-tokens</code></dd>
+            <dt>Fails</dt><dd>All three viewports (structural, not responsive)</dd>
+            <dt>Detected</dt><dd>axe-core 4.9 rule <code>heading-order</code> — 3 violations, impact <i>moderate</i></dd>
+            <dt>Outline</dt><dd>h1 → h2 → <b>h4</b> → h4 → h4 → h2</dd>
+            <dt>Rule</dt><dd>WCAG 2.2 <b>1.3.1</b> Info and Relationships (Level A)</dd>
+            <dt>Cause</dt><dd>Steps were re-tagged h3 → h4 to inherit the new <code>.step-heading</code> size (18px/1.4) instead of applying the type token to an h3.</dd>
+          </dl>
+          <div class="fix"><b>Suggested fix</b>Revert the three headings to <code>&lt;h3 class="text-title-sm"&gt;</code>. Size is identical — <code>.text-title-sm</code> and <code>.step-heading</code> both resolve to <code>--halo-font-title-sm</code>, so there is no visual change.</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 6 CHANGELOG -->
+  <article class="prow" id="p-changelog" data-status="pass">
+    <header class="phead">
+      <span class="pidx">06</span>
+      <div class="pheadmain">
+        <div class="pname">Changelog</div>
+        <div class="purl">https://arcwave.dev/changelog</div>
+      </div>
+      <div class="bpm" role="group" aria-label="Result by viewport">
+        <button type="button" class="bpc" data-setbp="360" data-r="pass">360<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+        <button type="button" class="bpc" data-setbp="768" data-r="pass">768<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+        <button type="button" class="bpc" data-setbp="1440" data-r="pass">1440<svg class="ic" aria-hidden="true"><use href="#i-check"/></svg><span class="sr">passed</span></button>
+      </div>
+      <span class="pill pass"><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg>Clean 3/3</span>
+    </header>
+    <div class="pbody">
+      <div class="compare">
+        <figure class="shot">
+          <div class="slot" data-page="changelog" data-v="before" data-url="arcwave.dev/changelog" data-alt="Wireframe of the changelog before the rollout: entries on a thin left rail, each with a version chip, a date and two text lines."></div>
+          <figcaption class="shotcap"><span class="k">Before</span><span class="v">1px rail</span></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="slot" data-page="changelog" data-v="after" data-url="arcwave.dev/changelog" data-alt="Wireframe of the changelog after the rollout: same timeline with a thicker rail, rounder version chips and more space between entries. No defects marked."></div>
+          <figcaption class="shotcap"><span class="k">After</span><span class="v">2px rail, token chips</span></figcaption>
+        </figure>
+      </div>
+      <div class="notes">
+        <div class="nblock">
+          <h5>What changed</h5>
+          <ul class="chg">
+            <li>Version chips moved onto <code>--halo-chip-*</code> tokens (3.9:1 → 6.1:1 contrast)</li>
+            <li>Timeline rail 1px → 2px, entry gap 24px → 32px</li>
+            <li>Dates switched to <code>font-variant-numeric: tabular-nums</code></li>
+          </ul>
+          <div class="fix"><b>Verified</b>Heading order h1 → h2 → h3 intact across 18 entries · rail stays aligned at 360px.</div>
+        </div>
+      </div>
+    </div>
+  </article>
+
+  <!-- 7 CONTACT -->
+  <article class="prow" id="p-contact" data-status="fail">
+    <header class="phead">
+      <span class="pidx">07</span>
+      <div class="pheadmain">
+        <div class="pname">Contact</div>
+        <div class="purl">https://arcwave.dev/contact</div>
+      </div>
+      <div class="bpm" role="group" aria-label="Result by viewport">
+        <button type="button" class="bpc" data-setbp="360" data-r="fail">360<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span class="sr">failed</span></button>
+        <button type="button" class="bpc" data-setbp="768" data-r="fail">768<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span class="sr">failed</span></button>
+        <button type="button" class="bpc" data-setbp="1440" data-r="fail">1440<svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg><span class="sr">failed</span></button>
+      </div>
+      <span class="pill fail"><svg class="ic" aria-hidden="true"><use href="#i-alert"/></svg>Finding 3</span>
+    </header>
+    <div class="pbody">
+      <div class="compare">
+        <figure class="shot">
+          <div class="slot" data-page="contact" data-v="before" data-url="arcwave.dev/contact" data-alt="Wireframe of the contact page before the rollout: form with clearly visible dark labels above each input."></div>
+          <figcaption class="shotcap"><span class="k">Before</span><span class="v">labels <b>7.94:1</b></span></figcaption>
+        </figure>
+        <figure class="shot">
+          <div class="slot flagged-slot" data-page="contact" data-v="after" data-url="arcwave.dev/contact" data-alt="Wireframe of the contact page after the rollout: the same form on a raised panel, but each label is now barely visible and outlined with a dotted marker, tagged three point one to one."></div>
+          <figcaption class="shotcap"><span class="k">After</span><span class="v">labels <b>3.10:1</b></span><span class="tagfail">Finding 3 · all widths</span></figcaption>
+        </figure>
+      </div>
+      <div class="notes">
+        <div class="nblock bad">
+          <div class="nhead"><span class="tnum">3</span><h4>Label contrast fails WCAG AA</h4></div>
+          <dl class="kv">
+            <dt>Where</dt><dd><code>form#contact-form label.field-label</code> — 5 nodes: Full name, Work email, Company, Team size, Message</dd>
+            <dt>Fails</dt><dd>All three viewports</dd>
+            <dt>Now</dt><dd><code>#868B94</code> on <code>#F4F5F7</code> = <b>3.10:1</b> at 14px/400 — needs 4.5:1</dd>
+            <dt>Was</dt><dd><code>#4B5160</code> on <code>#FFFFFF</code> = 7.94:1</dd>
+            <dt>Rule</dt><dd>WCAG 2.2 <b>1.4.3</b> Contrast (Minimum), Level AA</dd>
+            <dt>Cause</dt><dd><code>--halo-text-subtle</code> was tuned against <code>--halo-surface-base</code> (#FFF, 3.9:1 — already marginal) but the form sits on <code>--halo-surface-raised</code> (#F4F5F7).</dd>
+          </dl>
+          <div class="cdemo">
+            <span class="cchip old-c">Work email<small>before · 7.94:1</small></span>
+            <span class="cchip fail-c">Work email<small>now · 3.10:1 ✕</small></span>
+            <span class="cchip pass-c">Work email<small>fix · 5.24:1 ✓</small></span>
+          </div>
+          <div class="fix"><b>Suggested fix</b>Darken the token to <code>--halo-text-subtle:#5F6672</code> → 5.24:1 on #F4F5F7 and 6.5:1 on #FFF. Same token also feeds <code>.form-hint</code> and <code>.table-caption</code> — 9 further nodes clear AA for free.</div>
+        </div>
+      </div>
+    </div>
+  </article>
+</main>
+
+<!-- ===================== FOOTER ===================== -->
+<footer class="wrap">
+  <h2>Reproduce locally</h2>
+  <pre>git switch feat/halo-2-rollout &amp;&amp; npm run build &amp;&amp; npx serve dist -l 3000
+node scripts/visual-qa.mjs --widths 360,768,1440 --pages home,pricing,docs,blog,post,changelog,contact
+npx @axe-core/cli http://localhost:3000/contact --rules color-contrast,heading-order</pre>
+  <p>Wireframes on this page are hand-drawn abstractions of the rendered DOM, not screenshots. Proportions follow the measured layout; every number, selector and colour value is taken from the run.</p>
+  <div class="legend">
+    <span><svg class="ic" aria-hidden="true" style="color:var(--ok)"><use href="#i-check"/></svg> check passed</span>
+    <span><svg class="ic" aria-hidden="true" style="color:var(--bad)"><use href="#i-alert"/></svg> check failed</span>
+    <span><span class="tnum" style="display:inline-grid;place-items:center;width:15px;height:15px;border-radius:50%;background:var(--bad);color:#fff;font:700 9px/1 var(--mono)">n</span> defect marker on the wireframe</span>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var root = document.documentElement;
+
+  /* ---- build wireframes from templates ---- */
+  document.querySelectorAll('.slot').forEach(function(slot){
+    var tpl = document.getElementById('wf-' + slot.dataset.page);
+    if(!tpl) return;
+    var wf = document.createElement('div');
+    wf.className = 'wf' + (slot.classList.contains('flagged-slot') && slot.dataset.v === 'after' ? ' flagged' : '');
+    wf.setAttribute('data-v', slot.dataset.v);
+    wf.setAttribute('role','img');
+    wf.setAttribute('aria-label', slot.dataset.alt || '');
+
+    var chrome = document.createElement('div');
+    chrome.className = 'chrome';
+    chrome.innerHTML = '<i></i><i></i><i></i>';
+    var url = document.createElement('span');
+    url.className = 'url';
+    url.textContent = slot.dataset.url || '';
+    chrome.appendChild(url);
+
+    var vp = document.createElement('div');
+    vp.className = 'vp';
+    vp.appendChild(tpl.content.cloneNode(true));
+
+    wf.appendChild(chrome);
+    wf.appendChild(vp);
+    slot.appendChild(wf);
+  });
+
+  /* ---- viewport switcher ---- */
+  var BPNOTE = {'360':'360 × 760 · phone','768':'768 × 1000 · tablet','1440':'1440 × 900 · laptop'};
+  var note = document.getElementById('bpnote');
+
+  function setBp(bp){
+    root.setAttribute('data-bp', bp);
+    note.textContent = BPNOTE[bp];
+    document.querySelectorAll('.seg-ctl [data-setbp]').forEach(function(b){
+      b.setAttribute('aria-pressed', String(b.dataset.setbp === bp));
+    });
+    document.querySelectorAll('.bpc').forEach(function(b){
+      if(b.dataset.setbp === bp){ b.setAttribute('aria-current','true'); }
+      else { b.removeAttribute('aria-current'); }
+    });
+  }
+
+  document.querySelectorAll('[data-setbp]').forEach(function(b){
+    b.addEventListener('click', function(){ setBp(b.dataset.setbp); });
+  });
+
+  /* ---- filter ---- */
+  document.querySelectorAll('[data-filter]').forEach(function(b){
+    b.addEventListener('click', function(){
+      root.setAttribute('data-filter', b.dataset.filter);
+      document.querySelectorAll('[data-filter]').forEach(function(o){
+        o.setAttribute('aria-pressed', String(o.dataset.filter === b.dataset.filter));
+      });
+    });
+  });
+
+  /* ---- triage jump: unhide, scroll, flash ---- */
+  document.querySelectorAll('[data-jump]').forEach(function(a){
+    a.addEventListener('click', function(e){
+      e.preventDefault();
+      var el = document.getElementById(a.dataset.jump);
+      if(!el) return;
+      el.scrollIntoView({behavior:'smooth', block:'start'});
+      el.classList.remove('flash');
+      void el.offsetWidth;
+      el.classList.add('flash');
+      el.setAttribute('tabindex','-1');
+      el.focus({preventScroll:true});
+    });
+  });
+
+  /* start on the width where the layout break shows */
+  setBp('360');
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,21 @@
+{
+  "name": "@vetrina/video",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "remotion studio",
+    "render": "remotion render Announce out/vetrina-announce.mp4 --codec=h264",
+    "still": "remotion still Announce out/still.png"
+  },
+  "dependencies": {
+    "@remotion/cli": "4.0.428",
+    "@remotion/google-fonts": "4.0.428",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "remotion": "4.0.428"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "typescript": "^5.6.0"
+  }
+}

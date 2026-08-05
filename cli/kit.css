@@ -1,0 +1,893 @@
+/**
+ * vetrina kit
+ *
+ * A page links this in one line and the daemon inlines it at serve time, so the
+ * page a browser saves is still self-contained.
+ *
+ *   <link rel="stylesheet" href="/_vetrina/kit.css">
+ *
+ * ── The rule that matters most ──────────────────────────────────────
+ *
+ * ATOMS AND CONSTRAINTS, NEVER TEMPLATES.
+ *
+ * There is no `v-timeline`, no `v-incident`, no `v-audit`. There is an axis, a
+ * track, a bar, a cell, and the agent composes the shape. This is not tidiness.
+ * The one claim nothing else in this space can make is that the page is shaped
+ * like the task, and a kit that shipped whole shapes would quietly turn every
+ * page into the same dashboard and throw that away. If two pages built with
+ * this kit look alike, the kit is too strong and should give control back.
+ *
+ * So the kit owns the frame, the spacing, the type and the craft. It does not
+ * own the middle of the page. The frame should be invisible and the shape loud.
+ *
+ * ── How the chart atoms work ────────────────────────────────────────
+ *
+ * Every value is written in the markup AS TEXT and the CSS only draws it. An
+ * unstyled page is therefore still a readable list of numbers, and a screen
+ * reader gets the same numbers a sighted reader does. A chart whose values live
+ * only in a CSS variable is a chart that fails silently, and these pages get
+ * read on phones with no signal.
+ *
+ * Set `--v` to a 0..1 fraction of whatever the row's scale is. The kit does not
+ * compute scales; the agent already knows the numbers.
+ *
+ * Nothing here loads a font, an image, or a script.
+ *
+ * MIT, same as the rest of vetrina. This file is designed to be inlined into
+ * pages you keep, so the licence deliberately attaches no conditions to them.
+ */
+
+/* ── Tokens ──────────────────────────────────────────────────────────
+   Cold near-black dark against warm paper light. The asymmetry is deliberate:
+   a light theme produced by inverting a dark one is the tell of a generated
+   page. Override any of these on :root to inherit a host project's look. */
+
+:root {
+  color-scheme: light dark;
+
+  --v-ground:  #faf8f4;
+  --v-surface: #ffffff;
+  --v-raised:  #f3efe8;
+  --v-sunken:  #efeae1;
+  --v-line:    #e4ded3;
+  --v-line-strong: #c7bfb1;
+
+  --v-fg:   #14120f;
+  --v-fg-2: #4a463f;
+  --v-fg-3: #78726a;
+
+  /* Liveness. Never used for state. */
+  --v-live: #b25c00;
+
+  /* State. Always the fourth signal, after glyph, word and position. */
+  --v-urgent: #a11f2a;
+  --v-warn:   #7a5b00;
+  --v-ok:     #1f6b3a;
+  --v-idle:   #6b6459;
+
+  /* Quiet variants for anything not currently demanding attention. */
+  --v-ok-q: color-mix(in srgb, var(--v-ok) 45%, var(--v-fg-3));
+
+  /* Fills for bars, cells and tracks. Never the only carrier of a value. */
+  --v-fill:      color-mix(in srgb, var(--v-fg) 58%, transparent);
+  --v-fill-soft: color-mix(in srgb, var(--v-fg) 12%, transparent);
+
+  /* ── Spacing. One geometric scale, used for everything. ─────────────
+     The hard rule: a section gap is at least three times a block gap. Without
+     that ratio nothing groups and a page reads as one undifferentiated slab,
+     however good its contents are. */
+  --v-1: 4px;
+  --v-2: 8px;
+  --v-3: 12px;
+  --v-4: 16px;
+  --v-5: 24px;
+  --v-6: 32px;
+  --v-7: 48px;
+  --v-8: 64px;
+  --v-9: 96px;
+
+  --v-block: var(--v-5);
+  --v-section: clamp(var(--v-7), 8vw, var(--v-9));
+
+  /* ── Type. Modular, roughly 1.25. ─────────────────────────────────── */
+  --v-t-1: 11px;
+  --v-t-2: 12.5px;
+  --v-t-3: 14px;
+  --v-t-4: 15.5px;
+  --v-t-5: 17.5px;
+  --v-t-6: 22px;
+  --v-t-7: 28px;
+  --v-t-8: 36px;
+  --v-t-9: 46px;
+
+  --v-mono: ui-monospace, "SF Mono", SFMono-Regular, "DejaVu Sans Mono", Menlo, Consolas, monospace;
+  --v-prose: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --v-display: var(--v-mono);
+
+  --v-measure: 1120px;
+  --v-prose-measure: 68ch;
+  --v-radius: 2px;
+  --v-hair: 1px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --v-ground:  #0a0c10;
+    --v-surface: #12151b;
+    --v-raised:  #191d25;
+    --v-sunken:  #0d1015;
+    --v-line:    #232936;
+    --v-line-strong: #39414f;
+
+    --v-fg:   #eceff4;
+    --v-fg-2: #b3bac6;
+    --v-fg-3: #7e8695;
+
+    --v-live: #ffb03a;
+
+    --v-urgent: #ff7b7b;
+    --v-warn:   #ffd166;
+    --v-ok:     #6fd39a;
+    --v-idle:   #8891a0;
+
+    --v-ok-q: color-mix(in srgb, var(--v-ok) 45%, var(--v-fg-3));
+    --v-fill:      color-mix(in srgb, var(--v-fg) 50%, transparent);
+    --v-fill-soft: color-mix(in srgb, var(--v-fg) 11%, transparent);
+  }
+}
+
+/* A manual toggle beats the OS setting, because the phone you get handed is not
+   always in the theme you can read. Set data-theme on <html>. */
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --v-ground: #0a0c10; --v-surface: #12151b; --v-raised: #191d25; --v-sunken: #0d1015;
+  --v-line: #232936; --v-line-strong: #39414f;
+  --v-fg: #eceff4; --v-fg-2: #b3bac6; --v-fg-3: #7e8695;
+  --v-live: #ffb03a;
+  --v-urgent: #ff7b7b; --v-warn: #ffd166; --v-ok: #6fd39a; --v-idle: #8891a0;
+  --v-ok-q: color-mix(in srgb, var(--v-ok) 45%, var(--v-fg-3));
+  --v-fill: color-mix(in srgb, var(--v-fg) 50%, transparent);
+  --v-fill-soft: color-mix(in srgb, var(--v-fg) 11%, transparent);
+}
+
+/* ── Base ────────────────────────────────────────────────────────────
+   `overflow-x: clip` on the root is load-bearing. Every layout bug found in
+   testing had the same shape: something that could not shrink, inside something
+   that could not scroll. This stops the page itself from ever being the thing
+   that scrolls sideways. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html { overflow-x: clip; }
+
+body {
+  margin: 0;
+  background: var(--v-ground);
+  color: var(--v-fg);
+  font-family: var(--v-mono);
+  font-size: var(--v-t-4);
+  line-height: 1.55;
+  -webkit-text-size-adjust: 100%;
+  overflow-x: clip;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The page starts low. Content jammed against the top edge is the commonest
+   reason a good page reads as cramped. */
+.v-wrap {
+  max-width: var(--v-measure);
+  margin-inline: auto;
+  padding-block: clamp(var(--v-7), 7vw, var(--v-9)) var(--v-9);
+  padding-inline: clamp(var(--v-4), 4vw, var(--v-6));
+}
+
+/* Grid and flex children default to min-width:auto and refuse to shrink below
+   their contents. Everything the kit lays out opts out of that. */
+:where(.v-wrap, .v-grid, .v-cols, .v-pair, .v-split, .v-stats, .v-bars, .v-bar,
+       .v-wf, .v-wf-row, .v-card-head, .v-kicker, .v-meta, .v-section-head,
+       .v-chips, .v-axis, .v-track-labels) > * { min-inline-size: 0; }
+
+:where(a) { color: inherit; }
+:where(a):focus-visible,
+:where(button, summary, [tabindex]):focus-visible {
+  outline: 2px solid var(--v-live);
+  outline-offset: 2px;
+}
+
+:where(p) { max-width: var(--v-prose-measure); }
+
+/* ── Density ─────────────────────────────────────────────────────────
+   A page should vary: quiet masthead, dense evidence, air, dense evidence.
+   Uniform density reads as a data dump whatever is in it. */
+.v-air   { --v-block: var(--v-6); }
+.v-dense { --v-block: var(--v-3); }
+
+/* ── The frame ─────────────────────────────────────────────────────── */
+
+.v-kicker {
+  font-size: var(--v-t-1);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  color: var(--v-fg-3);
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v-1) var(--v-4);
+  align-items: baseline;
+  margin: 0;
+}
+.v-kicker .v-dot {
+  inline-size: 6px; block-size: 6px;
+  border-radius: 50%;
+  background: var(--v-live);
+  display: inline-block;
+}
+
+/* A verdict, not a topic. If the headline would have been true before the work
+   started it is a topic, and it wants rewriting. */
+.v-headline {
+  font-family: var(--v-display);
+  font-weight: 600;
+  font-size: clamp(var(--v-t-7), 5vw, var(--v-t-9));
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  margin: var(--v-5) 0 0;
+  max-width: 24ch;
+  text-wrap: balance;
+}
+
+.v-standfirst {
+  font-family: var(--v-prose);
+  font-size: clamp(var(--v-t-4), 2vw, var(--v-t-5));
+  line-height: 1.6;
+  color: var(--v-fg-2);
+  max-width: var(--v-prose-measure);
+  margin: var(--v-5) 0 0;
+}
+
+/* Branch, commit, counts, timestamp. No boxes: this is a caption, not data. */
+.v-meta {
+  margin: var(--v-5) 0 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--v-2) var(--v-4);
+  font-size: var(--v-t-1);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  color: var(--v-fg-3);
+}
+.v-meta > * { max-width: 100%; overflow-wrap: anywhere; }
+
+/* ── The hero slot ───────────────────────────────────────────────────
+   One dominant element per page: the chart, the track, the artifact. It gets
+   real room and no chrome, and everything else defers to it. A page where every
+   element carries equal weight has no shape at all. */
+.v-hero {
+  margin-block: var(--v-7);
+  min-block-size: min(44vh, 26em);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+/* ── Stat strip ──────────────────────────────────────────────────────
+   The two-second read, four to six tiles. No borders: the numbers are large
+   enough to group themselves, and a grid of outlined boxes is the largest
+   single source of visual noise on a dense page.
+
+   auto-fit with a min() floor cannot overflow a phone however many tiles are
+   added, so there is no breakpoint to forget. */
+.v-stats {
+  margin-block: var(--v-6);
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr));
+  gap: var(--v-5) var(--v-6);
+}
+
+.v-stat-label {
+  font-size: var(--v-t-1);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--v-fg-3);
+}
+
+.v-stat-num {
+  font-size: clamp(var(--v-t-7), 4vw, var(--v-t-8));
+  letter-spacing: -0.03em;
+  line-height: 1.05;
+  margin-block-start: var(--v-2);
+  overflow-wrap: anywhere;
+}
+.v-stat-num .v-unit {
+  font-size: var(--v-t-3);
+  color: var(--v-fg-3);
+  letter-spacing: 0;
+  margin-inline-start: 0.15em;
+}
+
+.v-stat-qual {
+  font-family: var(--v-prose);
+  font-size: var(--v-t-2);
+  color: var(--v-fg-3);
+  line-height: 1.45;
+  margin-block-start: var(--v-2);
+}
+
+/* Colour at most twice per screenful. These exist for the one or two tiles that
+   are the point, not for all of them. */
+.v-stat.is-urgent .v-stat-num { color: var(--v-urgent); }
+.v-stat.is-warn   .v-stat-num { color: var(--v-warn); }
+.v-stat.is-ok     .v-stat-num { color: var(--v-ok); }
+.v-stat.is-live   .v-stat-num { color: var(--v-live); }
+
+/* ── Sections ────────────────────────────────────────────────────────── */
+
+.v-section { margin-block-start: var(--v-section); }
+
+.v-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--v-4);
+  flex-wrap: wrap;
+  border-block-end: var(--v-hair) solid var(--v-line);
+  padding-block-end: var(--v-3);
+}
+.v-section-head > :where(h2, h3) {
+  font-size: var(--v-t-1);
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  font-weight: 600;
+  margin: 0;
+}
+.v-section-head .v-count {
+  font-size: var(--v-t-1);
+  letter-spacing: .12em;
+  color: var(--v-fg-3);
+  margin-inline-start: auto;
+}
+
+/* Say the ordering out loud when it is counter-intuitive. An ordering the
+   reader does not trust is worse than no ordering. */
+.v-section-note {
+  font-family: var(--v-prose);
+  font-size: var(--v-t-3);
+  color: var(--v-fg-3);
+  margin: var(--v-4) 0 var(--v-5);
+  max-width: var(--v-prose-measure);
+}
+
+/* ── Rows ────────────────────────────────────────────────────────────
+   The default row has no stripe and no border. Only rows wanting attention get
+   one, which is the whole point: when every row is outlined, none is
+   emphasised.
+
+   State is carried four ways, colour always last:
+     1. a glyph with a distinct silhouette   ▲ ■ ◆ ● ✓ ✕ ○
+     2. a spelled-out word                   NEEDS YOU, FIX NOW
+     3. position                             urgent things sit higher
+     4. colour                                                          */
+
+.v-card {
+  padding-block: var(--v-4);
+  border-block-end: var(--v-hair) solid var(--v-line);
+}
+.v-card:last-child { border-block-end: 0; }
+
+.v-card.is-urgent,
+.v-card.is-warn {
+  background: var(--v-raised);
+  border-inline-start: 3px solid var(--v-line-strong);
+  padding-inline: var(--v-4);
+  margin-block: var(--v-2);
+}
+.v-card.is-urgent { border-inline-start-color: var(--v-urgent); }
+.v-card.is-warn   { border-inline-start-color: var(--v-warn); }
+
+.v-card-head {
+  display: flex;
+  align-items: baseline;
+  gap: var(--v-3);
+  flex-wrap: wrap;
+}
+.v-card-head > :where(h2, h3, h4) {
+  font-size: var(--v-t-4);
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: -0.01em;
+  flex: 1 1 18rem;
+  overflow-wrap: anywhere;
+}
+
+.v-glyph { flex: none; inline-size: 1.2em; font-size: var(--v-t-2); line-height: 1.3; }
+
+.v-tag {
+  font-size: var(--v-t-1);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: var(--v-fg-3);
+}
+
+.is-urgent :where(.v-glyph, .v-tag) { color: var(--v-urgent); }
+.is-warn   :where(.v-glyph, .v-tag) { color: var(--v-warn); }
+.is-ok     :where(.v-glyph, .v-tag) { color: var(--v-ok-q); }
+.is-idle   :where(.v-glyph, .v-tag),
+.is-dead   :where(.v-glyph, .v-tag) { color: var(--v-idle); }
+.is-dead { opacity: .68; }
+
+.v-card :where(p) {
+  font-family: var(--v-prose);
+  font-size: var(--v-t-3);
+  line-height: 1.6;
+  color: var(--v-fg-2);
+  margin: var(--v-3) 0 0;
+}
+
+.v-why {
+  font-family: var(--v-prose);
+  font-size: var(--v-t-2);
+  color: var(--v-fg-3);
+  margin-block-start: var(--v-3);
+  padding-block-start: var(--v-3);
+  border-block-start: var(--v-hair) dotted var(--v-line-strong);
+}
+.v-why :where(b, strong) { color: var(--v-fg-2); font-weight: 600; }
+
+/* ── Prose and data ──────────────────────────────────────────────────
+   Monospace for data, proportional for prose. Unanimous across the evidence. */
+
+.v-prose { font-family: var(--v-prose); max-width: var(--v-prose-measure); }
+.v-data  { font-family: var(--v-mono); font-variant-numeric: tabular-nums; }
+
+:where(code, kbd, samp, .v-code) {
+  font-family: var(--v-mono);
+  font-size: .92em;
+  background: var(--v-raised);
+  border-radius: var(--v-radius);
+  padding: 1px 5px;
+  /* A path or an identifier is one unbreakable word to a browser, and one of
+     them is enough to widen a whole page. */
+  overflow-wrap: anywhere;
+}
+
+:where(pre) {
+  background: var(--v-sunken);
+  border-radius: var(--v-radius);
+  padding: var(--v-4);
+  overflow-x: auto;
+  max-width: 100%;
+  font-size: var(--v-t-2);
+  line-height: 1.55;
+}
+:where(pre) code { background: none; padding: 0; }
+
+/* ── Layout primitives ───────────────────────────────────────────────
+   Every one collapses on its own. There is no width to set and no breakpoint to
+   forget, because forgetting one was the only mechanical defect the whole
+   evidence test produced. */
+
+.v-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--v-5);
+}
+.v-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: var(--v-5);
+}
+.v-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr));
+  gap: var(--v-6);
+}
+.v-split {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
+  gap: var(--v-6) var(--v-7);
+  align-items: start;
+}
+
+/* ── Tables ──────────────────────────────────────────────────────────
+   A table is the one element that legitimately wants to be wider than a phone.
+   It scrolls inside itself rather than taking the page with it, and needs no
+   wrapper, so there is nothing an agent can forget to add. */
+
+.v-table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  border-collapse: collapse;
+  font-size: var(--v-t-2);
+  margin-block-start: var(--v-4);
+  white-space: nowrap;
+}
+@media (min-width: 720px) {
+  .v-table { display: table; width: 100%; white-space: normal; }
+}
+.v-table :where(th, td) {
+  text-align: start;
+  padding: var(--v-3) var(--v-4) var(--v-3) 0;
+  border-block-end: var(--v-hair) solid var(--v-line);
+  vertical-align: top;
+}
+.v-table :where(th) {
+  font-size: var(--v-t-1);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  color: var(--v-fg-3);
+  font-weight: 600;
+  white-space: nowrap;
+}
+.v-table :where(.v-num) { text-align: end; white-space: nowrap; }
+
+/* ══ Chart atoms ═════════════════════════════════════════════════════
+ *
+ * Deliberately small, and deliberately not charts. A waterfall, a gantt, a
+ * profile and a bar chart are the same two atoms arranged differently, and the
+ * arranging is the agent's job, because that is where the shape of the task
+ * lives.
+ *
+ * None of these is a line chart, a scatter plot or a graph with edges. Those
+ * want SVG. Inline SVG is fine and self-contained; use it and skip these.
+ */
+
+/* A labelled scale, above or below a set of rows. */
+.v-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--v-2);
+  font-size: var(--v-t-1);
+  letter-spacing: .1em;
+  color: var(--v-fg-3);
+  border-block-end: var(--v-hair) solid var(--v-line);
+  padding-block-end: var(--v-1);
+  margin-block-end: var(--v-3);
+}
+
+/* Horizontal bars: label, track, value. The value is real text. */
+.v-bars { display: grid; gap: var(--v-2); }
+.v-bar {
+  display: grid;
+  grid-template-columns: minmax(6rem, 14rem) 1fr minmax(3.5rem, auto);
+  align-items: center;
+  gap: var(--v-3);
+  font-size: var(--v-t-2);
+}
+@media (max-width: 560px) {
+  .v-bar { grid-template-columns: 1fr minmax(3.5rem, auto); }
+  .v-bar .v-bar-track { grid-column: 1 / -1; order: 3; }
+}
+.v-bar-label { color: var(--v-fg-2); overflow-wrap: anywhere; }
+.v-bar-track {
+  block-size: max(10px, 0.7em);
+  background: var(--v-fill-soft);
+  border-radius: 1px;
+  position: relative;
+  min-inline-size: 2rem;
+}
+.v-bar-track::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  inline-size: clamp(1px, calc(var(--v, 0) * 100%), 100%);
+  background: var(--v-fill);
+  border-radius: 1px;
+}
+.v-bar-value { text-align: end; white-space: nowrap; }
+
+.v-bar.is-urgent .v-bar-track::before { background: var(--v-urgent); }
+.v-bar.is-warn   .v-bar-track::before { background: var(--v-warn); }
+.v-bar.is-ok     .v-bar-track::before { background: var(--v-ok); }
+.v-bar.is-live   .v-bar-track::before { background: var(--v-live); }
+
+/* Waterfall: contributions either side of a baseline. Two half tracks, so the
+   baseline is a real grid column and stays aligned down the whole set. */
+.v-wf { display: grid; gap: var(--v-1); }
+.v-wf-row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 13rem) 1fr 1fr minmax(3.5rem, auto);
+  align-items: center;
+  gap: var(--v-2);
+  font-size: var(--v-t-2);
+}
+@media (max-width: 560px) {
+  .v-wf-row { grid-template-columns: 1fr 1fr minmax(3.5rem, auto); }
+  .v-wf-row .v-wf-label { grid-column: 1 / -1; }
+}
+.v-wf-label { color: var(--v-fg-2); overflow-wrap: anywhere; }
+.v-wf-neg, .v-wf-pos { block-size: max(10px, 0.7em); background: var(--v-fill-soft); position: relative; }
+.v-wf-neg { border-inline-end: var(--v-hair) solid var(--v-line-strong); }
+.v-wf-neg::before, .v-wf-pos::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inline-size: clamp(0px, calc(var(--v, 0) * 100%), 100%);
+}
+.v-wf-neg::before { inset-inline-end: 0; background: var(--v-urgent); }
+.v-wf-pos::before { inset-inline-start: 0; background: var(--v-ok); }
+.v-wf-value { text-align: end; white-space: nowrap; }
+
+/* Distribution or histogram: vertical bars in a fixed-height strip. */
+.v-dist {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  block-size: clamp(6em, 18vh, 12em);
+  padding-block-start: var(--v-2);
+}
+.v-dist > * {
+  flex: 1 1 0;
+  min-inline-size: 2px;
+  block-size: clamp(1px, calc(var(--v, 0) * 100%), 100%);
+  background: var(--v-fill);
+  border-radius: 1px 1px 0 0;
+}
+.v-dist > .is-urgent { background: var(--v-urgent); }
+.v-dist > .is-live   { background: var(--v-live); }
+
+/* A track: a span of time or progress with segments placed on it. `--a` and
+   `--b` are 0..1 positions. Labels go outside, in .v-track-labels. */
+.v-track {
+  position: relative;
+  block-size: max(26px, 1.7em);
+  background: var(--v-fill-soft);
+  border-radius: 1px;
+  margin-block: var(--v-2);
+}
+.v-track > .v-seg {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: clamp(0%, calc(var(--a, 0) * 100%), 100%);
+  inline-size: clamp(2px, calc((var(--b, 0) - var(--a, 0)) * 100%), 100%);
+  background: var(--v-fill);
+  border-radius: 1px;
+  overflow: hidden;
+  /* A segment that carries meaning only by position and colour disappears in
+     forced-colors and says nothing to a screen reader. Put the label inside;
+     if the segment is too narrow to show it, it is still in the accessibility
+     tree and still in the markup. */
+  font-size: var(--v-t-1);
+  letter-spacing: .06em;
+  color: var(--v-ground);
+  padding-inline: var(--v-1);
+  white-space: nowrap;
+  line-height: 1.9;
+}
+.v-seg.is-urgent { background: var(--v-urgent); }
+.v-seg.is-warn   { background: var(--v-warn); }
+.v-seg.is-ok     { background: var(--v-ok); }
+.v-seg.is-idle   { background: var(--v-idle); }
+/* A gap is drawn rather than merely absent, because an absence has to be
+   visible to be a finding. Hatching survives greyscale and forced colours. */
+.v-seg.is-gap {
+  background: repeating-linear-gradient(135deg, transparent 0 6px, var(--v-urgent) 6px 12px);
+  outline: var(--v-hair) solid var(--v-urgent);
+}
+/* A marker: a deadline, a budget, a promise. */
+.v-track > .v-mark {
+  position: absolute;
+  inset-block: -6px;
+  inset-inline-start: clamp(0%, calc(var(--a, 0) * 100%), 100%);
+  inline-size: 0;
+  border-inline-start: 2px dashed var(--v-live);
+}
+.v-track-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: var(--v-t-1);
+  letter-spacing: .1em;
+  color: var(--v-fg-3);
+}
+
+/* Cells: a matrix or heatmap. Every cell carries its value as text, so colour
+   is the second encoding and never the only one. */
+.v-cells {
+  display: grid;
+  gap: 2px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+.v-cell {
+  padding: var(--v-3) var(--v-2);
+  text-align: center;
+  font-size: var(--v-t-2);
+  background: color-mix(in srgb, var(--v-fg) calc(var(--v, 0) * 24%), var(--v-raised));
+  border-radius: 1px;
+  min-inline-size: 3rem;
+}
+.v-cell.is-urgent { background: color-mix(in srgb, var(--v-urgent) calc(var(--v, 0) * 55%), var(--v-raised)); }
+.v-cell.is-ok     { background: color-mix(in srgb, var(--v-ok) calc(var(--v, 0) * 55%), var(--v-raised)); }
+.v-cell-head {
+  font-size: var(--v-t-1);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--v-fg-3);
+  background: none;
+  padding: var(--v-2);
+  text-align: start;
+}
+
+/* A branching trace. A tree, not a graph: one parent, many children, which is
+   what a request fork or a call path actually is. Nest <ul> inside <li>. */
+.v-tree, .v-tree ul { list-style: none; margin: 0; padding: 0; }
+.v-tree ul {
+  margin-inline-start: var(--v-4);
+  padding-inline-start: var(--v-5);
+  border-inline-start: var(--v-hair) solid var(--v-line-strong);
+}
+.v-tree li { position: relative; padding-block: var(--v-2); }
+.v-tree ul > li::before {
+  content: "";
+  position: absolute;
+  inset-inline-start: calc(var(--v-5) * -1);
+  inset-block-start: 1.1em;
+  inline-size: var(--v-4);
+  border-block-start: var(--v-hair) solid var(--v-line-strong);
+}
+.v-tree li.is-urgent > .v-node { color: var(--v-urgent); }
+.v-tree li.is-ok > .v-node { color: var(--v-ok-q); }
+.v-node { font-size: var(--v-t-3); overflow-wrap: anywhere; }
+.v-node-note {
+  font-family: var(--v-prose);
+  font-size: var(--v-t-2);
+  color: var(--v-fg-3);
+  display: block;
+}
+
+/* An inline micro bar chart. Not a line: a line needs SVG, and pretending
+   otherwise produces something that works only for six tidy points. */
+.v-spark {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 1px;
+  block-size: 1.1em;
+  vertical-align: -0.15em;
+  margin-inline: 0.3em;
+}
+.v-spark > * {
+  inline-size: 3px;
+  block-size: clamp(1px, calc(var(--v, 0) * 100%), 100%);
+  background: var(--v-fill);
+}
+
+/* ── Progressive disclosure ──────────────────────────────────────────
+   Collapse the bulk. Thirty-two mechanical changes are a tally and a folded
+   table, not thirty-two rows between the reader and what is wrong. */
+
+.v-details {
+  border-block-start: var(--v-hair) solid var(--v-line);
+  margin-block-start: var(--v-4);
+}
+.v-details > summary {
+  cursor: pointer;
+  padding-block: var(--v-3);
+  font-size: var(--v-t-2);
+  letter-spacing: .04em;
+  color: var(--v-fg-3);
+  min-block-size: 44px;          /* a thumb, not a mouse */
+  display: flex;
+  align-items: center;
+  gap: var(--v-3);
+  list-style: none;
+}
+.v-details > summary::-webkit-details-marker { display: none; }
+.v-details > summary::before {
+  content: "+";
+  font-size: var(--v-t-4);
+  inline-size: 1em;
+  flex: none;
+}
+.v-details[open] > summary::before { content: "\2212"; }
+.v-details > summary:hover { color: var(--v-fg); }
+.v-details-body { padding-block-end: var(--v-5); }
+
+/* ── Filter chips ────────────────────────────────────────────────────── */
+
+.v-chips { display: flex; flex-wrap: wrap; gap: var(--v-2); padding-block: var(--v-4); }
+.v-chip {
+  font: inherit;
+  font-size: var(--v-t-1);
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  background: none;
+  color: var(--v-fg-3);
+  border: var(--v-hair) solid var(--v-line);
+  border-radius: var(--v-radius);
+  padding: var(--v-2) var(--v-3);
+  min-block-size: 36px;
+  cursor: pointer;
+}
+.v-chip[aria-pressed="true"] {
+  color: var(--v-fg);
+  border-color: var(--v-fg-3);
+  background: var(--v-raised);
+  font-weight: 600;
+}
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+
+.v-footer {
+  margin-block-start: var(--v-section);
+  padding-block-start: var(--v-5);
+  border-block-start: var(--v-hair) solid var(--v-line);
+  font-family: var(--v-prose);
+  font-size: var(--v-t-2);
+  color: var(--v-fg-3);
+  max-width: var(--v-prose-measure);
+}
+
+/* ── Utilities ───────────────────────────────────────────────────────── */
+
+.v-hidden { display: none !important; }
+/* Paired with the print block: a table that only appears on paper, for pages
+   whose evidence is a chart. */
+.v-print-only { display: none; }
+.v-sr {
+  position: absolute; inline-size: 1px; block-size: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip-path: inset(50%); white-space: nowrap; border: 0;
+}
+/* What a section looks like with nothing in it, which is a state every list has
+   and almost every generated page forgets. */
+.v-empty {
+  font-family: var(--v-prose);
+  font-size: var(--v-t-3);
+  color: var(--v-fg-3);
+  padding-block: var(--v-6);
+}
+
+/* ── Motion ──────────────────────────────────────────────────────────
+   One entrance and nothing else. Enough to feel made rather than dumped. */
+
+@media (prefers-reduced-motion: no-preference) {
+  .v-rise { animation: v-rise .24s cubic-bezier(.2,.6,.3,1) backwards; }
+  .v-rise:nth-child(2) { animation-delay: .04s }
+  .v-rise:nth-child(3) { animation-delay: .08s }
+  .v-rise:nth-child(4) { animation-delay: .12s }
+  .v-rise:nth-child(5) { animation-delay: .16s }
+  .v-rise:nth-child(6) { animation-delay: .2s }
+}
+@keyframes v-rise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* ── Forced colours ──────────────────────────────────────────────────
+   In forced-colors mode every background is replaced, so an atom that draws a
+   value as a filled area vanishes. Give each one a border so the shape
+   survives. The numbers are in the markup as text regardless. */
+
+@media (forced-colors: active) {
+  .v-bar-track, .v-wf-neg, .v-wf-pos, .v-track, .v-cell,
+  .v-dist > *, .v-spark > *, .v-track > .v-seg {
+    border: 1px solid CanvasText;
+  }
+  .v-bar-track::before, .v-wf-neg::before, .v-wf-pos::before { background: CanvasText; }
+  .v-card.is-urgent, .v-card.is-warn { border-inline-start-width: 4px; }
+}
+
+/* ── Print ───────────────────────────────────────────────────────────── */
+
+@media print {
+  body { background: #fff; color: #000; }
+  .v-chips { display: none; }
+  /* Background fills are dropped by most print settings, so a chart on paper is
+     decoration and the numbers are the point. They are already in the markup as
+     text; this makes sure the table carrying them is visible and its header
+     repeats across pages. */
+  .v-print-only { display: revert !important; }
+  .v-table { display: table; width: 100%; white-space: normal; }
+  .v-table thead { display: table-header-group; }
+  .v-bar, .v-wf-row, .v-track, .v-cell { break-inside: avoid; }
+  .v-track > .v-mark { border-inline-start-color: #000; }
+  .v-hero, .v-section { break-inside: avoid-page; }
+  .v-details > summary { display: none; }
+  .v-details-body { padding: 0; }
+  /* A closed <details> hides its own children, so hiding the summary alone
+     printed nothing at all. On paper there is no way to expand it. */
+  .v-details:not([open]) > *:not(summary) { display: block; }
+}

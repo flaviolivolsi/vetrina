@@ -1,0 +1,1043 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>CI triage — 23 failures, 4 causes — harbor @ main</title>
+<style>
+/* ---------- tokens ---------- */
+:root{
+  color-scheme: light dark;
+
+  --bg:#f4f4f1;
+  --surface:#ffffff;
+  --surface-2:#fbfbf9;
+  --ink:#15181d;
+  --ink-2:#464c56;
+  --muted:#6d747f;
+  --line:#e2e2dc;
+  --line-2:#cfcfc7;
+  --code-bg:#f6f6f2;
+
+  --c1:#c02a20;   /* fix now      */
+  --c1-bg:#fdeceb;
+  --c2:#8a5a00;   /* unblock ci   */
+  --c2-bg:#fdf2dc;
+  --c3:#5b3bb5;   /* latent       */
+  --c3-bg:#f0ecfd;
+  --c4:#5f6772;   /* ignore       */
+  --c4-bg:#eeeeeb;
+
+  --ok:#1f7a4d;
+  --ok-bg:#e6f4ec;
+
+  --shadow:0 1px 0 rgba(20,22,26,.04), 0 2px 6px rgba(20,22,26,.05);
+  --radius:10px;
+
+  --sans: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --mono: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0d0f12;
+    --surface:#14171c;
+    --surface-2:#191d23;
+    --ink:#e8eaed;
+    --ink-2:#b6bcc6;
+    --muted:#8b939f;
+    --line:#252a31;
+    --line-2:#333a44;
+    --code-bg:#0f1216;
+
+    --c1:#ff6f60; --c1-bg:#2a1512;
+    --c2:#e9ad34; --c2-bg:#251c09;
+    --c3:#ab8dfa; --c3-bg:#1c1730;
+    --c4:#95a0ad; --c4-bg:#1a1e24;
+
+    --ok:#4bd08a; --ok-bg:#0f2119;
+
+    --shadow:0 1px 0 rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
+  }
+}
+/* manual override wins over the media query */
+html[data-theme="light"]{
+  color-scheme: light;
+  --bg:#f4f4f1; --surface:#ffffff; --surface-2:#fbfbf9;
+  --ink:#15181d; --ink-2:#464c56; --muted:#6d747f;
+  --line:#e2e2dc; --line-2:#cfcfc7; --code-bg:#f6f6f2;
+  --c1:#c02a20; --c1-bg:#fdeceb;
+  --c2:#8a5a00; --c2-bg:#fdf2dc;
+  --c3:#5b3bb5; --c3-bg:#f0ecfd;
+  --c4:#5f6772; --c4-bg:#eeeeeb;
+  --ok:#1f7a4d; --ok-bg:#e6f4ec;
+  --shadow:0 1px 0 rgba(20,22,26,.04), 0 2px 6px rgba(20,22,26,.05);
+}
+html[data-theme="dark"]{
+  color-scheme: dark;
+  --bg:#0d0f12; --surface:#14171c; --surface-2:#191d23;
+  --ink:#e8eaed; --ink-2:#b6bcc6; --muted:#8b939f;
+  --line:#252a31; --line-2:#333a44; --code-bg:#0f1216;
+  --c1:#ff6f60; --c1-bg:#2a1512;
+  --c2:#e9ad34; --c2-bg:#251c09;
+  --c3:#ab8dfa; --c3-bg:#1c1730;
+  --c4:#95a0ad; --c4-bg:#1a1e24;
+  --ok:#4bd08a; --ok-bg:#0f2119;
+  --shadow:0 1px 0 rgba(0,0,0,.35), 0 2px 8px rgba(0,0,0,.30);
+}
+
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:var(--sans);
+  font-size:16px;
+  line-height:1.5;
+  -webkit-text-size-adjust:100%;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:960px;margin:0 auto;padding:20px 16px 72px}
+@media (min-width:760px){ .wrap{padding:32px 28px 96px} }
+
+h1,h2,h3{margin:0;font-weight:640;letter-spacing:-.015em;line-height:1.2}
+p{margin:0}
+code,pre,.mono{font-family:var(--mono)}
+a{color:inherit}
+
+.rule{height:1px;background:var(--line);border:0;margin:28px 0}
+
+/* ---------- header ---------- */
+header.top{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:16px;
+  padding-bottom:14px;border-bottom:1px solid var(--line);
+}
+.eyebrow{
+  font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;
+}
+.eyebrow b{color:var(--ink-2);font-weight:600}
+.dot{opacity:.5}
+
+#themeBtn{
+  flex:none;appearance:none;cursor:pointer;
+  background:var(--surface);color:var(--ink-2);
+  border:1px solid var(--line-2);border-radius:999px;
+  font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+  padding:7px 12px;line-height:1;
+}
+#themeBtn:hover{border-color:var(--muted);color:var(--ink)}
+
+/* ---------- verdict ---------- */
+.verdict{margin-top:26px}
+.verdict h1{
+  font-size:clamp(28px,7.2vw,44px);
+  letter-spacing:-.03em;
+}
+.verdict h1 .strike{
+  text-decoration:line-through;
+  text-decoration-thickness:.09em;
+  color:var(--muted);
+}
+.verdict .sub{
+  margin-top:10px;color:var(--ink-2);font-size:16px;max-width:64ch;
+}
+@media (min-width:760px){ .verdict .sub{font-size:17px} }
+
+/* ---------- proportion bar ---------- */
+.bar{
+  display:flex;width:100%;margin-top:22px;gap:3px;
+  border-radius:6px;overflow:hidden;
+}
+.seg{
+  position:relative;
+  min-width:46px;
+  height:64px;
+  border-radius:5px;
+  display:flex;flex-direction:column;justify-content:center;
+  padding:0 10px;
+  color:var(--ink);
+  border:1px solid var(--line-2);
+  overflow:hidden;
+  text-decoration:none;
+}
+.seg .n{font-family:var(--mono);font-size:20px;font-weight:700;line-height:1;letter-spacing:-.02em}
+.seg .meta{
+  display:flex;align-items:baseline;gap:5px;margin-top:5px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--ink-2);min-width:0;
+}
+.seg .g{flex:none;font-size:10px;line-height:1}
+.seg .lb{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media (max-width:620px){ .seg .lb{display:none} .seg{height:54px;padding:0 8px} }
+.seg::before{content:"";position:absolute;inset:0;pointer-events:none}
+
+/* distinct fill PATTERNS so the bar reads without colour */
+.seg.s1{background:var(--c1-bg);border-color:var(--c1)}
+.seg.s1::before{background:repeating-linear-gradient(135deg,transparent 0 5px,color-mix(in srgb,var(--c1) 26%,transparent) 5px 8px)}
+.seg.s2{background:var(--c2-bg);border-color:var(--c2)}
+.seg.s2::before{background:repeating-linear-gradient(90deg,transparent 0 7px,color-mix(in srgb,var(--c2) 24%,transparent) 7px 9px)}
+.seg.s3{background:var(--c3-bg);border-color:var(--c3)}
+.seg.s3::before{background:radial-gradient(color-mix(in srgb,var(--c3) 34%,transparent) 1.1px, transparent 1.2px) 0 0/7px 7px}
+.seg.s4{background:var(--c4-bg);border-color:var(--line-2);border-style:dashed}
+.seg.s4::before{background:none}
+.seg .n,.seg .meta{position:relative;z-index:1}
+
+.barnote{
+  margin-top:9px;font-size:13px;color:var(--muted);
+  display:flex;gap:6px;align-items:baseline;
+}
+.barnote .mono{font-size:12px}
+
+/* ---------- headline action ---------- */
+.oneThing{
+  margin-top:26px;background:var(--surface);border:1px solid var(--line-2);
+  border-left:5px solid var(--c1);
+  border-radius:var(--radius);box-shadow:var(--shadow);
+  padding:16px 18px;
+}
+.oneThing .k{
+  font-family:var(--mono);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--c1);font-weight:700;display:flex;align-items:center;gap:7px;
+}
+.oneThing .v{margin-top:8px;font-size:17px;font-weight:560;letter-spacing:-.01em;line-height:1.38}
+.oneThing .w{margin-top:9px;font-size:14px;color:var(--ink-2)}
+.oneThing code{
+  background:var(--code-bg);border:1px solid var(--line);border-radius:5px;
+  padding:1px 5px;font-size:.92em;
+}
+
+/* ---------- section label ---------- */
+.seclabel{
+  display:flex;align-items:center;gap:12px;margin:38px 0 16px;
+}
+.seclabel h2{font-size:13px;font-family:var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:600;white-space:nowrap}
+.seclabel .ln{flex:1;height:1px;background:var(--line)}
+.seclabel button{
+  appearance:none;background:none;border:1px solid var(--line-2);border-radius:999px;
+  color:var(--muted);font-family:var(--mono);font-size:10px;letter-spacing:.07em;
+  text-transform:uppercase;padding:5px 10px;cursor:pointer;line-height:1;white-space:nowrap;
+}
+.seclabel button:hover{color:var(--ink);border-color:var(--muted)}
+
+/* ---------- cause cards ---------- */
+.cause{
+  background:var(--surface);
+  border:1px solid var(--line);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  margin-bottom:16px;
+  overflow:hidden;
+}
+.cause .head{
+  display:flex;gap:14px;padding:16px 16px 14px;
+  border-left:5px solid var(--accent);
+}
+@media (min-width:760px){ .cause .head{padding:18px 20px 16px} }
+.cause.p1{--accent:var(--c1);--accent-bg:var(--c1-bg)}
+.cause.p2{--accent:var(--c2);--accent-bg:var(--c2-bg)}
+.cause.p3{--accent:var(--c3);--accent-bg:var(--c3-bg)}
+.cause.p4{--accent:var(--c4);--accent-bg:var(--c4-bg);}
+.cause.p4 .head{
+  border-image:repeating-linear-gradient(180deg,var(--c4) 0 5px,transparent 5px 10px) 1;
+}
+
+.glyph{
+  flex:none;width:44px;height:44px;border-radius:9px;
+  background:var(--accent-bg);border:1px solid var(--accent);
+  display:flex;align-items:center;justify-content:center;
+  color:var(--accent);font-size:19px;line-height:1;
+}
+.cause.p4 .glyph{border-style:dashed}
+
+.head .body{min-width:0;flex:1}
+.tagrow{display:flex;flex-wrap:wrap;gap:7px;align-items:center;margin-bottom:7px}
+.prio{
+  font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--accent);background:var(--accent-bg);
+  border:1px solid var(--accent);border-radius:5px;padding:3px 7px;line-height:1.25;
+}
+.cause.p4 .prio{border-style:dashed}
+.count{
+  font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--ink-2);background:var(--surface-2);
+  border:1px solid var(--line-2);border-radius:5px;padding:3px 7px;line-height:1.25;
+}
+.count b{font-weight:700;color:var(--ink)}
+
+.cause h3{font-size:18px;letter-spacing:-.018em}
+@media (min-width:760px){ .cause h3{font-size:19.5px} }
+.cause .why{margin-top:7px;color:var(--ink-2);font-size:14.5px;line-height:1.5}
+.cause .why code{
+  background:var(--code-bg);border:1px solid var(--line);border-radius:4px;
+  padding:0 4px;font-size:.9em;white-space:nowrap;
+}
+
+/* facts grid */
+.facts{
+  display:grid;grid-template-columns:1fr;
+  gap:1px;background:var(--line);
+  border-top:1px solid var(--line);
+}
+@media (min-width:560px){ .facts{grid-template-columns:1fr 1fr} }
+@media (min-width:820px){ .facts{grid-template-columns:repeat(4,1fr)} }
+.fact{padding:11px 16px;background:var(--surface-2)}
+.fact .k{
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);
+}
+.fact .v{margin-top:3px;font-size:13.5px;color:var(--ink);font-weight:500;line-height:1.35}
+.fact .v.mono{font-family:var(--mono);font-size:12.5px}
+
+.note{
+  display:flex;gap:9px;padding:11px 16px;border-top:1px solid var(--line);
+  background:var(--surface);font-size:13.5px;color:var(--ink-2);line-height:1.45;
+}
+.note .mk{flex:none;font-family:var(--mono);color:var(--muted);font-size:12px;padding-top:1px}
+
+/* ---------- disclosure ---------- */
+details{border-top:1px solid var(--line);background:var(--surface)}
+details > summary{
+  list-style:none;cursor:pointer;
+  padding:11px 16px;
+  font-family:var(--mono);font-size:11.5px;letter-spacing:.055em;text-transform:uppercase;
+  color:var(--muted);
+  display:flex;align-items:center;gap:9px;
+  user-select:none;
+}
+details > summary::-webkit-details-marker{display:none}
+details > summary:hover{color:var(--ink);background:var(--surface-2)}
+details > summary .tri{
+  flex:none;font-size:9px;transition:transform .14s ease;display:inline-block;color:var(--line-2);
+}
+details[open] > summary .tri{transform:rotate(90deg);color:var(--muted)}
+details[open] > summary{color:var(--ink-2);border-bottom:1px solid var(--line)}
+details > summary .cnt{margin-left:auto;color:var(--line-2);font-size:11px}
+
+.dbody{padding:14px 16px 16px}
+
+pre{
+  margin:0;background:var(--code-bg);border:1px solid var(--line);
+  border-radius:7px;padding:12px 13px;
+  overflow-x:auto;
+  font-size:12px;line-height:1.55;
+  color:var(--ink-2);
+  -webkit-overflow-scrolling:touch;
+}
+pre + pre{margin-top:10px}
+pre .fail{color:var(--c1);font-weight:600}
+pre .hl{color:var(--ink);font-weight:600}
+pre .dim{color:var(--muted)}
+pre .good{color:var(--ok);font-weight:600}
+
+.evlabel{
+  font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+  color:var(--muted);margin:0 0 7px;
+}
+.evlabel:not(:first-child){margin-top:16px}
+
+.proof{
+  margin-top:14px;display:flex;gap:9px;align-items:flex-start;
+  background:var(--ok-bg);border:1px solid var(--line-2);
+  border-color:color-mix(in srgb,var(--ok) 35%,var(--line-2));
+  border-radius:7px;padding:10px 12px;font-size:13px;color:var(--ink-2);line-height:1.45;
+}
+.proof .mk{flex:none;color:var(--ok);font-weight:700;font-family:var(--mono);font-size:12px}
+
+/* test list */
+ol.tests{margin:0;padding:0;list-style:none;counter-reset:t}
+ol.tests li{
+  display:flex;gap:10px;align-items:baseline;
+  padding:7px 0;border-top:1px dotted var(--line);
+  font-size:13px;
+}
+ol.tests li:first-child{border-top:0}
+ol.tests li::before{
+  counter-increment:t;content:counter(t);
+  flex:none;width:18px;text-align:right;
+  font-family:var(--mono);font-size:10.5px;color:var(--line-2);
+}
+ol.tests .tn{min-width:0;flex:1;line-height:1.4}
+ol.tests .path{font-family:var(--mono);font-size:11.5px;color:var(--muted);display:block;word-break:break-all}
+ol.tests .name{color:var(--ink);word-break:break-word}
+ol.tests .ms{
+  flex:none;font-family:var(--mono);font-size:11px;color:var(--muted);
+  font-variant-numeric:tabular-nums;
+}
+ol.tests .ms.slow{color:var(--c2)}
+
+/* ---------- timeline ---------- */
+.tl{list-style:none;margin:0;padding:0}
+.tl li{
+  display:grid;
+  grid-template-columns:58px 20px 1fr;
+  gap:0 10px;
+  align-items:start;
+}
+.tl .t{
+  font-family:var(--mono);font-size:11.5px;color:var(--muted);
+  padding-top:9px;font-variant-numeric:tabular-nums;
+}
+.tl .track{position:relative;display:flex;justify-content:center}
+.tl .track::before{
+  content:"";position:absolute;top:0;bottom:0;width:1px;background:var(--line);
+}
+.tl li:first-child .track::before{top:14px}
+.tl li:last-child .track::before{bottom:calc(100% - 14px)}
+.tl .pip{
+  position:relative;margin-top:9px;width:11px;height:11px;border-radius:50%;
+  background:var(--bg);border:2px solid var(--line-2);
+}
+.tl .c{padding:7px 0 11px;min-width:0}
+.tl .msg{font-size:13.5px;line-height:1.4;color:var(--ink-2)}
+.tl .sha{font-family:var(--mono);font-size:12px;color:var(--ink);font-weight:600}
+.tl .pr{font-family:var(--mono);font-size:11.5px;color:var(--muted)}
+
+.tl li.green .pip{background:var(--ok);border-color:var(--ok);border-radius:2px}
+.tl li.red   .pip{background:var(--c1);border-color:var(--c1);
+  border-radius:0;clip-path:polygon(50% 0,100% 100%,0 100%);width:13px;height:12px;border:0}
+.tl li.blame .pip{background:var(--surface);border-color:var(--accent,var(--c1));border-width:3px}
+.tl li.cleared .msg{color:var(--muted)}
+.tl li.cleared .sha{color:var(--muted);font-weight:500}
+
+.tl .badge{
+  display:inline-block;margin-top:5px;
+  font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  border:1px solid currentColor;border-radius:4px;padding:2px 6px;line-height:1.3;font-weight:700;
+}
+.badge.b1{color:var(--c1)} .badge.b2{color:var(--c2)} .badge.b3{color:var(--c3)}
+.badge.bok{color:var(--ok)} .badge.bdim{color:var(--muted);border-style:dashed;font-weight:500}
+
+/* ---------- next steps ---------- */
+.steps{list-style:none;margin:0;padding:0;
+  background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);overflow:hidden}
+.steps li{display:flex;gap:12px;padding:13px 16px;border-top:1px solid var(--line);align-items:flex-start}
+.steps li:first-child{border-top:0}
+.steps .box{
+  flex:none;width:17px;height:17px;border:1.5px solid var(--line-2);border-radius:4px;margin-top:2px;
+}
+.steps li.skip .box{border-style:dashed;position:relative}
+.steps li.skip .box::after{
+  content:"";position:absolute;left:2px;right:2px;top:6px;height:1.5px;background:var(--line-2);
+}
+.steps .txt{min-width:0;font-size:14.5px;line-height:1.45}
+.steps .txt small{display:block;margin-top:3px;color:var(--muted);font-size:12.5px;line-height:1.4}
+.steps li.skip .txt{color:var(--muted)}
+.steps .when{
+  flex:none;font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;
+  color:var(--muted);border:1px solid var(--line-2);border-radius:4px;padding:2px 6px;margin-top:1px;
+}
+
+/* ---------- footer ---------- */
+footer{margin-top:34px;padding-top:16px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--muted);line-height:1.55}
+footer .mono{font-size:11.5px}
+footer p + p{margin-top:7px}
+
+/* ---------- print ---------- */
+@media print{
+  body{background:#fff}
+  #themeBtn{display:none}
+  .cause,.steps,.oneThing{box-shadow:none;break-inside:avoid}
+  details{display:block}
+  details > summary{display:none}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="top">
+  <div class="eyebrow">
+    <span><b>harbor</b>/api</span><span class="dot">/</span>
+    <span>branch <b>main</b></span><span class="dot">/</span>
+    <span>run <b>#2841</b></span><span class="dot">/</span>
+    <span><b>4d1e8ba</b></span><span class="dot">/</span>
+    <span>03:12&nbsp;UTC</span><span class="dot">/</span>
+    <span>1&#8239;847 tests in 8m&nbsp;42s</span>
+  </div>
+  <button id="themeBtn" type="button" aria-label="Switch colour theme">Theme</button>
+</header>
+
+<section class="verdict">
+  <h1><span class="strike">23 failing tests</span><br>4&nbsp;causes. 1&nbsp;is urgent.</h1>
+  <p class="sub">
+    Every failure in run #2841 maps to one of four root causes. Two are explained by
+    a single commit each, both landed after last night&rsquo;s green run. One cluster is
+    pre-existing flake and is safe to ignore today.
+  </p>
+
+  <div class="bar" role="img" aria-label="23 failures split into four clusters: 6 null-handling regression, 11 timezone assumption, 2 real bugs in new code, 4 flaky websocket mock.">
+    <div class="seg s1" style="flex:6"><span class="n">6</span><span class="meta"><span class="g">&#9650;</span><span class="lb">Null regression</span></span></div>
+    <div class="seg s2" style="flex:11"><span class="n">11</span><span class="meta"><span class="g">&#9632;</span><span class="lb">Timezone / CI env</span></span></div>
+    <div class="seg s3" style="flex:2"><span class="n">2</span><span class="meta"><span class="g">&#9670;</span><span class="lb">New bugs</span></span></div>
+    <div class="seg s4" style="flex:4"><span class="n">4</span><span class="meta"><span class="g">&#9675;</span><span class="lb">Flake</span></span></div>
+  </div>
+  <p class="barnote">
+    <span class="mono">&#8592;</span>
+    <span>Ordered by urgency, sized by test count &mdash; note the widest cluster is <em>not</em> the one to fix first.</span>
+  </p>
+</section>
+
+<div class="oneThing">
+  <div class="k"><span>&#9650;</span> If you only do one thing today</div>
+  <p class="v">Patch or revert <code>a3f9c21</code> before the 14:00 deploy train.</p>
+  <p class="w">
+    It is already on <code>main</code>. It turns every guest checkout with a missing
+    optional contact field into an unhandled <code>TypeError</code> &rarr; HTTP 500.
+    The other three clusters do not reach production users today.
+  </p>
+</div>
+
+<div class="seclabel">
+  <h2>The four causes</h2>
+  <div class="ln"></div>
+  <button type="button" id="expandBtn" data-state="collapsed">Expand all</button>
+</div>
+
+<!-- ============ CAUSE 1 ============ -->
+<article class="cause p1">
+  <div class="head">
+    <div class="glyph" aria-hidden="true">&#9650;</div>
+    <div class="body">
+      <div class="tagrow">
+        <span class="prio">1 &middot; Fix now</span>
+        <span class="count"><b>6</b> tests</span>
+        <span class="count">Regression</span>
+        <span class="count">On main</span>
+      </div>
+      <h3>Null contact fields throw instead of passing through</h3>
+      <p class="why">
+        PR #4471 refactored customer serialisation into <code>toCustomerDTO()</code>. The
+        rewrite dropped the nullish guard in <code>normalizeContact()</code>, so any customer
+        record with a <code>null</code> email, phone or billing address now throws on
+        <code>.toLowerCase()</code>. Guest checkout is the main caller &mdash; those records
+        are null by design.
+      </p>
+    </div>
+  </div>
+
+  <div class="facts">
+    <div class="fact"><div class="k">Suspect commit</div><div class="v mono">a3f9c21 &middot; PR #4471</div></div>
+    <div class="fact"><div class="k">Confidence</div><div class="v">Confirmed &mdash; local revert makes 6/6 pass</div></div>
+    <div class="fact"><div class="k">Blast radius</div><div class="v">Guest checkout, PATCH /customers, search index</div></div>
+    <div class="fact"><div class="k">Est. fix</div><div class="v">~20 min + regression test</div></div>
+  </div>
+
+  <div class="note">
+    <span class="mk">&rarr;</span>
+    <span>The DTO tests that <em>should</em> have caught this exist and are in this cluster &mdash;
+    they were simply not run on the PR, because path-filtered PR checks skip the
+    <code>api-integration</code> project. That filter is the second bug here.</span>
+  </div>
+
+  <details>
+    <summary><span class="tri">&#9654;</span> Evidence <span class="cnt">stack trace + assertion</span></summary>
+    <div class="dbody">
+      <p class="evlabel">Representative failure &mdash; checkout.guest.test.ts</p>
+<pre><span class="fail">TypeError: Cannot read properties of null (reading 'toLowerCase')</span>
+ &#10095; normalizeContact   <span class="hl">src/api/dto/customer.ts:41:31</span>
+ &#10095; toCustomerDTO      src/api/dto/customer.ts:88:20
+ &#10095; createGuestOrder   src/api/routes/checkout.ts:207:16
+ &#10095; src/api/routes/__tests__/checkout.guest.test.ts:112:24
+
+  <span class="dim">39|</span> function normalizeContact(c: RawContact): Contact {
+  <span class="dim">40|</span>   return {
+  <span class="dim">41|</span>     email: c.email.toLowerCase().trim(),
+    <span class="dim">|</span>                   <span class="fail">^</span>
+  <span class="dim">42|</span>     phone: c.phone.replace(/\D/g, ''),</pre>
+
+      <p class="evlabel">Same cause, surfaced as a route-level assertion</p>
+<pre><span class="fail">AssertionError: expected 500 to be 201</span> <span class="dim">// Object.is equality</span>
+
+  <span class="dim">- Expected</span>
+  <span class="dim">+ Received</span>
+
+  <span class="good">- 201</span>
+  <span class="fail">+ 500</span>
+
+ &#10095; src/api/routes/__tests__/checkout.guest.test.ts:88:31</pre>
+
+      <p class="evlabel">The diff that did it &mdash; a3f9c21</p>
+<pre><span class="dim">--- a/src/api/dto/customer.ts</span>
+<span class="dim">+++ b/src/api/dto/customer.ts</span>
+<span class="good">- email: c.email ? c.email.toLowerCase().trim() : null,</span>
+<span class="good">- phone: c.phone ? c.phone.replace(/\D/g, '') : null,</span>
+<span class="fail">+ email: c.email.toLowerCase().trim(),</span>
+<span class="fail">+ phone: c.phone.replace(/\D/g, ''),</span></pre>
+
+      <div class="proof">
+        <span class="mk">&#10003;</span>
+        <span><span class="mono">git revert --no-commit a3f9c21 &amp;&amp; vitest run api</span> &rarr;
+        <b>6/6 pass</b>, no other test changes state. Re-applying reproduces all six.</span>
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="tri">&#9654;</span> Tests in this cluster <span class="cnt">6</span></summary>
+    <div class="dbody">
+      <ol class="tests">
+        <li><span class="tn"><span class="path">api/routes/__tests__/checkout.guest.test.ts</span><span class="name">creates an order for a customer with no account</span></span><span class="ms">89ms</span></li>
+        <li><span class="tn"><span class="path">api/routes/__tests__/checkout.guest.test.ts</span><span class="name">accepts a guest checkout with no phone number</span></span><span class="ms">71ms</span></li>
+        <li><span class="tn"><span class="path">api/dto/__tests__/customer.test.ts</span><span class="name">normalizes a contact with a null email</span></span><span class="ms">6ms</span></li>
+        <li><span class="tn"><span class="path">api/dto/__tests__/customer.test.ts</span><span class="name">keeps a null billing address as null</span></span><span class="ms">5ms</span></li>
+        <li><span class="tn"><span class="path">api/routes/__tests__/customers.patch.test.ts</span><span class="name">clears an optional field when sent as null</span></span><span class="ms">54ms</span></li>
+        <li><span class="tn"><span class="path">search/__tests__/indexer.test.ts</span><span class="name">indexes a customer that has never been contacted</span></span><span class="ms">128ms</span></li>
+      </ol>
+    </div>
+  </details>
+</article>
+
+<!-- ============ CAUSE 2 ============ -->
+<article class="cause p2">
+  <div class="head">
+    <div class="glyph" aria-hidden="true">&#9632;</div>
+    <div class="body">
+      <div class="tagrow">
+        <span class="prio">2 &middot; Unblocks CI</span>
+        <span class="count"><b>11</b> tests</span>
+        <span class="count">Environment</span>
+        <span class="count">Not a product regression</span>
+      </div>
+      <h3>Tests assume the runner clock is UTC; the fleet moved to Europe/Berlin</h3>
+      <p class="why">
+        <code>c0d55e1</code> moved the self-hosted runners from <code>us-east-1</code> to
+        <code>eu-central-1</code>. The new image does not pin <code>TZ</code>, so
+        <code>new Date(&hellip;)</code> now resolves to UTC+1 local time. Eleven tests format
+        or bucket dates without an explicit zone and slip by one hour or one calendar day.
+        <b>The product code is fine in these eleven cases; the tests are.</b>
+      </p>
+    </div>
+  </div>
+
+  <div class="facts">
+    <div class="fact"><div class="k">Suspect commit</div><div class="v mono">c0d55e1 &middot; PR #4479</div></div>
+    <div class="fact"><div class="k">Confidence</div><div class="v">Confirmed &mdash; reproduced locally with TZ set</div></div>
+    <div class="fact"><div class="k">Blast radius</div><div class="v">CI only &mdash; noise, no user impact</div></div>
+    <div class="fact"><div class="k">Est. fix</div><div class="v">~5 min, one line</div></div>
+  </div>
+
+  <div class="note">
+    <span class="mk">&rarr;</span>
+    <span>Two of the eleven &mdash; <code>digestSchedule</code> and <code>dailyRollup</code> &mdash;
+    fail because the <em>source</em> uses <code>getHours()</code> on a local Date, not just
+    the test. Pinning <code>TZ</code> hides a genuine bug for any non-UTC deployment.
+    Worth a follow-up ticket; not worth blocking on today.</span>
+  </div>
+
+  <details>
+    <summary><span class="tri">&#9654;</span> Evidence <span class="cnt">stack trace + assertion</span></summary>
+    <div class="dbody">
+      <p class="evlabel">Representative failure &mdash; invoicePeriod.test.ts</p>
+<pre><span class="fail">AssertionError: expected '2026-03-15' to be '2026-03-14'</span> <span class="dim">// Object.is equality</span>
+
+  <span class="dim">62|</span>   const authorizedAt = new Date('2026-03-14T23:30:00Z');
+  <span class="dim">63|</span>   const period = invoicePeriod(authorizedAt);
+  <span class="dim">64|</span>   expect(period.startDate).toBe('2026-03-14');
+    <span class="dim">|</span>                            <span class="fail">^</span>
+
+ &#10095; src/billing/__tests__/invoicePeriod.test.ts:64:28</pre>
+
+      <p class="evlabel">Same cause, hour-shaped rather than day-shaped</p>
+<pre><span class="fail">AssertionError: expected 46 to be 48</span> <span class="dim">// Object.is equality</span>
+    <span class="dim">at generateSlots &rarr; day boundary computed from local midnight</span>
+
+ &#10095; src/scheduling/__tests__/slotGenerator.test.ts:31:37</pre>
+
+      <p class="evlabel">Runner environment diff, #2836 (green) &rarr; #2841 (red)</p>
+<pre>  runner.label   <span class="good">sh-useast1-c5</span>   &rarr;  <span class="fail">sh-euc1-c6</span>
+  process.env.TZ <span class="good">"UTC"</span>           &rarr;  <span class="fail">undefined</span>
+  Intl zone      <span class="good">UTC</span>             &rarr;  <span class="fail">Europe/Berlin (UTC+01:00)</span>
+  node           v22.14.0        &rarr;  v22.14.0  <span class="dim">(unchanged)</span></pre>
+
+      <div class="proof">
+        <span class="mk">&#10003;</span>
+        <span><span class="mono">TZ=Europe/Berlin vitest run</span> on the last green commit
+        <span class="mono">8f2b0d7</span> reproduces <b>all 11</b>.
+        <span class="mono">TZ=UTC</span> on today&rsquo;s <span class="mono">4d1e8ba</span> makes
+        <b>11/11 pass</b>. Fix is <span class="mono">env: TZ: UTC</span> in
+        <span class="mono">.github/workflows/ci.yml</span>, or in the vitest setup file.</span>
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="tri">&#9654;</span> Tests in this cluster <span class="cnt">11</span></summary>
+    <div class="dbody">
+      <ol class="tests">
+        <li><span class="tn"><span class="path">billing/__tests__/invoicePeriod.test.ts</span><span class="name">buckets a charge into the period it was authorized in</span></span><span class="ms">12ms</span></li>
+        <li><span class="tn"><span class="path">billing/__tests__/invoicePeriod.test.ts</span><span class="name">rolls over to the next period at the month boundary</span></span><span class="ms">9ms</span></li>
+        <li><span class="tn"><span class="path">billing/__tests__/statementRenderer.test.ts</span><span class="name">renders the statement date in ISO form</span></span><span class="ms">14ms</span></li>
+        <li><span class="tn"><span class="path">scheduling/__tests__/slotGenerator.test.ts</span><span class="name">returns 48 half-hour slots for a standard day</span></span><span class="ms">31ms</span></li>
+        <li><span class="tn"><span class="path">scheduling/__tests__/slotGenerator.test.ts</span><span class="name">skips slots that fall inside a blackout window</span></span><span class="ms">27ms</span></li>
+        <li><span class="tn"><span class="path">scheduling/__tests__/recurrence.test.ts</span><span class="name">expands a weekly rule across a DST boundary</span></span><span class="ms">44ms</span></li>
+        <li><span class="tn"><span class="path">scheduling/__tests__/recurrence.test.ts</span><span class="name">anchors the series to the first occurrence date</span></span><span class="ms">18ms</span></li>
+        <li><span class="tn"><span class="path">reports/__tests__/dailyRollup.test.ts</span><span class="name">groups events into the calendar day they occurred</span></span><span class="ms">63ms</span></li>
+        <li><span class="tn"><span class="path">reports/__tests__/dailyRollup.test.ts</span><span class="name">emits an empty bucket for days with no events</span></span><span class="ms">21ms</span></li>
+        <li><span class="tn"><span class="path">notifications/__tests__/digestSchedule.test.ts</span><span class="name">sends the digest at 08:00 in the account timezone</span></span><span class="ms">11ms</span></li>
+        <li><span class="tn"><span class="path">audit/__tests__/retention.test.ts</span><span class="name">purges entries older than 90 days</span></span><span class="ms">37ms</span></li>
+      </ol>
+    </div>
+  </details>
+</article>
+
+<!-- ============ CAUSE 3 ============ -->
+<article class="cause p3">
+  <div class="head">
+    <div class="glyph" aria-hidden="true">&#9670;</div>
+    <div class="body">
+      <div class="tagrow">
+        <span class="prio">3 &middot; Before flag flip</span>
+        <span class="count"><b>2</b> tests</span>
+        <span class="count">Real bug</span>
+        <span class="count">Never passed</span>
+      </div>
+      <h3>Partial refunds ignore prior refunds and the captured amount</h3>
+      <p class="why">
+        These two are not a regression &mdash; they have never been green on any commit.
+        <code>7c4e10b</code> added the feature and its tests together and merged through the
+        queue while the full suite was not running. <code>applyPartialRefund()</code> validates
+        against the <em>authorized</em> amount rather than the <em>captured</em> amount, and
+        never subtracts refunds already issued. Together that permits refunding more money
+        than was ever taken.
+      </p>
+    </div>
+  </div>
+
+  <div class="facts">
+    <div class="fact"><div class="k">Origin commit</div><div class="v mono">7c4e10b &middot; PR #4482</div></div>
+    <div class="fact"><div class="k">Confidence</div><div class="v">Confirmed by reading the source</div></div>
+    <div class="fact"><div class="k">Blast radius</div><div class="v">None yet &mdash; flag <span class="mono">refunds.partial</span> at 0%</div></div>
+    <div class="fact"><div class="k">Est. fix</div><div class="v">~2h, wants a payments review</div></div>
+  </div>
+
+  <div class="note">
+    <span class="mk">&rarr;</span>
+    <span>Low urgency <em>only</em> because the flag is off. This is a money-losing bug the
+    moment it is turned on &mdash; do not let it be marked &ldquo;known failure&rdquo; and forgotten.</span>
+  </div>
+
+  <details>
+    <summary><span class="tri">&#9654;</span> Evidence <span class="cnt">both assertions + source</span></summary>
+    <div class="dbody">
+      <p class="evlabel">Failure 1 &mdash; guard compares against the wrong amount</p>
+<pre><span class="fail">AssertionError: expected [Function] to throw an error</span>
+
+  <span class="dim">// captured 20.00 of an authorized 90.00; refunding 45.00 must throw</span>
+  <span class="dim">47|</span>   expect(() =&gt; applyPartialRefund(charge, 4500))
+  <span class="dim">48|</span>     .toThrow(RefundExceedsCaptureError);
+    <span class="dim">|</span>      <span class="fail">^ resolved instead</span>
+
+ &#10095; src/payments/__tests__/partialRefund.test.ts:48:8</pre>
+
+      <p class="evlabel">Failure 2 &mdash; prior refunds are not subtracted</p>
+<pre><span class="fail">AssertionError: expected 4500 to be 1500</span> <span class="dim">// Object.is equality</span>
+
+  <span class="dim">// captured 45.00, already refunded 30.00 &rarr; 15.00 should remain</span>
+  <span class="dim">- Expected</span>   <span class="good">1500</span>
+  <span class="dim">+ Received</span>   <span class="fail">4500</span>
+
+ &#10095; src/payments/__tests__/partialRefund.test.ts:71:42</pre>
+
+      <p class="evlabel">Source &mdash; src/payments/refund.ts</p>
+<pre>  <span class="dim">28|</span> export function remainingRefundable(charge: Charge): Cents {
+  <span class="dim">29|</span>   <span class="fail">return charge.authorizedAmount;</span>
+  <span class="dim">30|</span>   <span class="dim">// TODO: charge.capturedAmount - sum(charge.refunds)</span>
+  <span class="dim">31|</span> }</pre>
+
+      <div class="proof">
+        <span class="mk">&#10003;</span>
+        <span><span class="mono">git log --diff-filter=A -- src/payments/__tests__/partialRefund.test.ts</span>
+        &rarr; added in <span class="mono">7c4e10b</span>. Both tests have failed on
+        <b>every</b> run since; there is no green commit to bisect to.</span>
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="tri">&#9654;</span> Tests in this cluster <span class="cnt">2</span></summary>
+    <div class="dbody">
+      <ol class="tests">
+        <li><span class="tn"><span class="path">payments/__tests__/partialRefund.test.ts</span><span class="name">rejects a refund larger than the captured amount</span></span><span class="ms">8ms</span></li>
+        <li><span class="tn"><span class="path">payments/__tests__/partialRefund.test.ts</span><span class="name">subtracts prior refunds from the remaining balance</span></span><span class="ms">7ms</span></li>
+      </ol>
+    </div>
+  </details>
+</article>
+
+<!-- ============ CAUSE 4 ============ -->
+<article class="cause p4">
+  <div class="head">
+    <div class="glyph" aria-hidden="true">&#9675;</div>
+    <div class="body">
+      <div class="tagrow">
+        <span class="prio">4 &middot; Ignore today</span>
+        <span class="count"><b>4</b> tests</span>
+        <span class="count">Flaky</span>
+        <span class="count">Pre-existing</span>
+      </div>
+      <h3>The WebSocket mock races its own open event</h3>
+      <p class="why">
+        All four use <code>MockWebSocket</code> from <code>test/mocks/websocket.ts</code>, which
+        fires <code>onopen</code> from a <code>setTimeout(0)</code> that can land after the test
+        has already begun waiting. On a loaded runner it misses the 2000&#8239;ms window. Nothing
+        about last night&rsquo;s commits touched this &mdash; it has been intermittent for three weeks.
+      </p>
+    </div>
+  </div>
+
+  <div class="facts">
+    <div class="fact"><div class="k">Suspect commit</div><div class="v">None &mdash; not a regression</div></div>
+    <div class="fact"><div class="k">Confidence</div><div class="v">High &mdash; 4/4 passed on rerun #2843</div></div>
+    <div class="fact"><div class="k">History</div><div class="v">17 hits on main in the last 21 days</div></div>
+    <div class="fact"><div class="k">Est. fix</div><div class="v">~45 min &mdash; schedule it, not today</div></div>
+  </div>
+
+  <div class="note">
+    <span class="mk">&rarr;</span>
+    <span>These are the reason run #2841 says 23 and rerun #2843 says 19. If someone quotes
+    you a different failure count, this cluster is the difference.</span>
+  </div>
+
+  <details>
+    <summary><span class="tri">&#9654;</span> Evidence <span class="cnt">timeout + rerun proof</span></summary>
+    <div class="dbody">
+      <p class="evlabel">Representative failure &mdash; identical shape in all four</p>
+<pre><span class="fail">Error: Timed out waiting for socket ready state (2000ms)</span>
+ &#10095; waitForOpen        <span class="hl">test/mocks/websocket.ts:64:11</span>
+ &#10095; MockClient.connect test/mocks/websocket.ts:98:5
+ &#10095; src/realtime/__tests__/presence.test.ts:29:9
+
+  <span class="dim">61|</span> async function waitForOpen(sock: MockWebSocket) {
+  <span class="dim">62|</span>   if (sock.readyState === OPEN) return;
+  <span class="dim">63|</span>   return withTimeout(once(sock, 'open'), 2000);
+  <span class="dim">|</span>          <span class="fail">^ 'open' may already have fired in a queued macrotask</span></pre>
+
+      <p class="evlabel">Rerun of failed jobs &mdash; run #2843, same commit 4d1e8ba</p>
+<pre>  presence &rsaquo; marks a peer online when it joins        <span class="good">PASS</span>  14ms
+  presence &rsaquo; drops a peer after two missed heartbeats  <span class="good">PASS</span>  22ms
+  reconnect &rsaquo; replays buffered messages               <span class="good">PASS</span>  31ms
+  liveTiles &rsaquo; streams tile updates                     <span class="good">PASS</span>  19ms
+
+  <span class="dim">4 passed &middot; 0 failed &middot; no code changed between #2841 and #2843</span></pre>
+
+      <div class="proof">
+        <span class="mk">&#10003;</span>
+        <span>100 local runs of the four specs: <b>13 failures</b>, all timeouts, all in
+        <span class="mono">waitForOpen</span>. Failure rate is unchanged before and after
+        <span class="mono">8f2b0d7</span> &mdash; this cluster is independent of last night.</span>
+      </div>
+    </div>
+  </details>
+
+  <details>
+    <summary><span class="tri">&#9654;</span> Tests in this cluster <span class="cnt">4</span></summary>
+    <div class="dbody">
+      <ol class="tests">
+        <li><span class="tn"><span class="path">realtime/__tests__/presence.test.ts</span><span class="name">marks a peer online when it joins the channel</span></span><span class="ms slow">2011ms</span></li>
+        <li><span class="tn"><span class="path">realtime/__tests__/presence.test.ts</span><span class="name">drops a peer after two missed heartbeats</span></span><span class="ms slow">2008ms</span></li>
+        <li><span class="tn"><span class="path">realtime/__tests__/reconnect.test.ts</span><span class="name">replays buffered messages after a reconnect</span></span><span class="ms slow">2013ms</span></li>
+        <li><span class="tn"><span class="path">dashboard/__tests__/liveTiles.test.ts</span><span class="name">streams tile updates without a full refetch</span></span><span class="ms slow">2006ms</span></li>
+      </ol>
+    </div>
+  </details>
+</article>
+
+<!-- ============ TIMELINE ============ -->
+<div class="seclabel">
+  <h2>Green &rarr; red, six commits</h2>
+  <div class="ln"></div>
+</div>
+
+<ul class="tl">
+  <li class="green">
+    <div class="t">22:41</div>
+    <div class="track"><div class="pip"></div></div>
+    <div class="c">
+      <div><span class="sha">8f2b0d7</span> <span class="pr">run #2836</span></div>
+      <div class="msg">Last fully green run &mdash; 1&#8239;824 passed, 0 failed.</div>
+      <span class="badge bok">&#9632; Baseline</span>
+    </div>
+  </li>
+  <li class="cleared">
+    <div class="t">23:04</div>
+    <div class="track"><div class="pip"></div></div>
+    <div class="c">
+      <div><span class="sha">e91c774</span> <span class="pr">#4468</span></div>
+      <div class="msg">chore(deps): bump undici 6.19.2 &rarr; 6.21.0</div>
+      <span class="badge bdim">Cleared &mdash; reverted locally, no effect</span>
+    </div>
+  </li>
+  <li class="blame" style="--accent:var(--c1)">
+    <div class="t">23:52</div>
+    <div class="track"><div class="pip"></div></div>
+    <div class="c">
+      <div><span class="sha">a3f9c21</span> <span class="pr">#4471</span></div>
+      <div class="msg">refactor(api): normalize customer payloads through toCustomerDTO()</div>
+      <span class="badge b1">&#9650; Cause 1 &mdash; 6 tests</span>
+    </div>
+  </li>
+  <li class="cleared">
+    <div class="t">00:37</div>
+    <div class="track"><div class="pip"></div></div>
+    <div class="c">
+      <div><span class="sha">2b8a6f4</span> <span class="pr">#4476</span></div>
+      <div class="msg">docs(runbook): add on-call rotation for payments</div>
+      <span class="badge bdim">Cleared &mdash; docs only</span>
+    </div>
+  </li>
+  <li class="blame" style="--accent:var(--c2)">
+    <div class="t">01:19</div>
+    <div class="track"><div class="pip"></div></div>
+    <div class="c">
+      <div><span class="sha">c0d55e1</span> <span class="pr">#4479</span></div>
+      <div class="msg">chore(ci): move self-hosted runner fleet us-east-1 &rarr; eu-central-1</div>
+      <span class="badge b2">&#9632; Cause 2 &mdash; 11 tests</span>
+    </div>
+  </li>
+  <li class="blame" style="--accent:var(--c3)">
+    <div class="t">02:48</div>
+    <div class="track"><div class="pip"></div></div>
+    <div class="c">
+      <div><span class="sha">7c4e10b</span> <span class="pr">#4482</span></div>
+      <div class="msg">feat(refunds): partial refund amounts</div>
+      <span class="badge b3">&#9670; Cause 3 &mdash; 2 tests, red on arrival</span>
+    </div>
+  </li>
+  <li class="red">
+    <div class="t">03:12</div>
+    <div class="track"><div class="pip"></div></div>
+    <div class="c">
+      <div><span class="sha">4d1e8ba</span> <span class="pr">run #2841</span></div>
+      <div class="msg">Scheduled full suite &mdash; 23 failed, 1&#8239;823 passed, 1 skipped.</div>
+      <span class="badge b1">&#9650; First red</span>
+    </div>
+  </li>
+</ul>
+
+<div class="note" style="border:1px solid var(--line);border-radius:var(--radius);margin-top:14px;background:var(--surface)">
+  <span class="mk">&#9888;</span>
+  <span>Nothing went red between 22:41 and 03:12 because the <b>full</b> suite only runs on the
+  03:00 schedule. PR checks run a path-filtered subset that excludes the
+  <span class="mono">api-integration</span>, <span class="mono">scheduling</span> and
+  <span class="mono">payments</span> projects &mdash; which is exactly why three of these four
+  clusters reached <span class="mono">main</span> unnoticed.</span>
+</div>
+
+<!-- ============ NEXT ============ -->
+<div class="seclabel">
+  <h2>Suggested order of work</h2>
+  <div class="ln"></div>
+</div>
+
+<ul class="steps">
+  <li>
+    <span class="box" aria-hidden="true"></span>
+    <span class="txt">Patch <span class="mono">normalizeContact()</span> or revert <span class="mono">a3f9c21</span>
+      <small>Clears 6 &middot; stops a 500 shipping at 14:00 &middot; ~20 min</small></span>
+    <span class="when">now</span>
+  </li>
+  <li>
+    <span class="box" aria-hidden="true"></span>
+    <span class="txt">Set <span class="mono">TZ: UTC</span> on the runner fleet
+      <small>Clears 11 &middot; makes the board readable again &middot; ~5 min</small></span>
+    <span class="when">now</span>
+  </li>
+  <li>
+    <span class="box" aria-hidden="true"></span>
+    <span class="txt">Widen the PR path filter to include <span class="mono">api-integration</span>
+      <small>The process bug that let causes 1 and 3 land &middot; ~15 min</small></span>
+    <span class="when">today</span>
+  </li>
+  <li>
+    <span class="box" aria-hidden="true"></span>
+    <span class="txt">Fix <span class="mono">remainingRefundable()</span> before the flag is flipped
+      <small>Clears 2 &middot; money-losing if shipped &middot; needs a payments reviewer &middot; ~2h</small></span>
+    <span class="when">this week</span>
+  </li>
+  <li class="skip">
+    <span class="box" aria-hidden="true"></span>
+    <span class="txt">Rewrite <span class="mono">MockWebSocket</span> to resolve open synchronously
+      <small>Clears 4 &middot; pre-existing flake &middot; no urgency, but stop retrying around it</small></span>
+    <span class="when">backlog</span>
+  </li>
+  <li class="skip">
+    <span class="box" aria-hidden="true"></span>
+    <span class="txt">Audit <span class="mono">getHours()</span> use in digest + rollup for non-UTC deploys
+      <small>Latent product bug hidden by pinning TZ &middot; file it so it is not lost</small></span>
+    <span class="when">backlog</span>
+  </li>
+</ul>
+
+<footer>
+  <p><b>What was done:</b> read all 23 failures from run #2841, diffed the runner environment against #2836,
+  compared with rerun #2843, bisected two clusters by local revert, and ran the flaky specs 100&times; locally.
+  Triage took 4m&nbsp;51s of wall time.</p>
+  <p><b>What was not done:</b> no code was changed, no commit reverted on the remote, no branch pushed,
+  no ticket filed. The working tree is clean &mdash; every &ldquo;confirmed&rdquo; above was verified in a
+  scratch clone and thrown away.</p>
+  <p class="mono">harbor/api &middot; main @ 4d1e8ba &middot; vitest 3.2.4 &middot; node v22.14.0 &middot; generated 03:19 UTC</p>
+</footer>
+
+</div>
+
+<script>
+(function () {
+  // --- theme toggle: cycles auto -> light -> dark ---
+  var html = document.documentElement;
+  var btn  = document.getElementById('themeBtn');
+  var modes = ['auto', 'light', 'dark'];
+  var i = 0;
+
+  try {
+    var saved = localStorage.getItem('triage-theme');
+    if (saved && modes.indexOf(saved) > -1) i = modes.indexOf(saved);
+  } catch (e) {}
+
+  function paint() {
+    var m = modes[i];
+    if (m === 'auto') html.removeAttribute('data-theme');
+    else html.setAttribute('data-theme', m);
+    btn.textContent = 'Theme: ' + m;
+    btn.setAttribute('aria-label', 'Colour theme, currently ' + m + '. Click to change.');
+    try { localStorage.setItem('triage-theme', m); } catch (e) {}
+  }
+  btn.addEventListener('click', function () {
+    i = (i + 1) % modes.length;
+    paint();
+  });
+  paint();
+
+  // --- expand / collapse every disclosure ---
+  var exp = document.getElementById('expandBtn');
+  exp.addEventListener('click', function () {
+    var open = exp.dataset.state === 'collapsed';
+    var all = document.querySelectorAll('article.cause details');
+    for (var j = 0; j < all.length; j++) all[j].open = open;
+    exp.dataset.state = open ? 'expanded' : 'collapsed';
+    exp.textContent = open ? 'Collapse all' : 'Expand all';
+  });
+
+  // --- clicking a bar segment jumps to its cause card ---
+  var segs = document.querySelectorAll('.seg');
+  var cards = document.querySelectorAll('article.cause');
+  for (var k = 0; k < segs.length; k++) {
+    (function (seg, card) {
+      if (!card) return;
+      seg.style.cursor = 'pointer';
+      seg.setAttribute('tabindex', '0');
+      seg.setAttribute('role', 'link');
+      function go() {
+        card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      seg.addEventListener('click', go);
+      seg.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); }
+      });
+    })(segs[k], cards[k]);
+  }
+})();
+</script>
+</body>
+</html>

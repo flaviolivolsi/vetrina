@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Officina config inventory — blast radius against size</title>
+<link rel="stylesheet" href="/_vetrina/kit.css">
+
+<style>
+  /* Only what the kit does not cover: the proportional map itself. The kit
+     gives .v-cells / .v-cell (intensity + text). The mosaic geometry — area as
+     the encoding — is this page's shape, so it lives here. */
+
+  .m-map {
+    /* 12 tracks always, on every width. The cells re-proportion, they do not
+       re-flow into a list, because a treemap that becomes a list stops being a
+       treemap. minmax(0,1fr) so no cell can widen a track and push the page. */
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-rows: var(--u);
+    --u: clamp(15px, 3.6vw, 17px);
+    gap: 3px;
+  }
+
+  .m-cell {
+    grid-column: span var(--c);
+    grid-row: span var(--r);
+    min-inline-size: 0;          /* kit's 3rem floor would widen tracks */
+    padding: 5px 6px;
+    text-align: start;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    overflow: hidden;
+    font-size: 10px;
+    line-height: 1.25;
+    /* A path is one unbreakable word. This is the single commonest cause of a
+       page that scrolls sideways, so it is set on the element that holds one. */
+    overflow-wrap: anywhere;
+    border: var(--v-hair) solid transparent;
+  }
+
+  /* Blast radius, three ways before colour: a glyph with its own silhouette, a
+     spelled word, and a border treatment that survives greyscale. */
+  .m-cell.is-fleet {
+    background: color-mix(in srgb, var(--v-urgent) 38%, var(--v-raised));
+    border-color: var(--v-urgent);
+  }
+  .m-cell.is-wide {
+    border-style: dashed;
+    border-color: var(--v-line-strong);
+  }
+  .m-cell.is-tail {
+    background: repeating-linear-gradient(135deg,
+      var(--v-raised) 0 7px, var(--v-sunken) 7px 14px);
+    border-style: dotted;
+    border-color: var(--v-line-strong);
+  }
+
+  .m-blast {
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    font-size: 9px;
+    color: var(--v-fg-3);
+  }
+  .is-fleet .m-blast, .is-wide .m-blast { color: var(--v-fg); font-weight: 600; }
+
+  .m-dir  { color: var(--v-fg-3); display: block; }
+  .m-base { color: var(--v-fg); font-weight: 600; display: block; }
+  .m-nums { margin-block-start: auto; color: var(--v-fg-2); white-space: normal; }
+
+  /* Bigger cells get bigger type. Nothing else changes. */
+  .t-xl { font-size: var(--v-t-3); padding: var(--v-3); gap: var(--v-2); }
+  .t-xl .m-blast { font-size: var(--v-t-1); }
+  .t-lg { font-size: var(--v-t-2); padding: var(--v-2) var(--v-3); gap: 3px; }
+  .t-lg .m-blast { font-size: 10px; }
+  .t-md { font-size: 11px; padding: 6px 7px; }
+
+  .m-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--v-2) var(--v-5);
+    font-size: var(--v-t-1);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--v-fg-3);
+    margin-block-start: var(--v-3);
+  }
+  .m-legend b { color: var(--v-fg-2); font-weight: 600; }
+  .m-swatch {
+    display: inline-block;
+    inline-size: 10px; block-size: 10px;
+    vertical-align: -1px;
+    border: var(--v-hair) solid var(--v-line-strong);
+    background: var(--v-raised);
+  }
+  .m-swatch.is-fleet { background: color-mix(in srgb, var(--v-urgent) 38%, var(--v-raised)); border-color: var(--v-urgent); }
+  .m-swatch.is-wide  { border-style: dashed; }
+
+  /* On a phone the map keeps all twelve tracks — it must stay a map — so the
+     cells get narrower and their text gets taller. The row unit grows and the
+     type tightens to match, which trades a taller map for a phone that never
+     scrolls sideways and never clips a filename. Vertical is the scroll a thumb
+     already expects. */
+  @media (max-width: 560px) {
+    .m-map { --u: 18px; gap: 2px; }
+    .m-cell { font-size: 9.5px; line-height: 1.14; padding: 4px 5px; gap: 1px; }
+    .m-blast { font-size: 8.5px; letter-spacing: .06em; }
+    .t-md { font-size: 10px; padding: 5px 6px; }
+    .t-lg { font-size: 11px; padding: 6px 7px; }
+    .t-xl { font-size: 12px; padding: var(--v-2); gap: var(--v-1); }
+    .t-xl .m-blast { font-size: 9px; }
+  }
+  /* Narrower than a modern phone, the cells lose width faster than the text
+     shrinks, so the row unit has to grow again. Counter-intuitive but correct:
+     a narrower screen needs a taller map, not a shorter one. */
+  @media (max-width: 400px) { .m-map { --u: 21px; } }
+  @media (max-width: 340px) { .m-map { --u: 24px; } }
+
+  figure.m-fig { margin: 0; }
+  figcaption { margin: 0; }
+</style>
+
+<div class="v-wrap">
+
+  <header>
+    <p class="v-kicker"><span class="v-dot"></span> Officina · configuration inventory · read-only sweep</p>
+
+    <h1 class="v-headline">Nine lines reach every device. The biggest file reaches one.</h1>
+
+    <p class="v-standfirst">
+      Officina is one always-on Linux server; the laptop, the phone and any borrowed
+      machine are terminals into it, stitched together by Tailscale. Its promise is warm
+      recovery — anything can die and you are working again within two hours, from
+      whatever device you are holding. Forty-one files configure that. This map draws
+      each one as an area: <b>size is the area, danger is the marking</b>. They turn out
+      to have almost nothing to do with each other.
+    </p>
+
+    <ul class="v-meta">
+      <li>41 files</li>
+      <li>2,980 lines</li>
+      <li>11 devices on the tailnet</li>
+      <li>branch main</li>
+      <li>swept 2026-08-04</li>
+      <li>nothing changed</li>
+    </ul>
+  </header>
+
+  <section class="v-stats">
+    <div class="v-stat">
+      <div class="v-stat-label">Files mapped</div>
+      <div class="v-stat-num">41</div>
+      <div class="v-stat-qual">Everything under <code>officina/</code> that changes machine state.</div>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Biggest file</div>
+      <div class="v-stat-num">412<span class="v-unit">lines</span></div>
+      <div class="v-stat-qual">Touches 1 device. A bad edit costs one rebuild.</div>
+    </div>
+    <div class="v-stat is-urgent">
+      <div class="v-stat-label">Smallest fleet-wide file</div>
+      <div class="v-stat-num">9<span class="v-unit">lines</span></div>
+      <div class="v-stat-qual">Touches all 11. A bad edit lands everywhere at once.</div>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Reach all 11 devices</div>
+      <div class="v-stat-num">6<span class="v-unit">files</span></div>
+      <div class="v-stat-qual">347 lines — 11.6% of the configuration.</div>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Size vs reach</div>
+      <div class="v-stat-num">−0.09<span class="v-unit">r</span></div>
+      <div class="v-stat-qual">Line count predicts blast radius about as well as a coin.</div>
+    </div>
+  </section>
+
+  <section class="v-hero">
+    <figure class="m-fig">
+      <div class="v-axis">
+        <span>Area = line count</span>
+        <span>Marking = blast radius</span>
+      </div>
+
+      <p class="v-sr">
+        A proportional map of 41 configuration files. Each cell's area is its line count.
+        Each cell is marked with how far a mistake in it propagates: FLEET reaches all 11
+        devices, WIDE reaches 3 to 4, LOCAL reaches 1 or 2. The largest cells are all LOCAL.
+        The four smallest cells drawn individually are all FLEET.
+      </p>
+
+      <div class="v-cells m-map">
+
+        <!-- strip A -->
+        <div class="v-cell m-cell t-xl" style="--v:.09; --c:7; --r:10">
+          <span class="m-blast">○ Local · 1 device</span>
+          <span class="m-path"><span class="m-dir">ansible/roles/workstation/tasks/</span><span class="m-base">main.yml</span></span>
+          <span class="m-nums">412 lines · 1 of 11 devices</span>
+        </div>
+        <div class="v-cell m-cell t-xl" style="--v:.09; --c:5; --r:10">
+          <span class="m-blast">○ Local · 1 device</span>
+          <span class="m-path"><span class="m-dir">agents/skills/officina-recovery/</span><span class="m-base">SKILL.md</span></span>
+          <span class="m-nums">296 lines · 1 of 11 devices</span>
+        </div>
+
+        <!-- strip B -->
+        <div class="v-cell m-cell t-lg" style="--v:.18; --c:7; --r:7">
+          <span class="m-blast">○ Local · 2 devices</span>
+          <span class="m-path"><span class="m-dir">caddy/</span><span class="m-base">Caddyfile</span></span>
+          <span class="m-nums">289 lines · 2 of 11 devices</span>
+        </div>
+        <div class="v-cell m-cell t-lg" style="--v:.09; --c:5; --r:7">
+          <span class="m-blast">○ Local · 1 device</span>
+          <span class="m-path"><span class="m-dir">backup/restic/</span><span class="m-base">exclude-rules.conf</span></span>
+          <span class="m-nums">207 lines · 1 of 11 devices</span>
+        </div>
+
+        <!-- strip C -->
+        <div class="v-cell m-cell t-md" style="--v:.09; --c:4; --r:6">
+          <span class="m-blast">○ Local · 1 device</span>
+          <span class="m-path"><span class="m-dir">systemd/user/</span><span class="m-base">officina-agent@.service</span></span>
+          <span class="m-nums">143 lines · 1 of 11 devices</span>
+        </div>
+        <div class="v-cell m-cell t-md is-wide" style="--v:.27; --c:4; --r:6">
+          <span class="m-blast">◆ Wide · 3 devices</span>
+          <span class="m-path"><span class="m-dir">ansible/roles/base/tasks/</span><span class="m-base">hardening.yml</span></span>
+          <span class="m-nums">140 lines · 3 of 11 devices</span>
+        </div>
+        <div class="v-cell m-cell t-md is-fleet" style="--v:1; --c:4; --r:6">
+          <span class="m-blast">▲ Fleet · 11 devices</span>
+          <span class="m-path"><span class="m-dir">ansible/group_vars/</span><span class="m-base">all.yml</span></span>
+          <span class="m-nums">137 lines · 11 of 11 devices</span>
+        </div>
+
+        <!-- strip D -->
+        <div class="v-cell m-cell t-md" style="--v:.18; --c:4; --r:5">
+          <span class="m-blast">○ Local · 2 devices</span>
+          <span class="m-path"><span class="m-dir">caddy/snippets/</span><span class="m-base">tls-internal.caddy</span></span>
+          <span class="m-nums">118 lines · 2 of 11 devices</span>
+        </div>
+        <div class="v-cell m-cell t-md" style="--v:.09; --c:4; --r:5">
+          <span class="m-blast">○ Local · 1 device</span>
+          <span class="m-path"><span class="m-dir">systemd/system/</span><span class="m-base">officina-backup.service</span></span>
+          <span class="m-nums">116 lines · 1 of 11 devices</span>
+        </div>
+        <div class="v-cell m-cell t-md" style="--v:.09; --c:4; --r:5">
+          <span class="m-blast">○ Local · 1 device</span>
+          <span class="m-path"><span class="m-dir">agents/skills/deploy-check/</span><span class="m-base">SKILL.md</span></span>
+          <span class="m-nums">112 lines · 1 of 11 devices</span>
+        </div>
+
+        <!-- strip E -->
+        <div class="v-cell m-cell" style="--v:.09; --c:3; --r:6">
+          <span class="m-blast">○ Local · 1</span>
+          <span class="m-path"><span class="m-dir">backup/restic/</span><span class="m-base">prune-policy.env</span></span>
+          <span class="m-nums">106 lines · 1 of 11</span>
+        </div>
+        <div class="v-cell m-cell is-fleet" style="--v:1; --c:3; --r:6">
+          <span class="m-blast">▲ Fleet · 11</span>
+          <span class="m-path"><span class="m-dir">ansible/roles/tailscale/tasks/</span><span class="m-base">main.yml</span></span>
+          <span class="m-nums">104 lines · 11 of 11</span>
+        </div>
+        <div class="v-cell m-cell" style="--v:.09; --c:3; --r:6">
+          <span class="m-blast">○ Local · 1</span>
+          <span class="m-path"><span class="m-dir">systemd/system/</span><span class="m-base">officina-restore.target</span></span>
+          <span class="m-nums">101 lines · 1 of 11</span>
+        </div>
+        <div class="v-cell m-cell is-wide" style="--v:.36; --c:3; --r:6">
+          <span class="m-blast">◆ Wide · 4</span>
+          <span class="m-path"><span class="m-dir">caddy/sites/</span><span class="m-base">inbox.caddy</span></span>
+          <span class="m-nums">97 lines · 4 of 11</span>
+        </div>
+
+        <!-- strip F — every cell here is at the drawing floor -->
+        <div class="v-cell m-cell is-fleet" style="--v:1; --c:3; --r:5">
+          <span class="m-blast">▲ Fleet · 11</span>
+          <span class="m-path"><span class="m-dir">systemd/user/</span><span class="m-base">officina-taildrop@.service</span></span>
+          <span class="m-nums">44 lines · 11 of 11</span>
+        </div>
+        <div class="v-cell m-cell is-fleet" style="--v:1; --c:3; --r:5">
+          <span class="m-blast">▲ Fleet · 11</span>
+          <span class="m-path"><span class="m-dir">tailscale/</span><span class="m-base">dns-split.json</span></span>
+          <span class="m-nums">31 lines · 11 of 11</span>
+        </div>
+        <div class="v-cell m-cell is-fleet" style="--v:1; --c:3; --r:5">
+          <span class="m-blast">▲ Fleet · 11</span>
+          <span class="m-path"><span class="m-dir">tailscale/</span><span class="m-base">acl.hujson</span></span>
+          <span class="m-nums">22 lines · 11 of 11</span>
+        </div>
+        <div class="v-cell m-cell is-fleet" style="--v:1; --c:3; --r:5">
+          <span class="m-blast">▲ Fleet · 11</span>
+          <span class="m-path"><span class="m-dir">agents/policy/</span><span class="m-base">action-whitelist.txt</span></span>
+          <span class="m-nums">9 lines · 11 of 11</span>
+        </div>
+
+        <!-- strip G — the tail, drawn as one block -->
+        <div class="v-cell m-cell t-md is-tail" style="--v:.18; --c:12; --r:7">
+          <span class="m-blast">○ Local · 1–2 devices each</span>
+          <span class="m-path"><span class="m-base">23 remaining files, drawn as one block</span><span class="m-dir">timers, drop-ins, one-line env files, two more Caddy sites</span></span>
+          <span class="m-nums">496 lines · none reaches more than 2 of 11 devices</span>
+        </div>
+
+      </div>
+
+      <figcaption class="m-legend">
+        <span><span class="m-swatch is-fleet"></span> <b>▲ Fleet</b> — 11 of 11 devices — 6 files</span>
+        <span><span class="m-swatch is-wide"></span> <b>◆ Wide</b> — 3–4 devices — 2 files</span>
+        <span><span class="m-swatch"></span> <b>○ Local</b> — 1–2 devices — 33 files</span>
+      </figcaption>
+    </figure>
+  </section>
+
+  <p class="v-section-note">
+    Area is line count, honestly, down to about 95 lines. Below that a cell is drawn at a
+    floor size so it can still carry its own filename and its own numbers — the four
+    smallest cells are bigger on this map than they are in the repository.
+    <code>agents/policy/action-whitelist.txt</code> is drawn roughly <b>ten times</b> its
+    true share. At true scale it would be a two-pixel mark in the corner, and it would
+    still reach all eleven devices. That is the whole finding: the thing your eye is drawn
+    to and the thing that can hurt you are different things.
+  </p>
+
+  <section class="v-section v-dense">
+    <div class="v-section-head">
+      <h2>The six that reach everything</h2>
+      <span class="v-count">smallest first — which is also least-reviewed first</span>
+    </div>
+
+    <p class="v-section-note">
+      Ordered by line count ascending, because on this list that ordering is the argument.
+      Small files invite a quicker read than large ones, and size tracks blast radius
+      not at all. The first half of that is an assumption; this page measures line
+      count and device reach, not review behaviour. None of these is misconfigured today. All six are places where a
+      correct-looking three-character change arrives on every device you own.
+    </p>
+
+    <article class="v-card is-urgent">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">▲</span>
+        <h3><code>agents/policy/action-whitelist.txt</code></h3>
+        <span class="v-tag">Fleet · 9 lines · 11 devices</span>
+      </div>
+      <p>
+        Nine allowed action names, one per line. Every agent process on every device reads
+        it before it does anything. Adding a tenth line widens what an agent may do
+        everywhere at once, and a nine-line file produces a one-line diff that no review
+        habit is built to catch.
+      </p>
+      <p class="v-why">
+        The project's own rule says it plainly: <b>the action whitelist is a security
+        boundary, not a UX choice.</b> The rule is written down. The file is still the
+        smallest thing that reaches every device.
+      </p>
+    </article>
+
+    <article class="v-card">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">▲</span>
+        <h3><code>tailscale/acl.hujson</code></h3>
+        <span class="v-tag">Fleet · 22 lines · 11 devices</span>
+      </div>
+      <p>
+        The tailnet grant table: which tags may reach which ports. A wrong tag changes who
+        can reach the server, from where, on every device simultaneously — including the
+        borrowed laptop that is only ever a terminal.
+      </p>
+      <p class="v-why">
+        Warm recovery <b>depends</b> on this file being permissive enough to let a fresh
+        device in, and safe enough that a fresh device is not a hole. Both properties live
+        in twenty-two lines.
+      </p>
+    </article>
+
+    <article class="v-card">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">▲</span>
+        <h3><code>tailscale/dns-split.json</code></h3>
+        <span class="v-tag">Fleet · 31 lines · 11 devices</span>
+      </div>
+      <p>
+        MagicDNS split routes. Its failure mode is the bad one: a wrong entry does not
+        break access, it silently resolves a name somewhere else. Nothing goes red.
+      </p>
+      <p class="v-why">
+        The two-hour recovery clock only starts when someone notices. <b>A file whose
+        failure mode is a wrong answer rather than an outage does not start the clock at
+        all.</b>
+      </p>
+    </article>
+
+    <article class="v-card">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">▲</span>
+        <h3><code>systemd/user/officina-taildrop@.service</code></h3>
+        <span class="v-tag">Fleet · 44 lines · 11 devices</span>
+      </div>
+      <p>
+        The paste-inbox unit, instantiated once per device. Its <code>Environment=</code>
+        block fixes the inbox path and its mode. A change here lands on every terminal the
+        next time the unit is re-templated, which is on the next converge, not on a
+        deliberate rollout.
+      </p>
+      <p class="v-why">
+        Forty-four lines, and one of them decides whether a directory that receives files
+        from other machines is <b>0700 or 0755</b>.
+      </p>
+    </article>
+
+    <article class="v-card">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">▲</span>
+        <h3><code>ansible/roles/tailscale/tasks/main.yml</code></h3>
+        <span class="v-tag">Fleet · 104 lines · 11 devices</span>
+      </div>
+      <p>
+        Brings <code>tailscaled</code> up and applies tags at join time. It runs against
+        every host in the inventory, so it is fleet-wide by construction rather than by
+        accident.
+      </p>
+      <p class="v-why">
+        This one is <b>at least the right size to look important</b>, which is the only
+        reason it gets read.
+      </p>
+    </article>
+
+    <article class="v-card">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">▲</span>
+        <h3><code>ansible/group_vars/all.yml</code></h3>
+        <span class="v-tag">Fleet · 137 lines · 11 devices</span>
+      </div>
+      <p>
+        The variables every play interpolates. Nothing executes here; everything is
+        parameterised from here. Change a hostname and eleven machines converge on the new
+        one.
+      </p>
+      <p class="v-why">
+        The largest fleet-wide file on the map — and, by every account, <b>the only
+        fleet-wide file anyone reviews carefully.</b> Size is buying attention it does not
+        need, and denying it to the five files above.
+      </p>
+    </article>
+  </section>
+
+  <section class="v-section v-air">
+    <div class="v-section-head">
+      <h2>What this is not</h2>
+    </div>
+    <div class="v-prose">
+      <p>
+        This is an inventory, not an incident. No file on this map is misconfigured, no
+        credential is exposed, and nothing here was reachable that should not have been.
+        Every one of the forty-one files is doing exactly what it was written to do.
+      </p>
+      <p>
+        The finding is about where attention goes. A review queue sorted by diff size,
+        a habit of skimming short files, an eye that reads a big block as a big
+        responsibility — all three point away from the six files that reach the whole
+        fleet. The map is here because a sorted list would have been read as a ranking,
+        and the point is not that one file is worse than another. The point is that the
+        picture and the danger do not line up, and you can see that in two seconds but
+        not in a table.
+      </p>
+      <p>
+        The cheapest correction is not a tool. It is putting the six paths above somewhere
+        a change to them cannot be quiet — a required second pair of eyes, a converge that
+        announces itself, a line in the recovery runbook. The whitelist rule already
+        exists. It just needs to apply to the file, not only to the idea.
+      </p>
+    </div>
+  </section>
+
+  <details class="v-details">
+    <summary>Full roster — 18 files drawn individually, plus the 23-file tail</summary>
+    <div class="v-details-body">
+      <table class="v-table">
+        <thead>
+          <tr>
+            <th>Path</th>
+            <th class="v-num">Lines</th>
+            <th class="v-num">Devices</th>
+            <th>Blast radius</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><code>ansible/roles/workstation/tasks/main.yml</code></td><td class="v-num">412</td><td class="v-num">1</td><td>○ Local</td></tr>
+          <tr><td><code>agents/skills/officina-recovery/SKILL.md</code></td><td class="v-num">296</td><td class="v-num">1</td><td>○ Local</td></tr>
+          <tr><td><code>caddy/Caddyfile</code></td><td class="v-num">289</td><td class="v-num">2</td><td>○ Local</td></tr>
+          <tr><td><code>backup/restic/exclude-rules.conf</code></td><td class="v-num">207</td><td class="v-num">1</td><td>○ Local</td></tr>
+          <tr><td><code>systemd/user/officina-agent@.service</code></td><td class="v-num">143</td><td class="v-num">1</td><td>○ Local</td></tr>
+          <tr><td><code>ansible/roles/base/tasks/hardening.yml</code></td><td class="v-num">140</td><td class="v-num">3</td><td>◆ Wide</td></tr>
+          <tr><td><code>ansible/group_vars/all.yml</code></td><td class="v-num">137</td><td class="v-num">11</td><td>▲ Fleet</td></tr>
+          <tr><td><code>caddy/snippets/tls-internal.caddy</code></td><td class="v-num">118</td><td class="v-num">2</td><td>○ Local</td></tr>
+          <tr><td><code>systemd/system/officina-backup.service</code></td><td class="v-num">116</td><td class="v-num">1</td><td>○ Local</td></tr>
+          <tr><td><code>agents/skills/deploy-check/SKILL.md</code></td><td class="v-num">112</td><td class="v-num">1</td><td>○ Local</td></tr>
+          <tr><td><code>backup/restic/prune-policy.env</code></td><td class="v-num">106</td><td class="v-num">1</td><td>○ Local</td></tr>
+          <tr><td><code>ansible/roles/tailscale/tasks/main.yml</code></td><td class="v-num">104</td><td class="v-num">11</td><td>▲ Fleet</td></tr>
+          <tr><td><code>systemd/system/officina-restore.target</code></td><td class="v-num">101</td><td class="v-num">1</td><td>○ Local</td></tr>
+          <tr><td><code>caddy/sites/inbox.caddy</code></td><td class="v-num">97</td><td class="v-num">4</td><td>◆ Wide</td></tr>
+          <tr><td><code>systemd/user/officina-taildrop@.service</code></td><td class="v-num">44</td><td class="v-num">11</td><td>▲ Fleet</td></tr>
+          <tr><td><code>tailscale/dns-split.json</code></td><td class="v-num">31</td><td class="v-num">11</td><td>▲ Fleet</td></tr>
+          <tr><td><code>tailscale/acl.hujson</code></td><td class="v-num">22</td><td class="v-num">11</td><td>▲ Fleet</td></tr>
+          <tr><td><code>agents/policy/action-whitelist.txt</code></td><td class="v-num">9</td><td class="v-num">11</td><td>▲ Fleet</td></tr>
+          <tr><td>23 remaining files (timers, drop-ins, env files, 2 Caddy sites)</td><td class="v-num">496</td><td class="v-num">1–2</td><td>○ Local</td></tr>
+        </tbody>
+        <tfoot>
+          <tr><td><b>41 files</b></td><td class="v-num"><b>2,980</b></td><td class="v-num">—</td><td>6 fleet · 2 wide · 33 local</td></tr>
+        </tfoot>
+      </table>
+    </div>
+  </details>
+
+  <footer class="v-footer">
+    <p>
+      Officina — 41 configuration files, 11 devices, one canonical server. Swept read-only
+      on 2026-08-04; nothing was written, converged or restarted. Area on the map is line
+      count with a drawing floor below ~95 lines; blast radius is the count of devices a
+      change to that file lands on, taken from the inventory and the unit templates.
+      Figures on this page are a demonstration inventory.
+    </p>
+  </footer>
+
+</div>

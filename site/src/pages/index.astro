@@ -1,0 +1,759 @@
+---
+// Fonts and brand tokens must be imported here, not @imported inside
+// <style>. Astro only rewrites fontsource's relative url() asset paths
+// for stylesheets that go through the module graph.
+import '@fontsource/azeret-mono/400.css';
+import '@fontsource/azeret-mono/500.css';
+import '@fontsource/dm-mono/400.css';
+import '@fontsource/dm-mono/500.css';
+import '../styles/brand.css';
+
+const demos = [
+  { file: '04-incident-timeline.html',  title: 'The wrong theory lasted 19 of the 26 minutes', shape: 'dual-track timeline', note: 'Two clocks on one axis. The time lost to the wrong cause is drawn as a hole, not described in a sentence.' },
+  { file: '01-eval-waterfall.html',     title: 'Nxe5 wins the pawn and mortgages the king',    shape: 'contribution waterfall', note: 'Thirty-two named concepts scored the move. Four decided it, and two of those pull against each other.' },
+  { file: '05-contract-annotated.html', title: 'Ten invariants have a file. One has a habit.', shape: 'annotated artifact', note: 'The contract rendered as the document it is, each rule marked in place against the code that enforces it.' },
+  { file: '02-latency-distribution.html', title: 'The median said ship it',                    shape: 'distribution', note: 'Ten thousand voice turns. The middle is fine and the entire story is in the tail.' },
+  { file: '06-sync-trace.html',         title: 'Sync held for 47 writes, dropped the one that mattered', shape: 'branching trace', note: 'From signal loss to reconciliation, and the single fork where last-write-wins picked the wrong side.' },
+  { file: '07-blast-radius.html',       title: 'Nine lines reach every device',                shape: 'proportional map', note: 'Forty-one config files sized by length and marked by reach, so the mismatch is a picture.' },
+  { file: '03-genome-slices.html',      title: '+22 Elo overall, −24 in closed positions',     shape: 'slice heatmap', note: 'A clear net gain hiding one class of position where it got worse. The aggregate cannot show this.' },
+  { file: '08-schema-drift.html',       title: 'Three columns drifted, one on purpose',        shape: 'side by side', note: 'The same table declared twice, aligned line for line, so a difference is a break in alignment.' },
+  { file: '09-parking-lot.html',        title: 'Nobody ever came back to the backup question', shape: 'parking lot', note: 'Five asides dropped into chat while an agent worked, and what became of each. Two still unanswered.' },
+  { file: '10-blocked.html',            title: 'One question, one screen',                     shape: 'no chart at all', note: 'A hundred and thirteen lines. Most of what the skill says is when not to build a page, and this is what that looks like.' },
+];
+---
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vetrina: chat only ever grows, a page is rewritten in place</title>
+<meta name="description" content="An hour with an agent leaves you with a pile you cannot parse. A vetrina page is scoped to one task and rewritten in place, so it stays one screen." />
+<link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+<meta name="color-scheme" content="dark" />
+<!-- Not launched. The film demos actions, which are specced and not built, so
+     this must not be indexed until that ships. Remove at launch. -->
+<meta name="robots" content="noindex, nofollow" />
+<meta property="og:title" content="Vetrina: a window your coding agents publish into" />
+<meta property="og:description" content="A transcript only grows. A page is rewritten in place. Ten pages, ten agents, none of which had seen the others." />
+<meta property="og:type" content="website" />
+<meta property="og:image" content="/og.jpg" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:image" content="/og.jpg" />
+<style>
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0; background:var(--ground); color:var(--fg);
+  font-family:var(--mono); font-size:14px; line-height:1.6;
+  -webkit-font-smoothing:antialiased; overflow-x:hidden;
+}
+/* paper grain */
+body::before{
+  content:""; position:fixed; inset:0; z-index:9999; pointer-events:none; opacity:.045;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+::selection{background:var(--live); color:#08131a}
+a{color:inherit}
+
+.wrap{max-width:1240px; margin-inline:auto; padding-inline:clamp(1.15rem,4vw,2.75rem)}
+.rule{height:1px; background:var(--hair); border:0; margin:0}
+
+/* ── masthead ─────────────────────────────────────────── */
+.mast{
+  display:flex; align-items:center; justify-content:space-between; gap:1rem;
+  padding:1.1rem 0; border-bottom:1px solid var(--hair);
+  font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:var(--faint);
+  position:sticky; top:0; z-index:50;
+  background:color-mix(in srgb, var(--ground) 88%, transparent);
+  backdrop-filter:blur(10px);
+}
+.mast b{color:var(--fg); font-weight:600; letter-spacing:.3em}
+.mast nav{display:flex; gap:1.4rem; align-items:center}
+.mast a{text-decoration:none; transition:color .18s}
+.mast a:hover{color:var(--fg)}
+.navsep{width:1px; height:14px; background:var(--hair); flex:none}
+.mast a.icon{display:inline-flex; align-items:center; gap:.45rem}
+.mast a.icon svg{display:block}
+.mast a.icon:hover{color:var(--live)}
+/* On a phone the section anchors go and the two links that leave the site stay,
+   because those are the ones someone is hunting for. */
+@media (max-width:760px){
+  .mast nav a:not(.icon){display:none}
+  .navsep{display:none}
+  .mast nav{gap:1.1rem}
+}
+@media (max-width:420px){ .mast a.icon span{display:none} }
+.pulse{
+  width:5px;height:5px;border-radius:50%;background:var(--live);
+  display:inline-block; margin-right:.55rem; vertical-align:middle;
+  animation:breathe 2.6s ease-in-out infinite;
+}
+@keyframes breathe{0%,100%{opacity:1}50%{opacity:.28}}
+
+/* ── hero ─────────────────────────────────────────────── */
+.hero{padding:clamp(4rem,11vw,8.5rem) 0 clamp(2.5rem,6vw,4.5rem)}
+.kicker{
+  font-size:10.5px; letter-spacing:.24em; text-transform:uppercase; color:var(--faint);
+  margin:0 0 clamp(1.6rem,4vw,2.4rem);
+  display:flex; flex-wrap:wrap; gap:.7rem 1.35rem; align-items:center;
+}
+h1{
+  font-family:var(--display);
+  font-size:clamp(1.75rem,4.1vw,3.35rem); line-height:1.16; letter-spacing:-.035em; font-weight:500;
+  margin:0; max-width:30ch; text-wrap:balance;
+}
+h1 .dim{color:var(--muted); font-weight:400}
+.standfirst{
+  font-family:var(--sans); font-size:clamp(15px,1.5vw,17.5px); line-height:1.62;
+  color:var(--muted); max-width:var(--measure); margin:clamp(1.9rem,4vw,2.6rem) 0 0;
+}
+.standfirst strong{color:var(--fg); font-weight:600}
+
+.cmd{
+  margin-top:clamp(2.2rem,5vw,3.2rem); display:flex; flex-wrap:wrap; gap:.9rem 1.4rem; align-items:center;
+}
+.cmd + .cmd{margin-top:1rem}
+
+/* The command is the one thing on this page a visitor needs to take away with
+   them, so the whole block is the button rather than a small icon beside it. */
+.copy{
+  font:inherit; color:inherit; cursor:pointer; text-align:left;
+  background:var(--surface); border:1px solid var(--border);
+  padding:.85rem 1.15rem; display:inline-flex; align-items:center; gap:1.4rem;
+  transition:border-color .18s, background .18s;
+}
+.copy:hover{border-color:var(--live); background:var(--raised)}
+.copy:focus-visible{outline:2px solid var(--live); outline-offset:3px}
+.copy code{font-family:var(--mono); font-size:14px; color:var(--fg); background:none; border:0; padding:0}
+.copy code .p{color:var(--faint)}
+.copy .ci{
+  font-size:10px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint);
+  margin-left:auto; white-space:nowrap; transition:color .18s;
+}
+.copy:hover .ci{color:var(--live)}
+.copy[data-done] .ci{color:var(--live)}
+@media (max-width:520px){
+  .copy{gap:.7rem; padding:.75rem .85rem}
+  .copy code{font-size:12.5px; overflow-wrap:anywhere}
+}
+.cmd .aside{font-size:11.5px; letter-spacing:.1em; text-transform:uppercase; color:var(--faint)}
+
+/* ── the film ─────────────────────────────────────────── */
+.film{background:#000; border:1px solid var(--hair); line-height:0}
+.film video{width:100%; display:block; aspect-ratio:16/9; background:#000}
+.filmcap{
+  margin:.9rem 0 0; font-size:10.5px; letter-spacing:.2em; text-transform:uppercase;
+  color:var(--faint); display:flex; gap:.6rem; align-items:center;
+}
+.filmcap a{color:var(--muted); text-decoration:none; border-bottom:1px solid var(--hair); padding-bottom:2px}
+.glink{color:var(--fg); text-decoration:none; border-bottom:1px solid var(--live); padding-bottom:1px}
+.glink:hover{color:var(--live)}
+.filmcap a:hover{color:var(--live); border-color:var(--live)}
+
+/* ── section furniture ────────────────────────────────── */
+section{padding:clamp(4rem,9vw,7rem) 0}
+.shead{
+  display:flex; align-items:baseline; gap:1.1rem; margin:0 0 clamp(1.8rem,4vw,2.6rem);
+  font-size:10.5px; letter-spacing:.24em; text-transform:uppercase; color:var(--faint);
+}
+.shead::after{content:""; flex:1; height:1px; background:var(--hair)}
+h2{
+  font-family:var(--display); font-weight:500;
+  font-size:clamp(1.35rem,2.5vw,2.05rem); line-height:1.28; letter-spacing:-.03em;
+  margin:0 0 1.15rem; max-width:34ch; text-wrap:balance;
+}
+.lede{font-family:var(--sans); font-size:15.5px; line-height:1.65; color:var(--muted); max-width:var(--measure); margin:0}
+.lede + .lede{margin-top:1rem}
+.lede strong{color:var(--fg); font-weight:600}
+
+/* ── the window ───────────────────────────────────────── */
+.window-head{display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:1.5rem; margin-bottom:clamp(2rem,4vw,3rem)}
+.legend{font-size:11px; letter-spacing:.14em; text-transform:uppercase; color:var(--faint); text-align:right}
+@media (max-width:760px){ .legend{text-align:left} .legend br{display:none} }
+.legend b{color:var(--muted); font-weight:400}
+
+/* Light spilling out of the window onto the street. The whole identity is one
+   metaphor, so the display grid gets a warm bloom behind it and the rest of
+   the page stays cold. */
+/* `clip` rather than `hidden`: it contains the bleed without creating a scroll
+   container, so the sticky masthead above still works. */
+#window{position:relative; overflow:clip}
+#window::before{
+  content:""; position:absolute; inset:14% -12% 30%; pointer-events:none; z-index:0;
+  background:radial-gradient(60% 50% at 50% 45%, rgba(255,176,58,.075), transparent 70%);
+  filter:blur(30px);
+}
+#window > .wrap{position:relative; z-index:1}
+
+.cases{
+  display:grid; gap:clamp(1.1rem,2.2vw,1.9rem);
+  grid-template-columns:repeat(auto-fill,minmax(min(100%,382px),1fr));
+}
+.case{
+  display:block; text-decoration:none; background:var(--surface);
+  border:1px solid var(--hair); position:relative;
+  transition:border-color .22s, transform .22s, background .22s;
+}
+.case:hover{border-color:var(--border); transform:translateY(-3px); background:var(--raised)}
+.case:focus-visible{outline:2px solid var(--live); outline-offset:3px}
+.case.tall{grid-column:span 2}
+@media (max-width:840px){ .case.tall{grid-column:span 1} }
+
+.glass{
+  position:relative; overflow:hidden; background:#0f0d0a;
+  border-bottom:1px solid var(--hair); height:262px;
+}
+.case.tall .glass{height:330px}
+.glass iframe{
+  width:1280px; height:1600px; border:0; display:block;
+  transform-origin:0 0; transform:scale(var(--s,.3));
+  pointer-events:none; filter:saturate(.92);
+  /* The demo pages honour prefers-color-scheme. Chromium propagates the
+     embedder's used colour-scheme into the frame, so this keeps them dark
+     against a dark page instead of punching white holes in it. Where an
+     engine ignores it, the lit-display framing below still reads as
+     deliberate rather than broken. */
+  color-scheme:dark;
+}
+.glass::after{ /* fade the cut edge so it reads as a window, not a crop */
+  content:""; position:absolute; inset:auto 0 0 0; height:74px;
+  background:linear-gradient(to bottom, transparent, var(--surface));
+  pointer-events:none;
+}
+.case:hover .glass::after{background:linear-gradient(to bottom, transparent, var(--raised))}
+
+.plate{padding:1.05rem 1.15rem 1.2rem}
+.plate .shape{font-size:10px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint)}
+.plate h3{
+  font-family:var(--display); font-size:15.5px; font-weight:500; letter-spacing:-.025em;
+  margin:.45rem 0 .5rem; line-height:1.24; color:var(--fg);
+}
+.plate p{font-family:var(--sans); font-size:13.2px; line-height:1.56; color:var(--muted); margin:0}
+.open{
+  margin-top:.85rem; font-size:10.5px; letter-spacing:.18em; text-transform:uppercase; color:var(--faint);
+  display:flex; align-items:center; gap:.5rem; transition:color .18s;
+}
+.case:hover .open{color:var(--live)}
+
+/* ── the argument: log vs view ────────────────────────── */
+.versus{display:grid; grid-template-columns:1fr 1fr; gap:clamp(1rem,2.4vw,2rem); margin-top:clamp(2.2rem,5vw,3.2rem)}
+.versus > *{min-width:0}
+@media (max-width:820px){ .versus{grid-template-columns:1fr} }
+.pane{border:1px solid var(--hair); background:var(--surface); display:flex; flex-direction:column}
+.pane header{
+  padding:.85rem 1.05rem; border-bottom:1px solid var(--hair);
+  font-size:10.5px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint);
+  display:flex; justify-content:space-between; gap:1rem;
+}
+.pane.bad header{color:var(--st-bad)}
+.pane.good header{color:var(--st-good)}
+.pane .body{padding:1.05rem; font-size:12.6px; line-height:1.72; color:var(--muted); flex:1}
+.pane.bad .body{white-space:pre-wrap; color:var(--faint); max-height:330px; overflow:hidden; position:relative; mask-image:linear-gradient(to bottom,#000 62%,transparent)}
+.mini{display:flex; flex-direction:column; gap:.55rem}
+.mini .row{display:flex; align-items:center; gap:.7rem; padding:.55rem .7rem; border:1px solid var(--hair-2); background:var(--ground)}
+.mini .row .g{width:14px; text-align:center; flex:0 0 14px; font-size:11px}
+.mini .row .t{flex:1; color:var(--fg); font-size:12.6px}
+.mini .row .m{font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--faint)}
+.mini .row.b{border-left:2px solid var(--st-bad)}
+.mini .row.w{border-left:2px solid var(--st-warn); border-left-style:dashed}
+.mini .row.y{border-left:2px double var(--st-you)}
+.mini .row.k{border-left:2px solid var(--st-good)}
+
+/* ── island / code ────────────────────────────────────── */
+.split{display:grid; grid-template-columns:1.05fr .95fr; gap:clamp(1.6rem,4vw,3.4rem); align-items:start}
+/* A grid item defaults to min-width:auto, so a column holding a <pre> refuses to
+   shrink below that block's min-content width and takes the page sideways with
+   it on a phone. The pre already scrolls itself; this lets the column give. */
+.split > *{min-width:0}
+@media (max-width:900px){ .split{grid-template-columns:1fr} }
+pre{
+  margin:0; padding:1.15rem 1.25rem; background:var(--surface); border:1px solid var(--hair);
+  overflow-x:auto; font-size:12.4px; line-height:1.72; color:var(--muted);
+}
+pre .k{color:var(--live)} pre .s{color:var(--st-good)} pre .c{color:var(--faint); font-style:italic}
+.rules{margin:clamp(1.6rem,3vw,2.2rem) 0 0; padding:0; list-style:none; display:flex; flex-direction:column; gap:.9rem}
+.rules li{padding-left:1.5rem; position:relative; font-family:var(--sans); font-size:14.2px; line-height:1.6; color:var(--muted)}
+.rules li::before{content:"—"; position:absolute; left:0; color:var(--faint)}
+.rules b{color:var(--fg); font-weight:600}
+
+/* ── steps ────────────────────────────────────────────── */
+.steps{display:grid; grid-template-columns:repeat(3,1fr); gap:clamp(1rem,2.4vw,1.9rem); counter-reset:s}
+@media (max-width:860px){ .steps{grid-template-columns:1fr} }
+.step{border-top:1px solid var(--border); padding-top:1.15rem; counter-increment:s}
+.step::before{content:"0" counter(s); font-size:10.5px; letter-spacing:.2em; color:var(--faint)}
+.step h3{font-family:var(--display); font-size:17px; font-weight:500; margin:.6rem 0 .55rem; letter-spacing:-.028em}
+.step p{font-family:var(--sans); font-size:13.6px; line-height:1.6; color:var(--muted); margin:0 0 .9rem}
+.step code{display:block; background:var(--surface); border:1px solid var(--hair); padding:.7rem .85rem; font-size:12px; color:var(--fg); overflow-x:auto; white-space:pre; max-width:100%}
+.steps > *{min-width:0}
+
+/* ── evidence ─────────────────────────────────────────── */
+.score{display:flex; flex-wrap:wrap; gap:clamp(1.4rem,4vw,3.4rem); align-items:baseline; margin-bottom:1.8rem}
+.score .n{font-family:var(--display); font-weight:500; font-size:clamp(2.6rem,6vw,4.4rem); line-height:.95; letter-spacing:-.05em}
+.score .n span{color:var(--faint)}
+.score .l{font-size:11px; letter-spacing:.2em; text-transform:uppercase; color:var(--faint); max-width:30ch; line-height:1.9}
+/* Used wherever the page describes something that does not exist yet. It has
+   to be impossible to skim past, because a demo of an unbuilt feature that is
+   not labelled as one is the fastest way to lose a reader's trust. */
+.unbuilt{
+  font-family:var(--sans); font-size:14.6px; line-height:1.62; color:var(--muted);
+  border:1px solid var(--st-warn); border-left-width:3px;
+  background:color-mix(in srgb, var(--st-warn) 7%, transparent);
+  padding:.95rem 1.15rem; margin:0 0 1.4rem; max-width:var(--measure);
+}
+.unbuilt b{color:var(--fg); font-weight:600}
+.unbuilt code{font-family:var(--mono); font-size:.9em; color:var(--fg)}
+
+.nextgrid{
+  display:grid; gap:1px; background:var(--hair); border:1px solid var(--hair);
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,19rem),1fr));
+}
+.nx{background:var(--surface); padding:clamp(1.2rem,2.4vw,1.7rem)}
+.nx h3{font-family:var(--display); font-size:16.5px; font-weight:500; letter-spacing:-.02em; margin:0 0 .7rem; color:var(--fg)}
+.nx p{font-family:var(--sans); font-size:14px; line-height:1.6; color:var(--muted); margin:0}
+.nx p.why{margin-top:.8rem; padding-top:.8rem; border-top:1px dotted var(--border); color:var(--faint); font-size:13px}
+
+.caveat{border-left:2px solid var(--st-warn); padding:.2rem 0 .2rem 1.3rem; max-width:var(--measure)}
+.caveat p{font-family:var(--sans); font-size:14.6px; line-height:1.62; color:var(--muted); margin:0}
+.caveat p + p{margin-top:.8rem}
+.caveat b{color:var(--fg); font-weight:600}
+
+/* ── footer ───────────────────────────────────────────── */
+footer{padding:clamp(3rem,7vw,5rem) 0 clamp(2.5rem,5vw,3.5rem); border-top:1px solid var(--hair)}
+.fgrid{display:flex; flex-wrap:wrap; justify-content:space-between; gap:2rem}
+.fgrid h4{font-size:10.5px; letter-spacing:.22em; text-transform:uppercase; color:var(--faint); margin:0 0 .9rem; font-weight:400}
+.fgrid ul{list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:.5rem}
+.fgrid a{text-decoration:none; color:var(--muted); font-size:13px; transition:color .18s}
+.fgrid a:hover{color:var(--live)}
+.colo{margin-top:clamp(2.5rem,5vw,3.5rem); font-size:11px; letter-spacing:.1em; color:var(--faint); max-width:var(--measure); line-height:1.9}
+
+/* ── entrance ─────────────────────────────────────────── */
+.rise{opacity:0; transform:translateY(14px); animation:rise .85s cubic-bezier(.2,.7,.3,1) forwards}
+@keyframes rise{to{opacity:1; transform:none}}
+@media (prefers-reduced-motion:reduce){
+  .rise{animation:none; opacity:1; transform:none}
+  .pulse{animation:none}
+  html{scroll-behavior:auto}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="mast">
+    <b><span class="pulse"></span>Vetrina</b>
+    <nav>
+      <a href="#window">The window</a>
+      <a href="#how">How</a>
+      <a href="#evidence">Evidence</a>
+      <a href="/gallery/" target="_blank" rel="noopener">Gallery</a>
+      <span class="navsep" aria-hidden="true"></span>
+      <a class="icon" href="https://github.com/flaviolivolsi/vetrina" target="_blank" rel="noopener"
+         aria-label="Vetrina on GitHub" title="Source on GitHub">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12"/></svg>
+        <span>GitHub</span>
+      </a>
+      <a class="icon" href="https://www.npmjs.com/package/vetrina-cli" target="_blank" rel="noopener"
+         aria-label="vetrina-cli on npm" title="vetrina-cli on npm">
+        <svg viewBox="0 0 24 24" width="17" height="17" fill="currentColor" aria-hidden="true"><path d="M1.763 0C.786 0 0 .786 0 1.763v20.474C0 23.214.786 24 1.763 24h20.474c.977 0 1.763-.786 1.763-1.763V1.763C24 .786 23.214 0 22.237 0zM5.13 5.323l13.837.019-.009 13.836h-3.464l.01-10.382h-3.456L12.04 19.17H5.113z"/></svg>
+        <span>npm</span>
+      </a>
+    </nav>
+  </header>
+</div>
+
+<!-- ───────────────────────────── hero -->
+<div class="wrap">
+  <div class="hero">
+    <p class="kicker rise" style="animation-delay:.05s">
+      <span>Italian · the shop window</span>
+      <span>·</span>
+      <span>for coding agents</span>
+      <span>·</span>
+      <span>MIT</span>
+    </p>
+    <h1 class="rise" style="animation-delay:.14s">
+      Chat only ever grows.<br />
+      <span class="dim">A page is rewritten in place.</span>
+    </h1>
+    <p class="standfirst rise" style="animation-delay:.26s">
+      An hour with an agent leaves you a pile. In the order it happened, not the order it
+      matters, and <strong>none of it addressable.</strong>
+    </p>
+    <p class="standfirst rise" style="animation-delay:.34s">
+      A vetrina page is scoped to one task and <strong>rewritten as the work moves.</strong> One
+      screen, current state, shaped like the job: a migration gets a table, an incident gets a
+      timeline.
+    </p>
+    <div class="cmd rise" style="animation-delay:.44s">
+      <button class="copy" type="button" data-copy="npx skills add -g flaviolivolsi/vetrina">
+        <code><span class="p">$</span> npx skills add -g flaviolivolsi/vetrina</code>
+        <span class="ci">copy</span>
+      </button>
+      <span class="aside">teach your agents, once. any agent, not just Claude Code</span>
+    </div>
+    <div class="cmd rise" style="animation-delay:.5s">
+      <button class="copy" type="button" data-copy="npx vetrina-cli">
+        <code><span class="p">$</span> npx vetrina-cli</code>
+        <span class="ci">copy</span>
+      </button>
+      <span class="aside">open the window. run it anywhere, once, for every project</span>
+    </div>
+  </div>
+</div>
+
+<!-- ───────────────────────────── the film -->
+<div class="wrap">
+  <div class="film rise" style="animation-delay:.55s">
+    <video
+      src="/vetrina-announce.mp4"
+      poster="/poster.jpg"
+      controls
+      playsinline
+      preload="metadata"
+    ></video>
+  </div>
+  <p class="filmcap">
+    30 seconds · <a href="/video">beat sheet and download</a>
+  </p>
+</div>
+
+<hr class="rule" style="margin-top:clamp(3rem,7vw,5rem)" />
+
+<!-- ───────────────────────────── the window -->
+<section id="window">
+  <div class="wrap">
+    <div class="window-head">
+      <div>
+        <p class="shead" style="margin-bottom:1.5rem">Ten pages · ten different shapes</p>
+        <h2>Every one of these was built by an agent that had never seen the others.</h2>
+        <p class="lede">
+          Each was given the finding its page had to carry and never the layout, because a brief that
+          describes markup has taken the agent's job. They share one stylesheet that owns the frame
+          and the spacing and deliberately owns nothing in the middle: there is an axis, a track, a
+          bar and a cell, and no component that draws a whole timeline.
+        </p>
+        <p class="lede" style="margin-top:1rem">
+          They came out between 113 and 579 lines, with eight distinct combinations of drawing
+          primitives and three that use none at all. <strong>Real projects, invented data:</strong>
+          Gregario, Luxifare and Officina are mine and the findings about them are made up. The one
+          with an outage on it uses a fictional company. These are live. Click one.
+        </p>
+      </div>
+      <p class="legend"><b>Running below:</b><br />real pages, not screenshots</p>
+    </div>
+
+    <div class="cases">
+      {demos.map((d, i) => (
+        <a class={`case rise ${i === 0 || i === demos.length - 1 ? 'tall' : ''}`} style={`animation-delay:${0.05 * (i % 6)}s`}
+           href={`/gallery/${d.file}`} target="_blank" rel="noopener">
+          <div class="glass"><iframe src={`/thumb-gallery/${d.file}`} loading="lazy" tabindex="-1" title={d.title} scrolling="no"></iframe></div>
+          <div class="plate">
+            <div class="shape">{d.shape}</div>
+            <h3>{d.title}</h3>
+            <p>{d.note}</p>
+            <div class="open"><span>Open the page</span><span>→</span></div>
+          </div>
+        </a>
+      ))}
+    </div>
+  </div>
+</section>
+
+<hr class="rule" />
+
+<!-- ───────────────────────────── log vs view -->
+<section>
+  <div class="wrap">
+    <p class="shead">The problem is accumulation</p>
+    <h2>The same hour of work, twice.</h2>
+    <p class="lede">
+      Left: the pile, in the order it happened. Right: the same hour, scoped to the task and rewritten
+      in place. One of them gets longer every time the agent does something. The other does not.
+    </p>
+
+    <div class="versus">
+      <div class="pane bad">
+        <header><span>Chat</span><span>only grows</span></header>
+        <div class="body">I've finished the migration pass across the router files. In total I touched 41 files. Most of the changes were mechanical: useHistory became useNavigate, Switch became Routes, and the component prop became element. There were six places where I had to make a judgement call, mostly around nested routes and the custom PrivateRoute wrapper, and I'd suggest you look at those. Two of them use history.block, which has no direct v6 equivalent, so I picked an approach but you should confirm it.
+
+I could not finish three files. UnsavedChangesPrompt.tsx still imports the deleted Prompt component, which is why the build does not currently compile.
+
+On tests: 212 of 216 pass. The four failures are all in the auth redirect suite. Three of them look like the same referrer to from rename, and the fourth might be a real regression I introduced…</div>
+      </div>
+      <div class="pane good">
+        <header><span>Vetrina</span><span>rewritten in place</span></header>
+        <div class="body">
+          <div class="mini">
+            <div class="row b"><span class="g">■</span><span class="t">Build does not compile</span><span class="m">Blocked</span></div>
+            <div class="row b"><span class="g">■</span><span class="t">UnsavedChangesPrompt.tsx</span><span class="m">Blocked</span></div>
+            <div class="row w"><span class="g">▲</span><span class="t">history.block has no v6 equivalent</span><span class="m">Judgement</span></div>
+            <div class="row w"><span class="g">▲</span><span class="t">PrivateRoute wrapper rewritten</span><span class="m">Judgement</span></div>
+            <div class="row y"><span class="g">◆</span><span class="t">Redirect precedence, needs a decision</span><span class="m">Needs you</span></div>
+            <div class="row k"><span class="g">●</span><span class="t">32 mechanical conversions</span><span class="m">Done</span></div>
+            <div class="row k"><span class="g">●</span><span class="t">212 / 216 tests passing</span><span class="m">Done</span></div>
+          </div>
+          <p style="margin:1.1rem 0 0; font-family:var(--sans); font-size:12.8px; color:var(--faint); line-height:1.6">
+            Sorted by how much of your attention each deserves. Filterable. The thirty-two boring ones
+            collapse into a tally. Same information, but only one of them you can act on.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" />
+
+<!-- ───────────────────────────── the skill -->
+<section>
+  <div class="wrap">
+    <div class="split">
+      <div>
+        <p class="shead">The hard part</p>
+        <h2>Knowing when <em>not</em> to build a page.</h2>
+        <p class="lede">
+          Rendering structure turned out to be the easy half. Ten agents did it well with no kit and
+          no house style. The half that decides whether any of this is worth having is the judgement
+          call before the markup: does this reader have to hold more than about three things in their
+          head at once, and if not, say it in two sentences and build nothing.
+        </p>
+        <p class="lede">
+          That judgement ships as a skill. It carries the test, ten named shapes to choose between,
+          and the four constraints. Most of what it says is when to stay quiet.
+        </p>
+        <ul class="rules">
+          <li><b>A vetrina built for every session is a vetrina nobody opens.</b> One unnecessary page
+            costs you the odds anyone opens the next one.</li>
+          <li><b>Pick the shape before writing markup.</b> A console bolted onto a problem that
+            wanted a timeline has thrown away the whole premise.</li>
+          <li><b>Never the only place an answer lives.</b> If they asked a question, answer it in chat
+            too. The page is where the detail goes so the words can be short.</li>
+        </ul>
+        <p class="lede" style="margin-top:1.4rem">
+          Given four real repositories and no mention of vetrina, it picked the right shape every time
+          it built a page, and correctly built nothing for a question that wanted one line.
+        </p>
+      </div>
+      <div>
+<pre><code><span class="c">// when the reader would otherwise hold</span>
+<span class="c">// more than three things at once</span>
+
+mixed states, some needing you   <span class="s">triage queue</span>
+many items, secretly few causes  <span class="s">ranked clusters</span>
+options against hard limits      <span class="s">filterable list</span>
+a path, and where it breaks      <span class="s">branching trace</span>
+a number that moved, and why     <span class="s">chart + attribution</span>
+the artifact, defects in place   <span class="s">annotated artifact</span>
+paths a human must choose        <span class="s">decision matrix</span>
+a sequence where gaps matter     <span class="s">dual-track timeline</span>
+several agents at once           <span class="s">urgency-sorted lanes</span>
+asides dropped mid-task          <span class="s">parking lot</span>
+
+<span class="c">// and most of the time, none of them.</span>
+<span class="c">// the answer is a sentence. say it.</span></code></pre>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" />
+
+<!-- ───────────────────────────── how -->
+<section id="how">
+  <div class="wrap">
+    <p class="shead">How it works</p>
+    <h2>A directory, a convention, and a thousand lines of plain Node.</h2>
+    <p class="lede" style="margin-bottom:clamp(2.4rem,5vw,3.4rem)">
+      Anything that can write a file can publish to it. Claude Code, Codex, Cursor, Aider, a cron job,
+      a CI run, a shell script. No SDK, no integration, no per-tool plugin.
+    </p>
+    <div class="steps">
+      <div class="step">
+        <h3>Run it once</h3>
+        <p>It binds your tailnet if you have one and loopback otherwise, refuses anything public,
+          steps to the next port if yours is busy, and prints a QR code. No config, no account, no
+          flags.</p>
+        <code>npx vetrina-cli</code>
+      </div>
+      <div class="step">
+        <h3>An agent writes a file</h3>
+        <p>One self-contained HTML file into a space inside the window. That is the entire API. No
+          registration, no manifest, no second file.</p>
+        <code>~/vetrina/&lt;space&gt;/page.html</code>
+      </div>
+      <div class="step">
+        <h3>Your tab updates</h3>
+        <p>A watcher and server-sent events, injected into every page. The agent rewrites as work
+          lands; the page in your hand changes without a refresh.</p>
+        <code>open on your phone, in another room</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" />
+
+<!-- ───────────────────────────── evidence -->
+<section id="evidence">
+  <div class="wrap">
+    <p class="shead">Evidence, not assertion</p>
+    <div class="split">
+      <div>
+        <div class="score">
+          <div class="n">10<span>/10</span></div>
+          <div class="l">
+            Ten pages · ten independent agents<br />
+            Zero network requests · zero console errors<br />
+            Judged against a rubric written first
+          </div>
+        </div>
+        <h2 style="margin-top:clamp(2rem,4vw,2.8rem)">The threshold was seven. The caveat matters more than the score.</h2>
+      </div>
+      <div class="caveat">
+      <p>
+        Every agent was handed an <b>already-structured brief</b>. So what this proves is that agents
+        render structure well when they have it, which answers the question about the design kit, and
+        settles that the kit should be extracted rather than invented.
+      </p>
+      <p>
+        It does not prove that an agent notices <b>when</b> a page beats a paragraph. That needed its
+        own test: four agents, four real repositories, no prompt mentioning vetrina at all. They picked
+        the right shape every time they built a page, and correctly built <b>nothing</b> for a question
+        that wanted one line, which is the harder half. One agent finished a twenty-finding audit and
+        typed all of it into chat instead, and fixing that turned out to be a wording problem in the
+        skill's own description rather than anything structural.
+      </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule" />
+
+<!-- ───────────────────────────── where this goes -->
+<section id="next">
+  <div class="wrap">
+    <p class="shead">Where this goes</p>
+    <h2>What exists today, and what is only an idea.</h2>
+    <p class="lede" style="margin-bottom:clamp(2.2rem,5vw,3rem)">
+      Everything above this line is built and shipped. Everything below is not, and is written down
+      so it is obvious which is which.
+    </p>
+    <div class="nextgrid">
+      <div class="nx">
+        <h3>Pages that answer back</h3>
+        <p>A page carries a small block of structured data describing what it shows, including bounded
+          choices it offers. You tap one from a phone and the agent resumes.</p>
+        <p class="why">Blocked on a real question: a write endpoint would let anything that can reach
+          the daemon act on your behalf, which is a far bigger claim than serving files.</p>
+      </div>
+      <div class="nx">
+        <h3>Expiry and unread state</h3>
+        <p>Pages age out on their own, the ones you have not seen are marked, and a page worth keeping
+          gets promoted rather than quietly surviving.</p>
+        <p class="why">Wanted once a window has enough in it to feel crowded. Not yet true.</p>
+      </div>
+      <div class="nx">
+        <h3>Agents reading each other</h3>
+        <p>If the data block exists, one agent can read what another published, and the window becomes
+          where work coordinates rather than only where it is displayed.</p>
+        <p class="why">The largest claim in the project and the least tested. Two agents and one
+          handoff would prove it; fifty would not.</p>
+      </div>
+      <div class="nx">
+        <h3>A relay, if the tailnet wall is real</h3>
+        <p>Reading your agents from a phone with no network setup at all, across machines.</p>
+        <p class="why">Deliberately last. Find out first whether loopback and a QR code already cover
+          it for most people.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <div class="fgrid">
+      <div>
+        <h4>Read</h4>
+        <ul>
+          <li><a href="https://github.com/flaviolivolsi/vetrina/blob/main/README.md">README, the argument</a></li>
+          <li><a href="https://www.npmjs.com/package/vetrina-cli">vetrina-cli on npm</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Evidence</h4>
+        <ul>
+          <li><a href="https://github.com/flaviolivolsi/vetrina/blob/main/evidence/SCORECARD.md">Ten pages, judged</a></li>
+          <li><a href="https://github.com/flaviolivolsi/vetrina/blob/main/evidence/COLD-TEST.md">Does it publish unprompted?</a></li>
+          <li><a href="https://github.com/flaviolivolsi/vetrina/blob/main/skills/vetrina/SKILL.md">The skill itself</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Look</h4>
+        <ul>
+          <li><a href="/gallery/" target="_blank" rel="noopener">The gallery, all ten</a></li>
+          <li><a href="/gallery/04-incident-timeline.html" target="_blank" rel="noopener">Nineteen minutes on the wrong theory</a></li>
+          <li><a href="/gallery/09-parking-lot.html" target="_blank" rel="noopener">The asides you dropped</a></li>
+        </ul>
+      </div>
+    </div>
+    <p class="colo">
+      <em>Vetrina</em>, Italian, the shop window. It gets redressed constantly, nobody expects last
+      week's display to still be there, and the whole point is that it is arranged for what is being
+      sold today. · Plain HTTP, no authentication, so the bind address is the whole access control: a tailnet, or your own machine.
+    </p>
+  </div>
+</footer>
+
+<script is:inline>
+  // Scale each demo page to fit its case. Cheaper and more robust than
+  // container-query maths, and it survives resize and font-size changes.
+  const fit = () => {
+    document.querySelectorAll('.glass').forEach((g) => {
+      g.style.setProperty('--s', (g.clientWidth / 1280).toFixed(4));
+    });
+  };
+  fit();
+  addEventListener('resize', fit);
+  if (window.ResizeObserver) {
+    const ro = new ResizeObserver(fit);
+    document.querySelectorAll('.glass').forEach((g) => ro.observe(g));
+  }
+
+  // One click puts the command on the clipboard. navigator.clipboard needs a
+  // secure context, which a plain-HTTP preview is not, so fall back rather
+  // than leave the button silently doing nothing.
+  const copyText = async (text) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;opacity:0';
+      document.body.appendChild(ta);
+      ta.select();
+      let ok = false;
+      try { ok = document.execCommand('copy'); } catch { ok = false; }
+      ta.remove();
+      return ok;
+    }
+  };
+
+  document.querySelectorAll('.copy').forEach((btn) => {
+    const label = btn.querySelector('.ci');
+    btn.addEventListener('click', async () => {
+      const ok = await copyText(btn.dataset.copy);
+      label.textContent = ok ? 'copied' : 'press ctrl+c';
+      btn.setAttribute('data-done', '');
+      clearTimeout(btn._t);
+      btn._t = setTimeout(() => {
+        label.textContent = 'copy';
+        btn.removeAttribute('data-done');
+      }, 1800);
+    });
+  });
+</script>
+</body>
+</html>

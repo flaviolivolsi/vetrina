@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gregario — offline sync trace, ride 2026-07-29</title>
+<link rel="stylesheet" href="/_vetrina/kit.css">
+<style>
+  /* The kit's tree indents 40px per level. At six levels that is 200px of the
+     390px phone spent on whitespace, so the deep nodes wrap to two words a
+     line. Narrow the step on small screens and move the connector with it. */
+  @media (max-width: 700px) {
+    .v-tree ul {
+      margin-inline-start: 0;
+      padding-inline-start: var(--v-4);
+    }
+    .v-tree ul > li::before {
+      inset-inline-start: calc(var(--v-4) * -1);
+      inline-size: 10px;
+    }
+  }
+
+  /* The kit gives .v-node overflow-wrap but not its note, and every note here
+     carries an identifier or a timestamp. */
+  .v-node-note {
+    overflow-wrap: anywhere;
+    max-width: 62ch;
+    margin-block-start: var(--v-1);
+  }
+  .v-node-note b { color: var(--v-fg-2); font-weight: 600; }
+  .v-node .v-when {
+    color: var(--v-fg-3);
+    font-size: var(--v-t-2);
+    letter-spacing: .04em;
+  }
+  .v-tree > li > .v-node { font-size: var(--v-t-4); font-weight: 600; }
+
+  /* A reference line inside a set of bars. Drawn as a dashed fill rather than a
+     colour, so it stays a different thing in greyscale and forced colours. */
+  .v-bar.is-threshold .v-bar-track { background: none; }
+  .v-bar.is-threshold .v-bar-track::before {
+    background: repeating-linear-gradient(90deg,
+      var(--v-fg-3) 0 3px, transparent 3px 7px);
+  }
+  .v-bar.is-threshold .v-bar-label,
+  .v-bar.is-threshold .v-bar-value { color: var(--v-fg-3); }
+
+  /* The note bodies are sentences, not code. They keep their authored line
+     breaks but must still wrap rather than push the card sideways. */
+  .v-note-body {
+    font-family: var(--v-prose);
+    font-size: var(--v-t-3);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+</style>
+</head>
+<body>
+<div class="v-wrap">
+
+  <header>
+    <p class="v-kicker">
+      <span><span class="v-dot" aria-hidden="true"></span> gregario</span>
+      <span>local-first sync</span>
+      <span>ride 2026-07-29</span>
+    </p>
+
+    <h1 class="v-headline">Sync held for 47 writes and quietly dropped the one that mattered.</h1>
+
+    <p class="v-standfirst">
+      One ride, 46 minutes without signal, 47 rows replayed from the outbox on
+      reconnect. Forty-two applied cleanly, five had been edited on both sides,
+      and last-write-wins picked correctly four times out of five. The fifth
+      compared a device clock running 41 seconds slow against a server clock,
+      decided a dictated rider note was the older write, and replaced it with a
+      machine-generated summary. No error, no tombstone, no retry.
+    </p>
+
+    <ul class="v-meta">
+      <li>expo sdk 55 / sqlite</li>
+      <li>hono + bun + drizzle</li>
+      <li>postgres 16</li>
+      <li>POST /sync/push</li>
+      <li>batch 9f31c04</li>
+    </ul>
+  </header>
+
+  <section class="v-stats" aria-label="Summary">
+    <div class="v-stat v-rise">
+      <div class="v-stat-label">Offline</div>
+      <div class="v-stat-num">46<span class="v-unit">m 52s</span></div>
+      <p class="v-stat-qual">14:02:11 to 14:49:03. Rider never noticed.</p>
+    </div>
+    <div class="v-stat v-rise">
+      <div class="v-stat-label">Queued in outbox</div>
+      <div class="v-stat-num">47<span class="v-unit">rows</span></div>
+      <p class="v-stat-qual">Across 5 tables, one push, 214 KB.</p>
+    </div>
+    <div class="v-stat v-rise">
+      <div class="v-stat-label">Applied clean</div>
+      <div class="v-stat-num">42</div>
+      <p class="v-stat-qual">No server-side edit since the row left.</p>
+    </div>
+    <div class="v-stat v-rise">
+      <div class="v-stat-label">Forked</div>
+      <div class="v-stat-num">5</div>
+      <p class="v-stat-qual">Edited on the phone and on the server.</p>
+    </div>
+    <div class="v-stat is-urgent v-rise">
+      <div class="v-stat-label">Human edits lost</div>
+      <div class="v-stat-num">1</div>
+      <p class="v-stat-qual">coach_notes#4471. Human write, lost to a cron job.</p>
+    </div>
+    <div class="v-stat v-rise">
+      <div class="v-stat-label">Device clock skew</div>
+      <div class="v-stat-num">&minus;41<span class="v-unit">s</span></div>
+      <p class="v-stat-qual">Phone behind server. Never corrected on the client.</p>
+    </div>
+  </section>
+
+  <section class="v-hero" aria-labelledby="trace-h">
+    <h2 id="trace-h" class="v-sr">The path one ride's writes took, from signal loss to server agreement</h2>
+
+    <ul class="v-tree">
+      <li>
+        <span class="v-node">○ SIGNAL LOST <span class="v-when">14:02:11 · km 38, Passo del Mortirolo</span>
+          <span class="v-node-note">Client is local-first by design: every domain write commits to SQLite first, then mirrors into <code>outbox</code>. Nothing on the ride screen blocks on the network.</span>
+        </span>
+        <ul>
+          <li>
+            <span class="v-node">■ 47 WRITES QUEUED <span class="v-when">14:02:11 → 14:48:57</span>
+              <span class="v-node-note"><b>waypoints 28</b>, <b>laps 12</b>, <b>coach_notes 4</b>, <b>settings 2</b>, <b>rides 1</b>. Each row stamped <code>updated_at</code> from the device clock at write time.</span>
+            </span>
+          </li>
+          <li>
+            <span class="v-node">● RECONNECT <span class="v-when">14:49:03 · LTE, 2 bars</span>
+              <span class="v-node-note">Outbox drains in one batch: <code>POST /sync/push</code>, 47 rows, 214 KB, 312 ms round trip, HTTP 200.</span>
+            </span>
+            <ul>
+              <li>
+                <span class="v-node">◆ SERVER COMPARES <code>updated_at</code> <span class="v-when">per row, last-write-wins</span>
+                  <span class="v-node-note">Drizzle upsert with a <code>WHERE excluded.updated_at &gt; target.updated_at</code> guard. The comparison is between two clocks that were never reconciled.</span>
+                </span>
+                <ul>
+                  <li class="is-ok">
+                    <span class="v-node">✓ 42 ROWS APPLY CLEANLY
+                      <span class="v-node-note">No server-side write since the client last saw them. Nothing to resolve; the outbox row is deleted on ack.</span>
+                    </span>
+                  </li>
+                  <li>
+                    <span class="v-node">◆ 5 ROWS FORK <span class="v-when">edited on both sides</span>
+                      <span class="v-node-note">Each of these has a phone version and a server version. One of the two is about to stop existing.</span>
+                    </span>
+                    <ul>
+                      <li class="is-ok">
+                        <span class="v-node">✓ laps#8812 → PHONE WINS
+                          <span class="v-node-note">Phone 14:31:07 vs server 14:22:19. Phone later by <b>9m 29s</b>. Correct: the server copy was a stale partial from the previous session.</span>
+                        </span>
+                      </li>
+                      <li class="is-ok">
+                        <span class="v-node">✓ laps#8819 → PHONE WINS
+                          <span class="v-node-note">Phone 14:44:02 vs server 14:20:55. Phone later by <b>23m 48s</b>. Correct.</span>
+                        </span>
+                      </li>
+                      <li class="is-ok">
+                        <span class="v-node">✓ waypoints#33190 → SERVER WINS
+                          <span class="v-node-note">Phone 14:26:44 vs server 14:31:02. Server later by <b>3m 37s</b>. Correct: the route was re-snapped server-side after the phone went dark.</span>
+                        </span>
+                      </li>
+                      <li class="is-ok">
+                        <span class="v-node">✓ settings#12 → SERVER WINS
+                          <span class="v-node-note">Phone 14:05:20 vs server 14:41:36. Server later by <b>35m 35s</b>. Correct: the rider changed units on the web app mid-ride.</span>
+                        </span>
+                      </li>
+                      <li class="is-urgent">
+                        <span class="v-node">✕ coach_notes#4471 → SERVER WINS, WRONGLY
+                          <span class="v-node-note">Phone 14:39:04 vs server 14:39:33. Server looks later by <b>29s</b>, so LWW keeps it. Corrected for the &minus;41s device skew, the phone write actually happened <b>12s after</b> the server one.</span>
+                        </span>
+                        <ul>
+                          <li>
+                            <span class="v-node">KEPT — server branch <span class="v-when">14:39:33</span>
+                              <span class="v-node-note">Background job <code>notes.summarize</code> rewrote <code>body</code> from the last 20 minutes of telemetry. Machine text, regenerable, runs again every ride.</span>
+                            </span>
+                          </li>
+                          <li class="is-urgent">
+                            <span class="v-node">✕ DISCARDED — phone branch <span class="v-when">14:39:04 device / 14:39:45 true</span>
+                              <span class="v-node-note">Rider's dictated note, spoken at the top of the climb. Overwritten in place. The outbox row was acked and deleted, so there is no local copy left and nothing to replay.</span>
+                            </span>
+                          </li>
+                        </ul>
+                      </li>
+                    </ul>
+                  </li>
+                </ul>
+              </li>
+            </ul>
+          </li>
+        </ul>
+      </li>
+    </ul>
+  </section>
+
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>The outbox at reconnect</h2>
+      <span class="v-count">47 rows · 5 tables</span>
+    </div>
+    <p class="v-section-note">
+      Ordered by volume. Waypoints dominate because the client samples GPS every
+      three seconds while recording; they are also the least contested, since
+      only one writer produces them.
+    </p>
+
+    <div class="v-bars">
+      <div class="v-bar">
+        <span class="v-bar-label">waypoints — 1 forked</span>
+        <span class="v-bar-track" style="--v:1"></span>
+        <span class="v-bar-value">28</span>
+      </div>
+      <div class="v-bar">
+        <span class="v-bar-label">laps — 2 forked</span>
+        <span class="v-bar-track" style="--v:.429"></span>
+        <span class="v-bar-value">12</span>
+      </div>
+      <div class="v-bar">
+        <span class="v-bar-label">coach_notes — 1 forked</span>
+        <span class="v-bar-track" style="--v:.143"></span>
+        <span class="v-bar-value">4</span>
+      </div>
+      <div class="v-bar">
+        <span class="v-bar-label">settings — 1 forked</span>
+        <span class="v-bar-track" style="--v:.071"></span>
+        <span class="v-bar-value">2</span>
+      </div>
+      <div class="v-bar">
+        <span class="v-bar-label">rides — 0 forked</span>
+        <span class="v-bar-track" style="--v:.036"></span>
+        <span class="v-bar-value">1</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>Five forks, four correct</h2>
+      <span class="v-count">4 sound · 1 inverted</span>
+    </div>
+    <p class="v-section-note">
+      Ordered by how close the two writes were in real time, widest gap first.
+      Both timestamps are as stored: the phone column is device-clock, the server
+      column is server-clock, and nothing in the push reconciles them.
+    </p>
+
+    <table class="v-table">
+      <thead>
+        <tr>
+          <th scope="col">Row</th>
+          <th scope="col">Phone <code>updated_at</code></th>
+          <th scope="col">Server <code>updated_at</code></th>
+          <th scope="col" class="v-num">True gap</th>
+          <th scope="col">LWW kept</th>
+          <th scope="col">Sound?</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>settings#12</code></td>
+          <td>14:05:20</td>
+          <td>14:41:36</td>
+          <td class="v-num">35m 35s</td>
+          <td>server</td>
+          <td>✓ yes</td>
+        </tr>
+        <tr>
+          <td><code>laps#8819</code></td>
+          <td>14:44:02</td>
+          <td>14:20:55</td>
+          <td class="v-num">23m 48s</td>
+          <td>phone</td>
+          <td>✓ yes</td>
+        </tr>
+        <tr>
+          <td><code>laps#8812</code></td>
+          <td>14:31:07</td>
+          <td>14:22:19</td>
+          <td class="v-num">9m 29s</td>
+          <td>phone</td>
+          <td>✓ yes</td>
+        </tr>
+        <tr>
+          <td><code>waypoints#33190</code></td>
+          <td>14:26:44</td>
+          <td>14:31:02</td>
+          <td class="v-num">3m 37s</td>
+          <td>server</td>
+          <td>✓ yes</td>
+        </tr>
+        <tr>
+          <td><code>coach_notes#4471</code></td>
+          <td>14:39:04</td>
+          <td>14:39:33</td>
+          <td class="v-num">12s</td>
+          <td>server</td>
+          <td>✕ inverted</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <p class="v-section-note" style="margin-block-start:var(--v-5)">
+      True gap is the real-time distance between the two writes after adding the
+      41 seconds back onto the device clock. It is not stored anywhere; it was
+      reconstructed from the server's receipt log.
+    </p>
+  </section>
+
+  <section class="v-section v-air">
+    <div class="v-section-head">
+      <h2>Why only this one inverted</h2>
+      <span class="v-count">log scale</span>
+    </div>
+    <p class="v-section-note">
+      Bars are on a log scale, because the gaps run from 12 seconds to 36
+      minutes and a linear axis would render the interesting one as a hairline.
+      The dashed bar is not data: it is the 41-second skew window. Any fork
+      whose two writes fall closer together than that bar can be decided the
+      wrong way round. Exactly one did.
+    </p>
+
+    <div class="v-bars">
+      <div class="v-bar">
+        <span class="v-bar-label">settings#12</span>
+        <span class="v-bar-track" style="--v:.985"></span>
+        <span class="v-bar-value">35m 35s</span>
+      </div>
+      <div class="v-bar">
+        <span class="v-bar-label">laps#8819</span>
+        <span class="v-bar-track" style="--v:.933"></span>
+        <span class="v-bar-value">23m 48s</span>
+      </div>
+      <div class="v-bar">
+        <span class="v-bar-label">laps#8812</span>
+        <span class="v-bar-track" style="--v:.815"></span>
+        <span class="v-bar-value">9m 29s</span>
+      </div>
+      <div class="v-bar">
+        <span class="v-bar-label">waypoints#33190</span>
+        <span class="v-bar-track" style="--v:.691"></span>
+        <span class="v-bar-value">3m 37s</span>
+      </div>
+      <div class="v-bar is-threshold">
+        <span class="v-bar-label">— clock skew window —</span>
+        <span class="v-bar-track" style="--v:.477"></span>
+        <span class="v-bar-value">41s</span>
+      </div>
+      <div class="v-bar is-urgent">
+        <span class="v-bar-label">✕ coach_notes#4471</span>
+        <span class="v-bar-track" style="--v:.319"></span>
+        <span class="v-bar-value">12s</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>What last-write-wins threw away</h2>
+      <span class="v-count">coach_notes#4471 · body</span>
+    </div>
+
+    <div class="v-split">
+      <div class="v-card">
+        <div class="v-card-head">
+          <span class="v-glyph" aria-hidden="true">■</span>
+          <h3>Kept — server</h3>
+          <span class="v-tag">14:39:33 · job notes.summarize</span>
+        </div>
+        <pre><code class="v-note-body">Cadence held 82–86 rpm through the climb.
+Normalised power 241 W over 18m 40s.
+Consider a longer warm-up before the next
+threshold block.</code></pre>
+        <p class="v-why">Regenerated from telemetry on every ride close. <b>Reproducible</b>: re-running the job restores it byte for byte.</p>
+      </div>
+
+      <div class="v-card is-urgent">
+        <div class="v-card-head">
+          <span class="v-glyph" aria-hidden="true">✕</span>
+          <h3>Discarded — phone</h3>
+          <span class="v-tag">14:39:04 device · dictated</span>
+        </div>
+        <pre><code class="v-note-body">left knee started clicking near the top of
+the mortirolo — cut the interval block, keep
+it z2 for the rest of the week</code></pre>
+        <p class="v-why">Voice capture, transcribed on device, never left SQLite in any other form. <b>Unrecoverable</b>: the outbox row was acked and deleted at 14:49:03.</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="v-section v-air">
+    <div class="v-section-head">
+      <h2>Is that acceptable</h2>
+      <span class="v-count">verdict</span>
+    </div>
+
+    <div class="v-prose">
+      <p>
+        For four of five forks, yes, and the architecture deserves the credit:
+        offline capture worked for 47 minutes on a mountain with no bars, the
+        replay was a single request, and reinstalling no longer costs the rider
+        their history. The failure is not that LWW is wrong. It is that LWW is
+        being asked to order two events using two clocks that have never spoken
+        to each other, and the only table where a machine writes while the
+        client is offline is also the only table where the loser is a human
+        sentence nobody else can reconstruct.
+      </p>
+      <p>
+        The exposure is bounded and countable: a fork can only invert if both
+        writes land within the skew window, and only <code>coach_notes</code>
+        has a server-side writer that fires during a ride. On this ride that is
+        1 row in 47. On a ride with no dictated notes it is 0.
+      </p>
+    </div>
+
+    <details class="v-details">
+      <summary>Three ways to close it, cheapest first</summary>
+      <div class="v-details-body">
+        <div class="v-card">
+          <div class="v-card-head">
+            <span class="v-glyph" aria-hidden="true">◆</span>
+            <h3>Make <code>coach_notes</code> append-only</h3>
+            <span class="v-tag">removes the conflict class</span>
+          </div>
+          <p>
+            A rider's dictated note and a generated summary are not two versions
+            of one row; they are two rows with a <code>source</code> column. No
+            comparison, no winner, nothing to lose. Costs one migration and a
+            list view that already exists.
+          </p>
+        </div>
+        <div class="v-card">
+          <div class="v-card-head">
+            <span class="v-glyph" aria-hidden="true">◆</span>
+            <h3>Send the client's clock offset with the batch</h3>
+            <span class="v-tag">makes LWW honest</span>
+          </div>
+          <p>
+            The push already knows when it started. Sending the device's own
+            <code>Date.now()</code> alongside it lets the server compute the skew
+            per batch and normalise every <code>updated_at</code> in it before
+            comparing. Fixes the ordering without changing the resolution rule.
+          </p>
+        </div>
+        <div class="v-card">
+          <div class="v-card-head">
+            <span class="v-glyph" aria-hidden="true">◆</span>
+            <h3>Hybrid logical clocks on every domain row</h3>
+            <span class="v-tag">correct, and the most work</span>
+          </div>
+          <p>
+            An HLC per row makes causality explicit and stops a slow device clock
+            deciding the winner. It cannot rank two genuinely concurrent edits,
+            so conflicts like this one have to be kept rather than resolved. It
+            is the right long answer and the wrong first move: it touches all five tables to fix a defect currently confined
+            to one.
+          </p>
+        </div>
+      </div>
+    </details>
+  </section>
+
+  <p class="v-footer">
+    Gregario, voice-first cycling copilot. Trace reconstructed from the client
+    outbox journal and the server receipt log for batch 9f31c04, ride
+    2026-07-29. Timestamps are local (Europe/Rome). This page is a demo: the
+    project and its architecture are real, the row identifiers and timings are
+    invented.
+  </p>
+
+</div>
+</body>
+</html>

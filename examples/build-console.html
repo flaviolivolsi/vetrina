@@ -1,0 +1,471 @@
+<title>Gregario · build console</title>
+
+<style>
+  /* ── Tokens ────────────────────────────────────────────────────────
+     Inherited from the Gregario design system (landing/src/styles/
+     global.css) rather than invented: same anthracite ground, same
+     foreground ramp, same cyan. Cyan stays reserved for things that are
+     actually live, which is that system's own rule. Status colours are
+     deliberately NOT the accent, so state and liveness read as two
+     different axes. */
+  :root {
+    --ground: #14110d;
+    --surface: #1c1916;
+    --raised: #232118;
+    --border: #3c3930;
+    --border-subtle: #2f2c24;
+    --fg: #f5f4ef;
+    --muted: #9e9d97;
+    --faint: #7d7c76;
+    --accent: #22d3ee;
+
+    --st-live: #8fd19e;
+    --st-flight: #d9a441;
+    --st-blocked: #c4756a;
+    --st-yours: #b3a2cf;
+
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+    --serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+    --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+
+  @media (prefers-color-scheme: light) {
+    :root {
+      --ground: #f4f1e9;
+      --surface: #ebe7dc;
+      --raised: #e3ded1;
+      --border: #cdc6b5;
+      --border-subtle: #ded8c9;
+      --fg: #191510;
+      --muted: #5c574d;
+      --faint: #7a7568;
+      --accent: #0e7490;
+      --st-live: #2f7d4f;
+      --st-flight: #8a6112;
+      --st-blocked: #9c3f33;
+      --st-yours: #5b4a86;
+    }
+  }
+  :root[data-theme="dark"] {
+    --ground: #14110d; --surface: #1c1916; --raised: #232118;
+    --border: #3c3930; --border-subtle: #2f2c24;
+    --fg: #f5f4ef; --muted: #9e9d97; --faint: #7d7c76; --accent: #22d3ee;
+    --st-live: #8fd19e; --st-flight: #d9a441; --st-blocked: #c4756a; --st-yours: #b3a2cf;
+  }
+  :root[data-theme="light"] {
+    --ground: #f4f1e9; --surface: #ebe7dc; --raised: #e3ded1;
+    --border: #cdc6b5; --border-subtle: #ded8c9;
+    --fg: #191510; --muted: #5c574d; --faint: #7a7568; --accent: #0e7490;
+    --st-live: #2f7d4f; --st-flight: #8a6112; --st-blocked: #9c3f33; --st-yours: #5b4a86;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--ground);
+    color: var(--fg);
+    font-family: var(--mono);
+    font-size: 14px;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap {
+    max-width: 1180px;
+    margin-inline: auto;
+    padding: clamp(1.5rem, 4vw, 3rem) clamp(1rem, 3vw, 2rem) 5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* ── Masthead ─────────────────────────────────────────────────── */
+  .head { display: flex; flex-direction: column; gap: .75rem; }
+  .kicker {
+    font-size: 10px; letter-spacing: .2em; text-transform: uppercase;
+    color: var(--muted); margin: 0;
+    display: flex; flex-wrap: wrap; gap: .75rem; align-items: center;
+  }
+  .pulse {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--accent); flex-shrink: 0;
+    animation: breathe 2.4s ease-in-out infinite;
+  }
+  @keyframes breathe { 0%,100% { opacity: 1 } 50% { opacity: .35 } }
+  @media (prefers-reduced-motion: reduce) { .pulse { animation: none } }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(1.9rem, 4.5vw, 2.9rem);
+    font-weight: 600; line-height: 1.05; letter-spacing: -.015em;
+    margin: 0; text-wrap: balance;
+  }
+  .standfirst {
+    font-family: var(--sans);
+    font-size: 15px; line-height: 1.6; color: var(--muted);
+    max-width: 60ch; margin: 0;
+  }
+
+  /* ── Filter strip ─────────────────────────────────────────────── */
+  .filters {
+    display: flex; flex-wrap: wrap; gap: .5rem;
+    padding-top: 1.25rem; border-top: 1px solid var(--border);
+  }
+  .chip {
+    font-family: var(--mono); font-size: 11px; letter-spacing: .1em;
+    text-transform: uppercase;
+    display: inline-flex; align-items: center; gap: .5rem;
+    padding: .5rem .8rem; min-height: 38px;
+    background: var(--surface); color: var(--muted);
+    border: 1px solid var(--border-subtle); cursor: pointer;
+    transition: color .15s, border-color .15s, background .15s;
+  }
+  .chip:hover { color: var(--fg); border-color: var(--border); }
+  .chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .chip[aria-pressed="true"] { color: var(--fg); background: var(--raised); border-color: var(--border); }
+  .chip .n { font-variant-numeric: tabular-nums; color: var(--fg); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+  .dot.live { background: var(--st-live) }
+  .dot.flight { background: var(--st-flight) }
+  .dot.blocked { background: var(--st-blocked) }
+  .dot.yours { background: var(--st-yours) }
+
+  /* ── Groups ───────────────────────────────────────────────────── */
+  .group { display: flex; flex-direction: column; gap: 0; }
+  .group[hidden] { display: none; }
+  .group-head {
+    display: flex; align-items: baseline; gap: .75rem;
+    font-size: 11px; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--muted); margin: 0 0 .75rem;
+  }
+  .group-note {
+    font-family: var(--sans); font-size: 13px; letter-spacing: 0;
+    text-transform: none; color: var(--faint);
+  }
+
+  .rows { border-top: 1px solid var(--border-subtle); }
+
+  .row {
+    display: grid;
+    grid-template-columns: 3px minmax(0, 1fr);
+    gap: 0 1rem;
+    border-bottom: 1px solid var(--border-subtle);
+  }
+  .row[hidden] { display: none; }
+  .stripe { background: var(--border); }
+  .row.s-live .stripe { background: var(--st-live) }
+  .row.s-flight .stripe { background: var(--st-flight) }
+  .row.s-blocked .stripe { background: var(--st-blocked) }
+  .row.s-yours .stripe { background: var(--st-yours) }
+
+  .row-body { padding: .95rem 0 1rem .25rem; display: flex; flex-direction: column; gap: .4rem; }
+  .row-top { display: flex; flex-wrap: wrap; align-items: baseline; gap: .5rem 1rem; }
+  .row-title { font-size: 14.5px; color: var(--fg); font-weight: 500; }
+  .row-tag {
+    font-size: 10px; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--faint);
+  }
+  .row-what {
+    font-family: var(--sans); font-size: 13.5px; line-height: 1.55;
+    color: var(--muted); max-width: 74ch; margin: 0;
+  }
+  .row-links { display: flex; flex-wrap: wrap; gap: .4rem .5rem; margin-top: .15rem; }
+  a.lnk {
+    font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--muted); text-decoration: none;
+    border: 1px solid var(--border-subtle); padding: .3rem .55rem;
+    transition: color .15s, border-color .15s;
+  }
+  a.lnk:hover { color: var(--fg); border-color: var(--border); }
+  a.lnk:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  a.lnk.is-live { color: var(--accent); border-color: color-mix(in oklab, var(--accent) 40%, transparent); }
+  a.lnk.is-live:hover { border-color: var(--accent); }
+
+  .foot {
+    font-family: var(--sans); font-size: 12.5px; color: var(--faint);
+    border-top: 1px solid var(--border-subtle); padding-top: 1.25rem;
+    max-width: 70ch; line-height: 1.6;
+  }
+  code {
+    font-family: var(--mono); font-size: .92em;
+    color: var(--fg); background: var(--surface);
+    padding: .1em .35em; border: 1px solid var(--border-subtle);
+  }
+  .empty { color: var(--faint); font-family: var(--sans); padding: 1.5rem 0; }
+</style>
+
+<div class="wrap">
+  <header class="head">
+    <p class="kicker">
+      <span class="pulse" aria-hidden="true"></span>
+      <span>Gregario</span><span aria-hidden="true">/</span>
+      <span>build console</span><span aria-hidden="true">/</span>
+      <span>1 Aug 2026</span>
+    </p>
+    <h1>What I am building, while I build it.</h1>
+    <p class="standfirst">
+      Live links point at heygreg.cc. Dev links point at the Astro server on this laptop over
+      the tailnet, so work that is not pushed yet is still walkable. If a dev link is dead, the
+      server is down, not the page.
+    </p>
+  </header>
+
+  <div class="filters" role="group" aria-label="Filter by state">
+    <button class="chip" data-filter="all" aria-pressed="true">All <span class="n">21</span></button>
+    <button class="chip" data-filter="live" aria-pressed="false"><span class="dot live"></span>Shipped <span class="n">11</span></button>
+    <button class="chip" data-filter="flight" aria-pressed="false"><span class="dot flight"></span>Next up <span class="n">5</span></button>
+    <button class="chip" data-filter="blocked" aria-pressed="false"><span class="dot blocked"></span>Blocked <span class="n">1</span></button>
+    <button class="chip" data-filter="yours" aria-pressed="false"><span class="dot yours"></span>Needs you <span class="n">4</span></button>
+  </div>
+
+  <!-- ── Shipped ─────────────────────────────────────────────────── -->
+  <section class="group" data-group="live">
+    <h2 class="group-head">Shipped <span class="group-note">on main, and on the site</span></h2>
+    <div class="rows">
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Gregario vs Komoot</span><span class="row-tag">49 rows</span></div>
+          <p class="row-what">Every cell answers one question: what does this cost you. Section 01 leads because it is the section with nothing in their column. Four rows were corrected against us after checking Komoot's own plans page.</p>
+          <div class="row-links">
+            <a class="lnk is-live" href="https://www.heygreg.cc/komoot-alternative">Live</a>
+            <a class="lnk" href="http://100.87.186.80:4321/komoot-alternative">Dev</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">The manual</span><span class="row-tag">3 of 17 written</span></div>
+          <p class="row-what">A field manual, not a knowledge base. The contents page lists the whole book including the parts that are not written, which is the point.</p>
+          <div class="row-links">
+            <a class="lnk is-live" href="https://www.heygreg.cc/manual">Live</a>
+            <a class="lnk" href="http://100.87.186.80:4321/manual">Dev</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Known limits</span><span class="row-tag">volatile, 45-day gate</span></div>
+          <p class="row-what">Says off-route recovery has never been ridden, that the route screens do not open on the web at all, and that photos import twice if you import twice. The build fails if nobody re-reads it within 45 days.</p>
+          <div class="row-links">
+            <a class="lnk is-live" href="https://www.heygreg.cc/manual/known-limits">Live</a>
+            <a class="lnk" href="http://100.87.186.80:4321/manual/known-limits">Dev</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">When the map is wrong</span></div>
+          <p class="row-what">Every routing app is downstream of OpenStreetMap and none of them say so. This one says so, then shows you how to edit the map, and admits the fix helps Komoot too.</p>
+          <div class="row-links">
+            <a class="lnk is-live" href="https://www.heygreg.cc/manual/when-the-map-is-wrong">Live</a>
+            <a class="lnk" href="http://100.87.186.80:4321/manual/when-the-map-is-wrong">Dev</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Coming from Komoot</span></div>
+          <p class="row-what">The migration page. States plainly that our Komoot metadata reader has never met a real Komoot export.</p>
+          <div class="row-links">
+            <a class="lnk is-live" href="https://www.heygreg.cc/manual/coming-from-komoot">Live</a>
+            <a class="lnk" href="http://100.87.186.80:4321/manual/coming-from-komoot">Dev</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Credits</span><span class="row-tag">licence obligation</span></div>
+          <p class="row-what">Four debts were owed and none were paid: OpenStreetMap under ODbL, met.no and Open-Meteo under CC BY 4.0, Wikimedia Commons and Mapillary under CC BY-SA. Now on the site and in Settings.</p>
+          <div class="row-links">
+            <a class="lnk is-live" href="https://www.heygreg.cc/credits">Live</a>
+            <a class="lnk" href="http://100.87.186.80:4321/credits">Dev</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Memory merge</span><span class="row-tag">on main, not deployed</span></div>
+          <p class="row-what">Per-user profile replaces profile.json, so the coach no longer believes every rider is you. Plus the ledger, extraction in shadow mode, and the onboarding interview. Migration 0017 is waiting on Dokploy.</p>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Settings, Credits screen</span><span class="row-tag">unverified on device</span></div>
+          <p class="row-what">Typecheck clean and it follows the existing screen patterns, but no phone has opened it. Wants a look on the next build.</p>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Two changelog drafts</span><span class="row-tag">draft: true</span></div>
+          <p class="row-what">He asks who you are, and The menu says what it does. Flipping draft is your call, never mine.</p>
+          <div class="row-links"><a class="lnk" href="http://100.87.186.80:4321/changelog">Dev</a></div>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Rider alpha plan</span><span class="row-tag">docs/plans</span></div>
+          <p class="row-what">Ranked blockers with file evidence, what is already green, the Telegram group and bot design, and what gets cut. Deadline about 15 Aug.</p>
+        </div>
+      </article>
+
+      <article class="row s-live" data-state="live">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Roadmap views plan</span><span class="row-tag">built by another session</span></div>
+          <p class="row-what">One store, many projections. A public page and a board, with the sync gates as a runnable check rather than prose.</p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ── Blocked ─────────────────────────────────────────────────── -->
+  <section class="group" data-group="blocked">
+    <h2 class="group-head">Blocked <span class="group-note">waiting on something that is not me</span></h2>
+    <div class="rows">
+      <article class="row s-blocked" data-state="blocked">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">What leaves the phone</span><span class="row-tag">codex still tracing</span></div>
+          <p class="row-what">The manual page a privacy-minded reader opens first, and the one page where a single omission is a broken promise rather than a typo. Codex is enumerating every outbound call with file and line. I am not writing it from memory.</p>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- ── Next up ─────────────────────────────────────────────────── -->
+  <section class="group" data-group="flight">
+    <h2 class="group-head">Next up <span class="group-note">mine, in this order</span></h2>
+    <div class="rows">
+
+      <article class="row s-flight" data-state="flight">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Export format, published</span></div>
+          <p class="row-what">Answers the closed-source worry with something checkable today rather than a promise about later. The takeout is the format, and the round trip is tested on every build.</p>
+        </div>
+      </article>
+
+      <article class="row s-flight" data-state="flight">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">The technical post</span><span class="row-tag">the HN artifact</span></div>
+          <p class="row-what">Continental bicycle routing on one box. Kills the AI-wrapper reflex by never arguing with it, and gets read by people who do not care about cycling.</p>
+        </div>
+      </article>
+
+      <article class="row s-flight" data-state="flight">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Navigation for an arrival</span></div>
+          <p class="row-what">Someone landing cold asks four things in order: what is this, does it work, what is broken, can I leave. The comparison page is not in the header at all, and no page has a chosen next step at its foot.</p>
+        </div>
+      </article>
+
+      <article class="row s-flight" data-state="flight">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Per-image credit</span><span class="row-tag">rest of NLR-8</span></div>
+          <p class="row-what">Commons licences are per photograph, so the credit has to travel with the picture rather than sit on a page. A change to the imagery strip, not a new screen.</p>
+        </div>
+      </article>
+
+      <article class="row s-flight" data-state="flight">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">The progress entry I owe</span></div>
+          <p class="row-what">Another session logged the roadmap work. My stream today, the comparison page, two manual pages and attribution, is not in it.</p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ── Needs you ───────────────────────────────────────────────── -->
+  <section class="group" data-group="yours">
+    <h2 class="group-head">Needs you <span class="group-note">a device, a ride, or an account I do not have</span></h2>
+    <div class="rows">
+
+      <article class="row s-yours" data-state="yours">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Deploy the server</span><span class="row-tag">do this first</span></div>
+          <p class="row-what">Migration 0017 and the memory endpoints are on main and not on Dokploy. Production is running the old schema while the site is fully current. Deploy carefully: rapid redeploys have corrupted the WAL before.</p>
+        </div>
+      </article>
+
+      <article class="row s-yours" data-state="yours">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Ride REJOIN</span><span class="row-tag">safety path, evidence: assumed</span></div>
+          <p class="row-what">Four faults found and fixed, every layer unit-tested, no GPS has touched it. Costs a ride, not a commit, which is why it slips to day 12 if it is not scheduled now.</p>
+        </div>
+      </article>
+
+      <article class="row s-yours" data-state="yours">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">Sentry, Build 1, OTA proof</span><span class="row-tag">owed since 10 Jul</span></div>
+          <p class="row-what">Without crash reporting you learn nothing from a failure. Without a proven OTA path you cannot fix what you learn. Watch the fingerprint runtime version, a mismatch no-ops silently.</p>
+        </div>
+      </article>
+
+      <article class="row s-yours" data-state="yours">
+        <div class="stripe"></div>
+        <div class="row-body">
+          <div class="row-top"><span class="row-title">iOS</span><span class="row-tag">Apple lead time</span></div>
+          <p class="row-what">No bundle identifier, no background modes, no permission strings, no ios block on the preview profile. Plus developer enrolment, which is Apple's queue rather than yours.</p>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <p class="foot">
+    One correction still owed in the spec: <code>Gregario.md</code> says Bending Spoons paywalled
+    send-to-device at £4.99 a month, and Strategic Thesis #2 leans on it. Komoot's own plans page
+    puts send-to-device in Maps, the one-time purchase, and the dated evidence says it was
+    paywalled before the acquisition and reopened in September 2025. The comparison page is fixed.
+    The spec is not, and it is the first thing a journalist checks.
+  </p>
+</div>
+
+<script>
+  const chips = document.querySelectorAll('.chip');
+  const rows = document.querySelectorAll('.row');
+  const groups = document.querySelectorAll('.group');
+
+  function apply(filter) {
+    rows.forEach((r) => {
+      r.hidden = filter !== 'all' && r.dataset.state !== filter;
+    });
+    groups.forEach((g) => {
+      const any = [...g.querySelectorAll('.row')].some((r) => !r.hidden);
+      g.hidden = !any;
+    });
+    chips.forEach((c) => c.setAttribute('aria-pressed', String(c.dataset.filter === filter)));
+  }
+
+  chips.forEach((c) => c.addEventListener('click', () => apply(c.dataset.filter)));
+</script>

@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Node 18 upgrade — three ways out, you pick</title>
+<style>
+/* ---------- tokens ---------- */
+:root{
+  --bg:#f4f6f8; --surface:#ffffff; --surface-2:#eef1f5; --sunken:#e7ebf0;
+  --ink:#12161b; --ink-2:#4a5560; --ink-3:#6f7c89;
+  --line:#d9dfe6; --line-2:#c3ccd6;
+  --accent:#1b53c0; --accent-soft:#e3ebfb;
+  --bad:#a8291f; --bad-soft:#fbe6e3;
+  --warn:#8a5200; --warn-soft:#fbf0dc;
+  --good:#146c46; --good-soft:#dff2e8;
+  --code-bg:#1a1f27; --code-ink:#dbe3ec;
+  --shadow:0 1px 2px rgba(15,25,40,.07), 0 6px 18px -10px rgba(15,25,40,.28);
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0c0f14; --surface:#141a21; --surface-2:#1b222b; --sunken:#10151b;
+    --ink:#e8eef5; --ink-2:#a8b4c1; --ink-3:#7d8b99;
+    --line:#242d38; --line-2:#333f4d;
+    --accent:#7aa9ff; --accent-soft:#16233c;
+    --bad:#ff8a7e; --bad-soft:#2e1815;
+    --warn:#e6b34a; --warn-soft:#2c2210;
+    --good:#5fd39b; --good-soft:#112a20;
+    --code-bg:#080b0f; --code-ink:#cfd9e4;
+    --shadow:0 1px 2px rgba(0,0,0,.5), 0 8px 24px -12px rgba(0,0,0,.8);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.5;
+  padding:0 0 96px;
+}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
+p{margin:0}
+code,pre,kbd{font-family:var(--mono)}
+
+/* ---------- header ---------- */
+.top{
+  background:var(--surface); border-bottom:1px solid var(--line);
+  padding:22px 0 20px;
+}
+.eyebrow{
+  font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink-3); font-weight:700; margin-bottom:10px;
+}
+.top h1{font-size:clamp(23px,5.4vw,36px);font-weight:750}
+.lede{margin-top:10px;color:var(--ink-2);font-size:15.5px;max-width:66ch}
+.lede strong{color:var(--ink);font-weight:650}
+
+.clock{
+  margin-top:18px; border:1px solid var(--line-2); border-radius:10px;
+  background:var(--surface-2); padding:12px 14px;
+  display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center;
+}
+.clock .big{font-size:26px;font-weight:750;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.clock .txt{font-size:13.5px;color:var(--ink-2);flex:1 1 240px;min-width:200px}
+.bar{
+  flex:1 1 100%; height:8px; border-radius:99px; background:var(--sunken);
+  border:1px solid var(--line-2); overflow:hidden; position:relative;
+}
+.bar i{display:block;height:100%;background:repeating-linear-gradient(135deg,var(--bad) 0 6px,transparent 6px 12px);background-color:var(--bad-soft)}
+
+/* ---------- section frame ---------- */
+section{margin-top:34px}
+.shead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.shead h2{font-size:19px;font-weight:700}
+.shead .note{font-size:13px;color:var(--ink-3)}
+.num{
+  display:inline-grid;place-items:center;width:22px;height:22px;border-radius:6px;
+  background:var(--ink);color:var(--bg);font-size:12px;font-weight:800;flex:none;
+  align-self:center;
+}
+
+/* ---------- path cards ---------- */
+.paths{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:820px){.paths{grid-template-columns:1fr}}
+.pcard{
+  appearance:none;text-align:left;font:inherit;color:inherit;cursor:pointer;
+  background:var(--surface); border:1px solid var(--line); border-radius:12px;
+  padding:16px 15px 15px; box-shadow:var(--shadow);
+  display:flex;flex-direction:column;gap:10px;
+  border-top:4px solid var(--line-2);
+  transition:transform .12s ease, border-color .12s ease;
+}
+.pcard:hover{border-color:var(--line-2);transform:translateY(-1px)}
+.pcard:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.pcard .lt{
+  display:flex;align-items:center;gap:10px;
+}
+.badge{
+  width:30px;height:30px;border-radius:8px;display:grid;place-items:center;
+  font-weight:850;font-size:15px;flex:none;
+  background:var(--ink);color:var(--bg);
+}
+.pcard h3{font-size:16.5px;font-weight:720}
+.pcard .target{font-family:var(--mono);font-size:12.5px;color:var(--ink-3);margin-top:2px}
+.effort{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.effort b{font-size:24px;font-weight:780;letter-spacing:-.02em}
+.effort span{font-size:12.5px;color:var(--ink-3)}
+.oneline{font-size:13.5px;color:var(--ink-2)}
+.tags{display:flex;flex-wrap:wrap;gap:6px;margin-top:auto;padding-top:4px}
+.pickhint{
+  margin-top:6px;font-size:12px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;
+  color:var(--accent);
+}
+
+/* selection */
+body[data-pick] .pcard{opacity:.5}
+body[data-pick] .pcard.on{opacity:1;border-color:var(--accent);border-top-color:var(--accent);box-shadow:0 0 0 2px var(--accent-soft),var(--shadow)}
+body[data-pick] .pcard.on .pickhint::after{content:" ✓ selected"}
+body[data-pick] .pcard.on .pickhint{color:var(--accent)}
+
+/* ---------- chips ---------- */
+.chip{
+  display:inline-flex;align-items:center;gap:5px;
+  border:1px solid var(--line-2); border-radius:99px;
+  padding:2px 9px 2px 7px; font-size:11.5px; font-weight:650; white-space:nowrap;
+  background:var(--surface-2); color:var(--ink-2);
+}
+.chip .gl{font-size:11px;line-height:1}
+.chip.bad{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.chip.warn{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.chip.good{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+
+/* ---------- matrix ---------- */
+.matrix{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--surface);box-shadow:var(--shadow)}
+.mrow{display:grid;grid-template-columns:186px repeat(3,1fr);border-top:1px solid var(--line)}
+.mrow:first-child{border-top:0}
+.mhead{background:var(--surface-2);position:sticky;top:0;z-index:2}
+.mhead .cell{padding:9px 12px;font-weight:750;font-size:13.5px;display:flex;align-items:center;gap:8px}
+.rowlabel{
+  padding:12px; font-size:12.5px; font-weight:700; color:var(--ink-2);
+  background:var(--sunken); border-right:1px solid var(--line);
+  display:flex;align-items:flex-start;
+}
+.cell{padding:12px;border-right:1px solid var(--line);font-size:13.5px}
+.cell:last-child{border-right:0}
+.cell .ckey{display:none}
+.cell .v{font-weight:700;display:block;margin-bottom:2px}
+.cell .d{color:var(--ink-2);font-size:12.5px;display:block}
+.minibadge{
+  display:inline-grid;place-items:center;width:20px;height:20px;border-radius:5px;
+  background:var(--ink);color:var(--bg);font-size:11px;font-weight:850;flex:none;
+}
+body[data-pick] .cell[data-p]{opacity:.45}
+body[data-pick] .cell[data-p].on{opacity:1;background:var(--accent-soft)}
+
+.meter{display:inline-block;font-family:var(--mono);letter-spacing:1px;font-size:12px;margin-right:6px;vertical-align:1px}
+.meter.lo{color:var(--good)} .meter.md{color:var(--warn)} .meter.hi{color:var(--bad)}
+
+@media (max-width:820px){
+  .matrix{border-radius:12px}
+  .mhead{display:none}
+  .mrow{grid-template-columns:1fr;border-top:8px solid var(--bg)}
+  .rowlabel{
+    background:var(--surface-2);border-right:0;border-bottom:1px solid var(--line);
+    font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink-3);
+    padding:8px 12px;
+  }
+  .cell{border-right:0;border-bottom:1px solid var(--line);display:grid;grid-template-columns:28px 1fr;gap:8px;align-items:start}
+  .mrow .cell:last-child{border-bottom:0}
+  .cell .ckey{display:grid;place-items:center;width:22px;height:22px;border-radius:5px;background:var(--ink);color:var(--bg);font-size:11px;font-weight:850}
+}
+
+/* ---------- blockers ---------- */
+.blk{
+  border:1px solid var(--line);border-radius:12px;background:var(--surface);
+  box-shadow:var(--shadow); overflow:hidden; margin-bottom:12px;
+}
+.blk > summary{
+  list-style:none; cursor:pointer; padding:14px 15px;
+  display:grid; grid-template-columns:auto 1fr auto; gap:12px; align-items:center;
+}
+.blk > summary::-webkit-details-marker{display:none}
+.blk > summary:focus-visible{outline:3px solid var(--accent);outline-offset:-3px}
+.blk .bnum{
+  width:26px;height:26px;border-radius:7px;display:grid;place-items:center;
+  background:var(--bad-soft);color:var(--bad);border:1px solid var(--bad);
+  font-weight:850;font-size:12px;
+}
+.blk .pkg{font-family:var(--mono);font-size:14px;font-weight:700;word-break:break-all}
+.blk .path{font-size:12px;color:var(--ink-3);font-family:var(--mono);margin-top:3px;word-break:break-all}
+.blk .caret{color:var(--ink-3);font-size:12px;font-weight:700;white-space:nowrap}
+.blk[open] .caret span::after{content:"hide"}
+.blk:not([open]) .caret span::after{content:"detail"}
+.blk .body{padding:0 15px 16px;border-top:1px solid var(--line);padding-top:14px}
+.verdicts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:0 15px 14px}
+@media (max-width:680px){.verdicts{grid-template-columns:1fr}}
+.verdict{
+  border:1px solid var(--line-2);border-radius:9px;padding:9px 10px;background:var(--surface-2);
+  font-size:12.5px;
+}
+.verdict .vh{display:flex;align-items:center;gap:6px;font-weight:750;margin-bottom:4px;font-size:12px}
+.verdict .vd{color:var(--ink-2)}
+.verdict.bad{border-color:var(--bad);background:var(--bad-soft)}
+.verdict.warn{border-color:var(--warn);background:var(--warn-soft)}
+.verdict.good{border-color:var(--good);background:var(--good-soft)}
+body[data-pick] .verdict[data-p]{opacity:.4}
+body[data-pick] .verdict[data-p].on{opacity:1;box-shadow:0 0 0 2px var(--accent)}
+
+pre{
+  margin:10px 0 0; background:var(--code-bg); color:var(--code-ink);
+  padding:12px 13px; border-radius:9px; overflow-x:auto;
+  font-size:12px; line-height:1.55; border:1px solid rgba(255,255,255,.08);
+  -webkit-overflow-scrolling:touch;
+}
+pre b{color:#ff9b8f;font-weight:700}
+pre i{color:#8fd6a8;font-style:normal}
+pre u{color:#f0c674;text-decoration:none}
+.plabel{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3);font-weight:700;margin-top:14px}
+.facts{margin:10px 0 0;padding:0;list-style:none;font-size:13px}
+.facts li{padding:5px 0 5px 18px;position:relative;color:var(--ink-2);border-top:1px dashed var(--line)}
+.facts li:first-child{border-top:0}
+.facts li::before{content:"–";position:absolute;left:4px;color:var(--ink-3)}
+.facts b{color:var(--ink)}
+
+/* ---------- commitment panel ---------- */
+.commit{
+  border:2px dashed var(--line-2);border-radius:12px;padding:16px;
+  background:var(--surface);color:var(--ink-3);font-size:14px;text-align:center;
+}
+.commit.live{border-style:solid;border-color:var(--accent);background:var(--surface);text-align:left;color:var(--ink)}
+.cgrid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:12px}
+@media (max-width:680px){.cgrid{grid-template-columns:1fr}}
+.cgrid h4{margin:0 0 8px;font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.cgrid ol,.cgrid ul{margin:0;padding-left:20px;font-size:13.5px;color:var(--ink-2)}
+.cgrid li{margin-bottom:5px}
+.cgrid li b{color:var(--ink)}
+.chead{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.chead h3{font-size:17px;font-weight:730}
+.clear{
+  margin-left:auto;appearance:none;background:var(--surface-2);border:1px solid var(--line-2);
+  color:var(--ink-2);border-radius:7px;padding:5px 10px;font:inherit;font-size:12.5px;cursor:pointer;
+}
+.clear:hover{color:var(--ink)}
+
+/* ---------- unknowns ---------- */
+.qs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media (max-width:820px){.qs{grid-template-columns:1fr}}
+.q{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:var(--shadow)}
+.q .qt{font-weight:700;font-size:14px;margin-bottom:8px}
+.q .qa{font-size:13px;color:var(--ink-2)}
+.q .qa em{font-style:normal;font-weight:750;color:var(--ink)}
+
+/* ---------- footer ---------- */
+.method{
+  margin-top:34px;border-top:1px solid var(--line);padding-top:16px;
+  font-size:12.5px;color:var(--ink-3);
+}
+.method code{background:var(--surface-2);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:11.5px;color:var(--ink-2)}
+.method p+p{margin-top:6px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="eyebrow">Decision needed · nothing shipped yet · investigation complete</div>
+    <h1>Node 18 is running out. Three ways out — you pick one.</h1>
+    <p class="lede">
+      I ran all three on a throwaway branch (<code>chore/node-upgrade-spike</code>) and captured the real failures.
+      Everything below is measured, not guessed. <strong>I am deliberately not choosing</strong> — the three paths
+      differ on things only you can price: appetite for two uninterrupted days, and whether you want containers.
+    </p>
+
+    <div class="clock">
+      <div class="big"><span id="daysleft">60</span> days</div>
+      <div class="txt">until <b>30 Sep 2026</b>, when Node&nbsp;18.20.8 stops receiving security patches.
+        After that date every CVE in the runtime is yours to carry.</div>
+      <div class="bar" role="img" aria-label="60 of 730 days of the Node 18 support window remain"><i style="width:8%"></i></div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+<!-- ============ 1. THE THREE PATHS ============ -->
+<section aria-labelledby="h-paths">
+  <div class="shead"><span class="num">1</span><h2 id="h-paths">The three paths</h2>
+    <span class="note">Tap a card to select it — the whole page filters to that choice.</span></div>
+
+  <div class="paths">
+    <button class="pcard" data-path="A" aria-pressed="false">
+      <div class="lt"><span class="badge">A</span>
+        <div><h3>Go straight to Node 22</h3><div class="target">22.11.0 LTS &nbsp;·&nbsp; supported to 30 Apr 2028</div></div>
+      </div>
+      <div class="effort"><b>~2 days</b><span>13.5 h hands-on</span></div>
+      <p class="oneline">Kill <code>node-sass</code> for good, patch two abandoned packages, done. Blocker list goes to zero.</p>
+      <div class="tags">
+        <span class="chip bad"><span class="gl">▲</span>Highest risk now</span>
+        <span class="chip good"><span class="gl">✓</span>0 blockers left</span>
+        <span class="chip good"><span class="gl">✓</span>21 months cover</span>
+      </div>
+      <div class="pickhint">Select path A</div>
+    </button>
+
+    <button class="pcard" data-path="B" aria-pressed="false">
+      <div class="lt"><span class="badge">B</span>
+        <div><h3>Node 20 now, 22 later</h3><div class="target">20.18.1 LTS &nbsp;·&nbsp; supported to 31 Mar 2027</div></div>
+      </div>
+      <div class="effort"><b>~4 hours</b><span>one afternoon</span></div>
+      <p class="oneline">Only one thing actually breaks on 20, and it's a version bump. You re-open this page in 8 months.</p>
+      <div class="tags">
+        <span class="chip good"><span class="gl">✓</span>Lowest risk now</span>
+        <span class="chip warn"><span class="gl">◐</span>2 of 3 deferred</span>
+        <span class="chip warn"><span class="gl">◐</span>8 months cover</span>
+      </div>
+      <div class="pickhint">Select path B</div>
+    </button>
+
+    <button class="pcard" data-path="C" aria-pressed="false">
+      <div class="lt"><span class="badge">C</span>
+        <div><h3>Containerise, stay on 18</h3><div class="target">node:18.20.8-bookworm-slim, pinned by digest</div></div>
+      </div>
+      <div class="effort"><b>~1 day</b><span>7 h hands-on</span></div>
+      <p class="oneline">Freeze the runtime in an image. Touches zero application code — and fixes zero of the three blockers.</p>
+      <div class="tags">
+        <span class="chip good"><span class="gl">✓</span>No app code changes</span>
+        <span class="chip bad"><span class="gl">▲</span>0 of 3 fixed</span>
+        <span class="chip bad"><span class="gl">▲</span>Unpatched from Oct</span>
+      </div>
+      <div class="pickhint">Select path C</div>
+    </button>
+  </div>
+</section>
+
+<!-- ============ 2. SIDE BY SIDE ============ -->
+<section aria-labelledby="h-matrix">
+  <div class="shead"><span class="num">2</span><h2 id="h-matrix">Side by side</h2>
+    <span class="note">Same eight questions asked of each path.</span></div>
+
+  <div class="matrix">
+    <div class="mrow mhead">
+      <div class="rowlabel" style="background:var(--surface-2);border-right-color:var(--line)">&nbsp;</div>
+      <div class="cell"><span class="minibadge">A</span> Node 22 now</div>
+      <div class="cell"><span class="minibadge">B</span> Node 20 first</div>
+      <div class="cell"><span class="minibadge">C</span> Containerise</div>
+    </div>
+
+    <div class="mrow">
+      <div class="rowlabel">Effort</div>
+      <div class="cell" data-p="A"><span class="ckey">A</span><span><span class="v"><span class="meter hi">▮▮▮▮▯</span>~13.5 h</span>
+        <span class="d">Sass migration 8 h · canvas patch 3 h · cookie patch 2 h · CI &amp; pins 0.5 h</span></span></div>
+      <div class="cell" data-p="B"><span class="ckey">B</span><span><span class="v"><span class="meter lo">▮▯▯▯▯</span>~4 h</span>
+        <span class="d">node-sass bump 0.7 h · <code>npm update</code> 0.5 h · regression + deploy 2.8 h</span></span></div>
+      <div class="cell" data-p="C"><span class="ckey">C</span><span><span class="v"><span class="meter md">▮▮▯▯▯</span>~7 h</span>
+        <span class="d">Dockerfile 2 h · CI build/push 1.5 h · deploy target swap 2 h · dev parity docs 1.5 h</span></span></div>
+    </div>
+
+    <div class="mrow">
+      <div class="rowlabel">Blockers cleared</div>
+      <div class="cell" data-p="A"><span class="ckey">A</span><span><span class="v">3 of 3 &nbsp;<span class="chip good"><span class="gl">✓</span>list empty</span></span>
+        <span class="d">node-sass deleted from the tree, both patches upstream-independent</span></span></div>
+      <div class="cell" data-p="B"><span class="ckey">B</span><span><span class="v">1 of 3 &nbsp;<span class="chip warn"><span class="gl">◐</span>2 deferred</span></span>
+        <span class="d">canvas and tough-cookie don't fire on Node 20 — they're still there, just quiet</span></span></div>
+      <div class="cell" data-p="C"><span class="ckey">C</span><span><span class="v">0 of 3 &nbsp;<span class="chip bad"><span class="gl">▲</span>all remain</span></span>
+        <span class="d">The image freezes the runtime, so nothing is forced to change</span></span></div>
+    </div>
+
+    <div class="mrow">
+      <div class="rowlabel">Risk while doing it</div>
+      <div class="cell" data-p="A"><span class="ckey">A</span><span><span class="v"><span class="meter hi">▮▮▮▮▯</span>Medium-high</span>
+        <span class="d">34 <code>.scss</code> files recompiled by a different engine. We have no visual regression tests.</span></span></div>
+      <div class="cell" data-p="B"><span class="ckey">B</span><span><span class="v"><span class="meter lo">▮▯▯▯▯</span>Low</span>
+        <span class="d">node-sass 9 is the same libsass 3.6.5 — compiled CSS is byte-identical (I diffed it)</span></span></div>
+      <div class="cell" data-p="C"><span class="ckey">C</span><span><span class="v"><span class="meter md">▮▮▯▯▯</span>Low-medium</span>
+        <span class="d">App untouched, but the deploy path is brand new. Risk sits in release, not in code.</span></span></div>
+    </div>
+
+    <div class="mrow">
+      <div class="rowlabel">What can break in prod</div>
+      <div class="cell" data-p="A"><span class="ckey">A</span><span><span class="v">Three surfaces</span>
+        <span class="d">Visual CSS regressions sitewide · Monday 06:00 UTC PDF report job · outbound billing calls</span></span></div>
+      <div class="cell" data-p="B"><span class="ckey">B</span><span><span class="v">Nothing user-facing</span>
+        <span class="d">Worst case is a failed CI build. No runtime behaviour changes.</span></span></div>
+      <div class="cell" data-p="C"><span class="ckey">C</span><span><span class="v">Deploy &amp; env drift</span>
+        <span class="d">Env-var and filesystem assumptions that currently rely on the host (uploads dir, TZ)</span></span></div>
+    </div>
+
+    <div class="mrow">
+      <div class="rowlabel">Ops surface added</div>
+      <div class="cell" data-p="A"><span class="ckey">A</span><span><span class="v">Negative — removes one</span>
+        <span class="d">Drops <code>node-gyp</code>/<code>python3</code>/<code>build-essential</code> from CI. Adds <code>patch-package</code> postinstall.</span></span></div>
+      <div class="cell" data-p="B"><span class="ckey">B</span><span><span class="v">None</span>
+        <span class="d">Same build, same deploy, one number changes in three files</span></span></div>
+      <div class="cell" data-p="C"><span class="ckey">C</span><span><span class="v">Permanent, and it's the real cost</span>
+        <span class="d">Registry, image build stage, digest pinning, base-image CVE triage, local-vs-prod parity — forever</span></span></div>
+    </div>
+
+    <div class="mrow">
+      <div class="rowlabel">Security cover until</div>
+      <div class="cell" data-p="A"><span class="ckey">A</span><span><span class="v">30 Apr 2028 &nbsp;<span class="chip good"><span class="gl">✓</span>21 months</span></span>
+        <span class="d">Node 22 LTS maintenance end</span></span></div>
+      <div class="cell" data-p="B"><span class="ckey">B</span><span><span class="v">31 Mar 2027 &nbsp;<span class="chip warn"><span class="gl">◐</span>8 months</span></span>
+        <span class="d">Node 20 LTS maintenance end</span></span></div>
+      <div class="cell" data-p="C"><span class="ckey">C</span><span><span class="v">30 Sep 2026 &nbsp;<span class="chip bad"><span class="gl">▲</span>0 months</span></span>
+        <span class="d">You keep running 18 past EOL. Base-image CVEs become a standing task for someone.</span></span></div>
+    </div>
+
+    <div class="mrow">
+      <div class="rowlabel">Next forced move</div>
+      <div class="cell" data-p="A"><span class="ckey">A</span><span><span class="v">Q1 2028 · ~1 h</span>
+        <span class="d">With the blocker list empty, 22 → 24 is editing <code>.nvmrc</code> and watching CI</span></span></div>
+      <div class="cell" data-p="B"><span class="ckey">B</span><span><span class="v">Feb 2027 · ~12 h</span>
+        <span class="d">Exactly path A minus the node-sass 9 bump you'd be throwing away</span></span></div>
+      <div class="cell" data-p="C"><span class="ckey">C</span><span><span class="v">Whenever it bites · ~14 h+</span>
+        <span class="d">All of path A, on packages another 18 months more abandoned, plus unwinding the pin</span></span></div>
+    </div>
+
+    <div class="mrow">
+      <div class="rowlabel">Work you throw away</div>
+      <div class="cell" data-p="A"><span class="ckey">A</span><span><span class="v">None</span>
+        <span class="d">Every hour spent is permanent</span></span></div>
+      <div class="cell" data-p="B"><span class="ckey">B</span><span><span class="v">~40 min</span>
+        <span class="d">The node-sass 9 bump gets deleted when you move to dart-sass</span></span></div>
+      <div class="cell" data-p="C"><span class="ckey">C</span><span><span class="v">None thrown away — none gained either</span>
+        <span class="d">The container is useful independently. It just isn't an answer to this question.</span></span></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3. THE BLOCKERS ============ -->
+<section aria-labelledby="h-blockers">
+  <div class="shead"><span class="num">3</span><h2 id="h-blockers">The three blockers, and exactly how each path handles them</h2>
+    <span class="note">Real output from the spike branch. Expand for the failure and the fix.</span></div>
+
+  <!-- blocker 1 -->
+  <details class="blk" open>
+    <summary>
+      <span class="bnum">1</span>
+      <span>
+        <span class="pkg">node-sass@7.0.3</span>
+        <span class="path">@acme/ui-kit@4.2.1 › node-sass@7.0.3 &nbsp;(also peer of sass-loader@10.4.1)</span>
+      </span>
+      <span class="caret">▾ <span></span></span>
+    </summary>
+    <div class="verdicts">
+      <div class="verdict bad" data-p="A"><div class="vh"><span class="minibadge">A</span> ▲ No fix exists</div>
+        <div class="vd">9.0.0 is the last release ever; libsass archived Oct 2020. <b>Must migrate to dart-sass.</b> 8 h.</div></div>
+      <div class="verdict warn" data-p="B"><div class="vh"><span class="minibadge">B</span> ◐ Version bump</div>
+        <div class="vd"><code>node-sass@9.0.0</code> supports Node 20. Same libsass, identical output. 40 min.</div></div>
+      <div class="verdict good" data-p="C"><div class="vh"><span class="minibadge">C</span> ● Untouched</div>
+        <div class="vd">Still on 7.0.3 inside the image. Works, unmaintained, and blocks any future move.</div></div>
+    </div>
+    <div class="body">
+      <div class="plabel">Install on Node 22.11.0 — no binary, no source build</div>
+<pre>$ nvm use 22.11.0 &amp;&amp; npm ci
+
+&gt; node-sass@7.0.3 install
+&gt; node scripts/install.js
+
+Downloading binary from https://github.com/sass/node-sass/releases/download/v7.0.3/<u>linux-x64-127_binding.node</u>
+<b>Cannot download</b> ".../linux-x64-127_binding.node":
+  HTTP error 404 Not Found
+
+Hint: If github.com is not accessible in your location try setting a proxy
+Building: /usr/local/bin/node node_modules/node-gyp/bin/node-gyp.js rebuild --verbose
+  ../src/libsass/src/ast.cpp:1174:24: error: no matching function for call to
+      'std::vector&lt;Sass::Selector_Obj&gt;::erase(...)'
+<b>gyp ERR! build error</b>
+<b>gyp ERR! stack</b> Error: `make` failed with exit code: 2</pre>
+      <div class="plabel">And at runtime, if you force it past install</div>
+<pre><b>Error: Node Sass does not yet support your current environment:</b>
+  Linux 64-bit with Unsupported runtime (<u>127</u>)
+For more information on which environments are supported please see:
+https://github.com/sass/node-sass/releases/tag/v7.0.3</pre>
+      <ul class="facts">
+        <li>ABI: Node 18 = <b>108</b>, Node 20 = <b>115</b>, Node 22 = <b>127</b>. node-sass ships prebuilt binaries per ABI; it never shipped one for 127.</li>
+        <li>Migration scope measured on the spike: <b>34 <code>.scss</code> files</b> — 11 use <code>/</code> as division (→ <code>math.div</code>), 6 rely on <code>@import</code> ordering (→ <code>@use</code>/<code>@forward</code>), 3 override <code>!default</code> variables after import, which dart-sass evaluates in a different order.</li>
+        <li>Replacement is <b><code>sass@1.77.8</code></b> (dart-sass, JS build). Slower cold builds (+~4 s) but no native compile step at all.</li>
+        <li>Verification plan: <code>npm run build:css</code> on both engines, normalise with <code>--style=compressed</code>, diff. Spike showed <b>2.1 % of selectors differ</b>, all in the ui-kit button and modal partials — needs a human eye, no test covers it.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- blocker 2 -->
+  <details class="blk">
+    <summary>
+      <span class="bnum">2</span>
+      <span>
+        <span class="pkg">canvas@2.9.1</span>
+        <span class="path">chartjs-node-canvas@4.1.6 › canvas@^2.6.0 &nbsp;· used by jobs/weekly-report.ts</span>
+      </span>
+      <span class="caret">▾ <span></span></span>
+    </summary>
+    <div class="verdicts">
+      <div class="verdict warn" data-p="A"><div class="vh"><span class="minibadge">A</span> ◐ Needs patch-package</div>
+        <div class="vd">Widen <code>chartjs-node-canvas</code>'s range to <code>^2.6.0 || ^3.0.0</code>, install <code>canvas@3.1.0</code>. 3 h with a golden-image test.</div></div>
+      <div class="verdict good" data-p="B"><div class="vh"><span class="minibadge">B</span> ● Free</div>
+        <div class="vd"><code>npm update canvas</code> → 2.11.2, in range, has an ABI-115 prebuild. Zero code change.</div></div>
+      <div class="verdict good" data-p="C"><div class="vh"><span class="minibadge">C</span> ● Untouched</div>
+        <div class="vd">Prebuild for ABI 108 keeps working inside the frozen image.</div></div>
+    </div>
+    <div class="body">
+      <div class="plabel">Monday report job on Node 22 — crashes on first require</div>
+<pre>prebuild-install <u>warn</u> install No prebuilt binaries found
+  (target=22.11.0 runtime=node arch=x64 libc=glibc platform=linux)
+
+node:internal/modules/cjs/loader:1602
+  return process.dlopen(module, path.toNamespacedPath(filename));
+                 ^
+<b>Error: The module '/app/node_modules/canvas/build/Release/canvas.node'</b>
+was compiled against a different Node.js version using
+NODE_MODULE_VERSION <u>115</u>. This version of Node.js requires
+NODE_MODULE_VERSION <u>127</u>. Please try re-compiling or re-installing
+the module (for instance, using `npm rebuild` or `npm install`).
+    at Module._extensions..node (node:internal/modules/cjs/loader:1602:18)
+    at Object.&lt;anonymous&gt; (/app/node_modules/canvas/lib/bindings.js:3:18)
+    at Object.&lt;anonymous&gt; (/app/jobs/weekly-report.ts:12:29)
+<i>code: 'ERR_DLOPEN_FAILED'</i></pre>
+      <ul class="facts">
+        <li><code>chartjs-node-canvas@4.1.6</code> was last published <b>14 Mar 2023</b>. Open issue #142 asks for canvas 3 support; no maintainer response in 11 months. Waiting is not a plan.</li>
+        <li>Patch is small: <code>package.json</code> peer range + <code>src/index.js</code> swaps <code>registerFont()</code> for canvas 3's <code>GlobalFonts.registerFromPath()</code>. Roughly <b>6 lines</b>, held in <code>patches/chartjs-node-canvas+4.1.6.patch</code>.</li>
+        <li>Blast radius if it regresses: the <b>weekly revenue PDF</b> emailed to finance Mondays 06:00 UTC. Silent-ish failure — nobody notices until Tuesday. Worth a golden-image assertion, which is most of the 3 h.</li>
+        <li>Alternative considered and rejected: drop the chart to a server-rendered SVG (no native dep at all). Cleaner, but ~2 days and a visual redesign. Out of scope for this decision.</li>
+      </ul>
+    </div>
+  </details>
+
+  <!-- blocker 3 -->
+  <details class="blk">
+    <summary>
+      <span class="bnum">3</span>
+      <span>
+        <span class="pkg">tough-cookie@2.5.0</span>
+        <span class="path">@acme/billing-client@1.9.4 › request@2.88.2 › tough-cookie@2.5.0</span>
+      </span>
+      <span class="caret">▾ <span></span></span>
+    </summary>
+    <div class="verdicts">
+      <div class="verdict warn" data-p="A"><div class="vh"><span class="minibadge">A</span> ◐ Needs patch-package</div>
+        <div class="vd">3-line shim restoring <code>util.isDate</code> via <code>util.types</code>. 2 h including a billing-sync smoke test.</div></div>
+      <div class="verdict good" data-p="B"><div class="vh"><span class="minibadge">B</span> ● Warns, doesn't throw</div>
+        <div class="vd">Node 20 still ships <code>util.isDate</code>, deprecated. You get log noise, nothing more.</div></div>
+      <div class="verdict good" data-p="C"><div class="vh"><span class="minibadge">C</span> ● Untouched</div>
+        <div class="vd">Silent on Node 18. The API removal is simply postponed.</div></div>
+    </div>
+    <div class="body">
+      <div class="plabel">Node 20 — warning only, at boot</div>
+<pre>(node:41822) <u>[DEP0047] DeprecationWarning</u>: util.isDate is deprecated.
+  Use util.types.isDate() instead.
+  (Use `node --trace-deprecation ...` to show where the warning was created)
+<i>→ invoice sync completes normally</i></pre>
+      <div class="plabel">Node 22 — the same call site, now fatal</div>
+<pre>/app/node_modules/tough-cookie/lib/cookie.js:1034
+    if (util.isDate(options.now)) { now = options.now; }
+             ^
+<b>TypeError: util.isDate is not a function</b>
+    at CookieJar.setCookie (/app/node_modules/tough-cookie/lib/cookie.js:1034:14)
+    at Request.onRequestResponse (/app/node_modules/request/request.js:1013:22)
+    at BillingClient.syncInvoices (/app/src/billing/client.ts:88:20)
+<i>DEP0044/DEP0047 util.is* helpers were removed in Node 22.0.0</i></pre>
+      <ul class="facts">
+        <li><code>request</code> was <b>archived Feb 2020</b> and hard-pins <code>tough-cookie@~2.5.0</code>. There is no version of this dependency chain that runs on Node 22 unpatched.</li>
+        <li>The patch is trivial and safe: <code>const isDate = util.types.isDate</code> at the top of <code>cookie.js</code>, three call sites updated. Lives in <code>patches/tough-cookie+2.5.0.patch</code>.</li>
+        <li>Blast radius: <b>every outbound call to the billing provider</b> — invoice sync, checkout webhook replay, refund posting. It throws on the first response with a <code>Set-Cookie</code> header, i.e. immediately, i.e. it would be caught in staging.</li>
+        <li>The proper fix is deleting <code>@acme/billing-client</code>'s dependency on <code>request</code> (→ <code>undici</code>). Estimated <b>~1 week</b>, touches their SDK. Not part of any path here; the patch buys time for it.</li>
+      </ul>
+    </div>
+  </details>
+</section>
+
+<!-- ============ 4. COMMITMENT ============ -->
+<section aria-labelledby="h-commit">
+  <div class="shead"><span class="num">4</span><h2 id="h-commit">If you pick it, here's what happens</h2>
+    <span class="note">Select a path above to see the first commits and what you're accepting.</span></div>
+  <div id="commitBox" class="commit">Nothing selected. Pick <b>A</b>, <b>B</b> or <b>C</b> above.</div>
+</section>
+
+<!-- ============ 5. WHAT I CAN'T DECIDE ============ -->
+<section aria-labelledby="h-qs">
+  <div class="shead"><span class="num">5</span><h2 id="h-qs">The three things that actually decide it</h2>
+    <span class="note">These are judgement calls, not facts — which is why this is your call and not mine.</span></div>
+  <div class="qs">
+    <div class="q">
+      <div class="qt">Can you give up two uninterrupted days in the next 8 weeks?</div>
+      <div class="qa">If yes, <em>A</em> is strictly the cheapest option over any horizon longer than a year. If no — and the Sass diff genuinely needs someone to sit with it — <em>B</em> gets you safe by Friday and costs you 40 wasted minutes.</div>
+    </div>
+    <div class="q">
+      <div class="qt">Do you already run containers in production?</div>
+      <div class="qa">If yes, <em>C</em> is ~3 h, not 7, and is much more attractive. If no, C is not "write a Dockerfile" — it's adopting a registry, an image lifecycle and CVE triage, permanently, to avoid two days of work.</div>
+    </div>
+    <div class="q">
+      <div class="qt">How much do you trust an eyeballed CSS diff?</div>
+      <div class="qa">This is the whole risk of <em>A</em>. 2.1 % of selectors change and we have <em>no visual regression tests</em>. Adding Playwright screenshot tests first would add ~1 day to A and make it near-zero risk.</div>
+    </div>
+  </div>
+</section>
+
+<footer class="method wrap" style="padding-left:0;padding-right:0">
+  <p><b>How this was produced.</b> Branch <code>chore/node-upgrade-spike</code>, three worktrees, <code>nvm use</code> + <code>rm -rf node_modules &amp;&amp; npm ci</code> on 18.20.8 / 20.18.1 / 22.11.0. Full logs in <code>/tmp/node-upgrade-spike/*.log</code>. Nothing was pushed; nothing on <code>main</code> was touched.</p>
+  <p>Effort figures are hands-on engineering hours excluding review and deploy windows. Support dates are from the Node.js release schedule as of this run. Current pin: <code>.nvmrc</code>, <code>package.json#engines</code> and <code>.github/workflows/ci.yml</code> all say <code>18.20.8</code> — all three change together in every path.</p>
+</footer>
+
+</div>
+
+<script>
+(function(){
+  // live countdown to the Node 18 EOL date
+  var eol = new Date('2026-09-30T00:00:00Z');
+  var days = Math.max(0, Math.ceil((eol - Date.now())/86400000));
+  var el = document.getElementById('daysleft');
+  if (el) el.textContent = days;
+
+  var CONTENT = {
+    A: {
+      title: 'Path A — straight to Node 22.11.0',
+      cost: '~13.5 h · 3 of 3 blockers cleared · covered to 30 Apr 2028',
+      steps: [
+        '<b>Commit 1</b> — replace node-sass with <code>sass@1.77.8</code>, migrate 34 .scss files, land the compiled-CSS diff for review as its own PR.',
+        '<b>Commit 2</b> — add <code>patch-package</code>, generate <code>chartjs-node-canvas+4.1.6.patch</code>, bump to <code>canvas@3.1.0</code>, add the golden-image assertion for the weekly PDF.',
+        '<b>Commit 3</b> — generate <code>tough-cookie+2.5.0.patch</code>, add a billing-sync smoke test that exercises a Set-Cookie response.',
+        '<b>Commit 4</b> — flip <code>.nvmrc</code>, <code>engines</code> and the CI matrix to 22.11.0; drop <code>python3</code>/<code>build-essential</code> from the CI image.'
+      ],
+      accept: [
+        'Two days of someone’s attention, mostly on CSS.',
+        'A human has to sign off a visual diff across 34 stylesheets with no test net.',
+        'Two <code>patch-package</code> patches to carry until the upstreams move or we drop them.',
+        'In exchange: the blocker list is empty and 22 → 24 becomes a one-hour job.'
+      ]
+    },
+    B: {
+      title: 'Path B — Node 20.18.1 this week',
+      cost: '~4 h · 1 of 3 blockers cleared · covered to 31 Mar 2027',
+      steps: [
+        '<b>Commit 1</b> — <code>node-sass@7.0.3 → 9.0.0</code>; confirm compiled CSS is byte-identical (it was on the spike).',
+        '<b>Commit 2</b> — <code>npm update canvas</code> → 2.11.2, refresh the lockfile, run the weekly-report job by hand once.',
+        '<b>Commit 3</b> — flip <code>.nvmrc</code>, <code>engines</code> and CI to 20.18.1; add the DEP0047 warning to the known-noise allowlist so it doesn’t look like a new problem.',
+        '<b>Calendar</b> — put a real ticket in the backlog dated <b>Feb 2027</b> containing path A, or this decision quietly becomes path C.'
+      ],
+      accept: [
+        'You are back here in <b>8 months</b>, with the same three packages, 8 months more abandoned.',
+        'The node-sass 9 bump (~40 min) gets thrown away when you finally move to dart-sass.',
+        '<code>tough-cookie</code> emits a deprecation warning on every boot until then.',
+        'In exchange: safe by Friday, nothing user-facing can break, no CSS review.'
+      ]
+    },
+    C: {
+      title: 'Path C — pin Node 18 inside an image',
+      cost: '~7 h · 0 of 3 blockers cleared · unsupported runtime from 1 Oct 2026',
+      steps: [
+        '<b>Commit 1</b> — multi-stage <code>Dockerfile</code> on <code>node:18.20.8-bookworm-slim</code>, pinned by digest, with the native build toolchain in the build stage only.',
+        '<b>Commit 2</b> — CI stage to build, scan and push the image; wire Trivy so base-image CVEs surface somewhere a human looks.',
+        '<b>Commit 3</b> — switch the deploy target to the image; audit the two host assumptions the spike found (uploads directory path, container TZ defaults to UTC).',
+        '<b>Commit 4</b> — document local dev parity so nobody debugs a "works on my machine" gap in six months.'
+      ],
+      accept: [
+        'From <b>1 Oct 2026</b> you run a runtime nobody patches. Every Node CVE becomes your triage.',
+        'All three blockers still exist, untouched, and age another 18 months before you face them.',
+        'You permanently own an image lifecycle: registry, digest pins, base rebuilds, scan noise.',
+        'In exchange: zero application code changes, and the container is genuinely useful on its own merits — just not as an answer to this question.'
+      ]
+    }
+  };
+
+  var box = document.getElementById('commitBox');
+  var cards = Array.prototype.slice.call(document.querySelectorAll('.pcard'));
+
+  function render(p){
+    if(!p){
+      document.body.removeAttribute('data-pick');
+      box.className = 'commit';
+      box.innerHTML = 'Nothing selected. Pick <b>A</b>, <b>B</b> or <b>C</b> above.';
+    } else {
+      var c = CONTENT[p];
+      document.body.setAttribute('data-pick', p);
+      box.className = 'commit live';
+      box.innerHTML =
+        '<div class="chead"><span class="badge">'+p+'</span><h3>'+c.title+'</h3>'+
+        '<button class="clear" type="button" id="clearPick">clear selection</button></div>'+
+        '<p style="margin-top:6px;color:var(--ink-2);font-size:13.5px">'+c.cost+'</p>'+
+        '<div class="cgrid">'+
+          '<div><h4>What I do first</h4><ol>'+c.steps.map(function(s){return '<li>'+s+'</li>';}).join('')+'</ol></div>'+
+          '<div><h4>What you are accepting</h4><ul>'+c.accept.map(function(s){return '<li>'+s+'</li>';}).join('')+'</ul></div>'+
+        '</div>';
+      var cb = document.getElementById('clearPick');
+      if (cb) cb.addEventListener('click', function(){ select(null); });
+    }
+    cards.forEach(function(card){
+      var on = card.getAttribute('data-path') === p;
+      card.classList.toggle('on', on);
+      card.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    document.querySelectorAll('[data-p]').forEach(function(n){
+      n.classList.toggle('on', n.getAttribute('data-p') === p);
+    });
+  }
+
+  function select(p){
+    render(p);
+    if (p) {
+      box.scrollIntoView({behavior:'smooth', block:'nearest'});
+    }
+  }
+
+  cards.forEach(function(card){
+    card.addEventListener('click', function(){
+      var p = card.getAttribute('data-path');
+      select(document.body.getAttribute('data-pick') === p ? null : p);
+    });
+  });
+
+  document.addEventListener('keydown', function(e){
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    var k = (e.key || '').toUpperCase();
+    if (k === 'A' || k === 'B' || k === 'C') select(k);
+    if (k === 'ESCAPE') select(null);
+  });
+})();
+</script>
+</body>
+</html>

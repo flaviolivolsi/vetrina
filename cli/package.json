@@ -1,0 +1,36 @@
+{
+  "name": "vetrina-cli",
+  "version": "0.3.0",
+  "description": "A window your coding agents publish into. Chat only ever grows; a page is rewritten in place.",
+  "type": "module",
+  "bin": {
+    "vetrina": "vetrina.mjs"
+  },
+  "main": "vetrina.mjs",
+  "files": [
+    "vetrina.mjs",
+    "qr.mjs",
+    "kit.css",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT",
+  "author": "Flavio Li Volsi",
+  "homepage": "https://github.com/flaviolivolsi/vetrina",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/flaviolivolsi/vetrina.git"
+  },
+  "keywords": [
+    "ai",
+    "agents",
+    "coding-agents",
+    "claude-code",
+    "codex",
+    "cursor",
+    "dashboard",
+    "tailscale"
+  ]
+}

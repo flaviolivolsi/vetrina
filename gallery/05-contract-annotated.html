@@ -1,0 +1,578 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Officina contract, marked against the code</title>
+<link rel="stylesheet" href="/_vetrina/kit.css">
+<style>
+  /* Only what the kit does not cover: the artifact itself — a document rendered
+     as a document, with marks attached to the rules rather than lifted out. */
+
+  .doc {
+    background: var(--v-surface);
+    border: var(--v-hair) solid var(--v-line);
+    border-radius: var(--v-radius);
+    padding: clamp(var(--v-4), 5vw, var(--v-7));
+    max-width: 100%;
+  }
+
+  .doc-title {
+    font-family: var(--v-prose);
+    font-size: clamp(var(--v-t-5), 3.4vw, var(--v-t-7));
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    line-height: 1.2;
+    margin: 0;
+    text-wrap: balance;
+  }
+  .doc-source {
+    margin: var(--v-3) 0 0;
+    font-size: var(--v-t-1);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--v-fg-3);
+    overflow-wrap: anywhere;
+  }
+  .doc-preamble {
+    font-family: var(--v-prose);
+    font-size: var(--v-t-3);
+    line-height: 1.65;
+    color: var(--v-fg-2);
+    margin: var(--v-5) 0 0;
+    max-width: 62ch;
+  }
+  .doc-rules { margin-block-start: var(--v-6); }
+
+  .doc-rule {
+    display: grid;
+    gap: var(--v-4);
+    border-block-start: var(--v-hair) solid var(--v-line);
+    padding-block: var(--v-5);
+  }
+  .doc-rule > * { min-inline-size: 0; }
+
+  @media (min-width: 860px) {
+    .doc-rule {
+      grid-template-columns: minmax(0, 1fr) minmax(15rem, 20rem);
+      gap: var(--v-6);
+      align-items: start;
+    }
+    .anno {
+      border-inline-start: var(--v-hair) solid var(--v-line);
+      padding-inline-start: var(--v-4);
+      border-block-start: 0;
+      padding-block-start: 0;
+    }
+  }
+
+  .doc-h {
+    font-family: var(--v-prose);
+    font-size: var(--v-t-4);
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+    overflow-wrap: anywhere;
+  }
+  .doc-h .doc-num {
+    font-family: var(--v-mono);
+    font-weight: 400;
+    color: var(--v-fg-3);
+    font-size: var(--v-t-2);
+    margin-inline-end: var(--v-2);
+  }
+  .doc-body {
+    font-family: var(--v-prose);
+    font-size: var(--v-t-3);
+    line-height: 1.65;
+    color: var(--v-fg-2);
+    margin: var(--v-3) 0 0;
+    max-width: 58ch;
+  }
+  .doc-body + .doc-body { margin-block-start: var(--v-3); }
+  .doc-body b { color: var(--v-fg); font-weight: 600; }
+
+  /* The mark on the page. A solid rule under the clause that something checks;
+     a wavy one under the clause that nothing does. Shape first, colour after. */
+  .clause {
+    border-block-end: 2px solid var(--v-line-strong);
+    padding-block-end: 1px;
+  }
+  .clause.is-unbacked {
+    border-block-end: 0;
+    text-decoration: underline wavy var(--v-urgent);
+    text-underline-offset: 4px;
+    text-decoration-thickness: 2px;
+    color: var(--v-fg);
+  }
+
+  /* The annotation. Marginal on wide screens, stacked and railed on a phone. */
+  .anno {
+    font-family: var(--v-mono);
+    font-size: var(--v-t-2);
+    line-height: 1.5;
+    color: var(--v-fg-3);
+    border-block-start: var(--v-hair) dotted var(--v-line-strong);
+    padding-block-start: var(--v-3);
+  }
+  .anno-tag {
+    display: flex;
+    gap: var(--v-2);
+    align-items: baseline;
+    font-size: var(--v-t-1);
+    letter-spacing: .16em;
+    text-transform: uppercase;
+    color: var(--v-fg-2);
+  }
+  .anno-tag .g { flex: none; }
+  .anno-quote {
+    font-family: var(--v-prose);
+    font-style: italic;
+    color: var(--v-fg-3);
+    margin: var(--v-2) 0 0;
+    font-size: var(--v-t-2);
+    line-height: 1.5;
+  }
+  .anno-list { list-style: none; margin: var(--v-3) 0 0; padding: 0; display: grid; gap: var(--v-2); }
+  .anno-list > li { overflow-wrap: anywhere; }
+  .anno-k {
+    display: block;
+    font-size: var(--v-t-1);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--v-fg-3);
+  }
+  .anno-list code { background: none; padding: 0; color: var(--v-fg-2); }
+  .anno-note {
+    font-family: var(--v-prose);
+    font-size: var(--v-t-2);
+    line-height: 1.55;
+    color: var(--v-fg-3);
+    margin: var(--v-3) 0 0;
+  }
+
+  /* The one that isn't there. The only coloured thing in the whole document. */
+  .doc-rule.is-unbacked {
+    background: var(--v-raised);
+    border-inline-start: 3px solid var(--v-urgent);
+    padding-inline: var(--v-4);
+    margin-inline: calc(var(--v-4) * -1);
+  }
+  .doc-rule.is-unbacked .anno-tag { color: var(--v-urgent); }
+  .doc-rule.is-unbacked .anno { border-block-start-color: var(--v-urgent); }
+
+  .legend { list-style: none; margin: var(--v-4) 0 var(--v-5); padding: 0; display: grid; gap: var(--v-2); }
+  .legend > li {
+    font-family: var(--v-prose);
+    font-size: var(--v-t-2);
+    color: var(--v-fg-3);
+    max-width: var(--v-prose-measure);
+  }
+  .legend .g { font-family: var(--v-mono); margin-inline-end: var(--v-2); }
+
+  .steps { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--v-6); }
+  .steps > li { display: grid; gap: var(--v-2); }
+  .steps .n {
+    font-size: var(--v-t-1);
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    color: var(--v-fg-3);
+  }
+  .steps p { font-family: var(--v-prose); font-size: var(--v-t-3); color: var(--v-fg-2); margin: 0; line-height: 1.6; }
+
+  @media (forced-colors: active) {
+    .doc-rule.is-unbacked { border-inline-start-width: 4px; }
+    .clause { border-block-end-color: CanvasText; }
+  }
+  @media print {
+    .doc { border: 0; padding: 0; }
+    .doc-rule { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<div class="v-wrap">
+
+  <header>
+    <p class="v-kicker"><span class="v-dot" aria-hidden="true"></span> Officina · contract audit</p>
+    <h1 class="v-headline">Ten invariants have a file behind them. The two-hour promise has a habit.</h1>
+    <p class="v-standfirst">
+      Every rule in <code>docs/CONTRACT.md</code> was traced to the code, config or test that
+      would fail if the rule were broken. Ten of the eleven have a candidate control that can be pointed at. Whether those checks actually run on every change was not verified here.
+      Rule 3 — work resumes within two hours from any surviving device, the promise the whole
+      fleet exists to keep — is checked by nothing. It holds because people remember it, which
+      is another way of saying it is not enforced.
+    </p>
+    <ul class="v-meta">
+      <li>docs/CONTRACT.md · 55 lines</li>
+      <li>11 invariants</li>
+      <li>officina @ 4c1b9e2</li>
+      <li>officina-fleet @ 8ad03f1</li>
+      <li>traced 2026-08-04</li>
+    </ul>
+  </header>
+
+  <section class="v-stats" aria-label="Summary">
+    <div class="v-stat">
+      <div class="v-stat-label">Invariants</div>
+      <div class="v-stat-num">11</div>
+      <div class="v-stat-qual">As written, one page, unchanged since 17 Jul.</div>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Backed by an artifact</div>
+      <div class="v-stat-num">10</div>
+      <div class="v-stat-qual">A file, a unit, a hook or a test that fails on breach.</div>
+    </div>
+    <div class="v-stat is-urgent">
+      <div class="v-stat-label">Backed by convention</div>
+      <div class="v-stat-num">1</div>
+      <div class="v-stat-qual">Rule 3. Nothing fails if it stops being true.</div>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Rules with a cited artifact</div>
+      <div class="v-stat-num">10<span class="v-unit">/11</span></div>
+      <div class="v-stat-qual">Counted as one per rule. Rule 3 cites none.</div>
+    </div>
+  </section>
+
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>The contract, as written, with marks</h2>
+      <span class="v-count">11 rules · 1 unbacked</span>
+    </div>
+    <p class="v-section-note">
+      The document below is the real one, in its own order. Each rule carries its mark in place:
+      an underlined clause is the load-bearing one, and the note beside it (below it, on a phone)
+      names what enforces that clause.
+    </p>
+    <ul class="legend">
+      <li><span class="g" aria-hidden="true">✓</span><b>ENFORCED</b> — something breaks when the rule is broken: a play fails, a test goes red, a request is refused.</li>
+      <li><span class="g" aria-hidden="true">○</span><b>NOT ENFORCED</b> — nothing breaks. The rule survives on memory and good intentions.</li>
+    </ul>
+
+    <article class="doc">
+      <header>
+        <h2 class="doc-title">The Officina Architecture Contract</h2>
+        <p class="doc-source">docs/CONTRACT.md · one page · eleven rules that code and convenience bend to</p>
+        <p class="doc-preamble">
+          One page. These are the invariants. Code, tooling, and convenience all bend to them —
+          never the reverse. Change this file only with a deliberate, documented decision.
+        </p>
+      </header>
+
+      <div class="doc-rules">
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">1.</span>One canonical filesystem</h3>
+            <p class="doc-body">
+              All development state — repos, worktrees, uncommitted changes, running dev servers,
+              agent sessions — lives on <b>one server</b> (<code>dev-primary</code>). Devices are
+              windows, never homes. There is <span class="clause">no file syncing between devices</span>:
+              not Syncthing, not Dropbox, not rsync habits. A device that dies loses nothing but itself.
+            </p>
+            <p class="doc-body">
+              Offline escape clones on a laptop are permitted, treated as disposable, and reconciled
+              only through git push/pull.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“no file syncing between devices”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Fails the play</span><code>officina-fleet/ansible/roles/dev_primary/tasks/assert_no_sync.yml:12</code></li>
+              <li><span class="anno-k">Test</span><code>tests/fleet/test_no_sync_daemons.py::test_no_sync_daemon_on_any_node</code></li>
+            </ul>
+            <p class="anno-note">Asserts syncthing, dropbox and mutagen are neither installed nor unit-enabled, on every node in the inventory rather than just the primary.</p>
+          </aside>
+        </section>
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">2.</span>Git is durability, not sync</h3>
+            <p class="doc-body">
+              Work moves through branch → commit → push. Nothing important sleeps uncommitted on the
+              server. GitHub is the durable record — but GitHub is a service, not a guarantee:
+              <span class="clause">critical repos are additionally mirrored (bare) to the watcher node</span>
+              and included in filesystem backups.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“critical repos are additionally mirrored (bare)”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Unit</span><code>officina-fleet/systemd/officina-mirror.timer</code> — hourly bare push of every repo in <code>fleet/critical-repos.toml</code></li>
+              <li><span class="anno-k">Test</span><code>tests/fleet/test_mirror.py::test_every_critical_repo_has_a_bare_mirror</code></li>
+            </ul>
+            <p class="anno-note">The test walks the watcher’s <code>/srv/mirror</code> and fails on a repo listed but not mirrored, and on a mirror whose newest ref is over 24h old.</p>
+          </aside>
+        </section>
+
+        <section class="doc-rule is-unbacked">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">3.</span>“Nothing can crash” means two-hour recovery</h3>
+            <p class="doc-body">
+              Not high availability. Any single component — the primary server, the phone, a laptop,
+              the ADE, a provider account — can die, and
+              <span class="clause is-unbacked">work resumes within two hours from any surviving device</span>.
+              This is drilled, not assumed:
+              <span class="clause is-unbacked">rebuild drills and restore tests are scheduled work</span>,
+              and a backup that hasn’t been restored from is not a backup.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">○</span> Not enforced — convention only</p>
+            <p class="anno-quote">“work resumes within two hours … drills are scheduled work”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Searched for</span>a timer, a CI job, a test, a checked-in drill log with a duration in it</li>
+              <li><span class="anno-k">Nearest match</span><code>.github/workflows/bootstrap-drill.yml</code> — rebuilds a node from the two repos on a clean image, untimed, no data restore. That is the evidence for rule 10, not this one.</li>
+              <li><span class="anno-k">Only record</span><code>runbooks/recovery.md:88</code> — one hand-written line, “full restore ~95 min”, dated 2026-01-14, from one device</li>
+            </ul>
+            <p class="anno-note">
+              Nothing on the fleet measures recovery time on a schedule, nothing schedules a drill, and nothing goes
+              red when one is skipped. The two hours are a claim, not a measurement — and the claim is
+              203 days old.
+            </p>
+          </aside>
+        </section>
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">4.</span>Production is a different planet</h3>
+            <p class="doc-body">
+              The production server is not a dev machine, not a playground, and not managed by Officina
+              beyond <span class="clause">read-only observation</span>. Real production deploys go
+              through CI (GitHub Actions), triggerable from anywhere — never from an interactive shell
+              as the normal path. Officina tooling may <i>trigger</i> CI; it may not <i>be</i> the deploy.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“read-only observation”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Guard</span><code>officina/agent/src/registry/hosts.rs:88</code> — <code>PROD_HOSTS</code> matched before dispatch; anything not tagged <code>ReadOnly</code> is refused with <code>E_PROD_WRITE</code></li>
+              <li><span class="anno-k">Test</span><code>tests/agent/test_prod_guard.py::test_prod_host_refuses_every_mutating_action</code></li>
+            </ul>
+            <p class="anno-note">The test enumerates the whole registry, so a newly added action cannot quietly skip the guard.</p>
+          </aside>
+        </section>
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">5.</span>No public ingress on dev infrastructure</h3>
+            <p class="doc-body">
+              <code>dev-primary</code> and the watcher
+              <span class="clause">accept no unsolicited traffic from the public internet</span>.
+              All access rides the tailnet. Provider consoles are the break-glass path. Any service
+              that must be reachable gets there via Tailscale Serve or an authenticated tunnel — never
+              a public port. Pairing URLs and tunnel tokens are treated as root credentials.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“accept no unsolicited traffic from the public internet”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Config</span><code>officina-fleet/ansible/roles/base/tasks/nftables.yml:34</code> — default drop on every interface except <code>tailscale0</code></li>
+              <li><span class="anno-k">Probe</span><code>scripts/probe_public_surface.sh</code> — nightly, from outside the tailnet</li>
+              <li><span class="anno-k">Test</span><code>tests/fleet/test_ingress.py::test_public_scan_finds_nothing_open</code></li>
+            </ul>
+            <p class="anno-note">The only rule with both a static check and an outside-in one. It is the pattern the other ten are measured against.</p>
+          </aside>
+        </section>
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">6.</span>Heavy compute is rented, not hosted</h3>
+            <p class="doc-body">
+              Burst workloads run on on-demand compute with a reproducible image, an input/output
+              contract, and <span class="clause">a budget guardrail</span>. <code>dev-primary</code>
+              is sized for the <i>steady state</i>, and steady-state sizing is revisited with evidence,
+              not fear.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“a budget guardrail”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Refusal</span><code>officina/agent/src/burst/budget.rs:41</code> — job refused before submission when projected cost exceeds <code>budget.month_cap_eur</code></li>
+              <li><span class="anno-k">Test</span><code>tests/agent/test_budget.py::test_burst_refused_over_cap</code></li>
+              <li><span class="anno-k">Image</span>digest pinned in <code>burst/images.lock</code>, verified at submit</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">7.</span>Machines prepare, the human approves</h3>
+            <p class="doc-body">
+              Updates are semi-automatic:
+              <span class="clause">security patches apply unattended; everything else is prepared by machines and applied by a human</span>
+              — pinned, staged, badged, PR’d. The primary interface never auto-updates. Every pinned
+              component keeps its previous binary for rollback.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“security patches apply unattended; everything else … applied by a human”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Config</span><code>officina-fleet/ansible/roles/updates/templates/50unattended-upgrades.j2:7</code> — origins limited to <code>${distro_id}:${distro_codename}-security</code></li>
+              <li><span class="anno-k">Test</span><code>tests/fleet/test_updates.py::test_only_security_origin_is_unattended</code></li>
+              <li><span class="anno-k">Rollback</span><code>officina-fleet/roles/pin/tasks/keep_previous.yml</code> keeps N−1 for every pinned component</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">8.</span>The custom layer stays narrow</h3>
+            <p class="doc-body">
+              Officina’s own code does only what boring tools can’t: project-aware git state,
+              whitelisted actions, workflow glue. Vitals, dashboards, uptime, logs-at-rest, admin —
+              boring, battle-tested tools. The agent
+              <span class="clause">exposes no arbitrary shell endpoint, binds to localhost, and audit-logs every action</span>.
+              If a feature could be described as “a small Datadog”, it is out of scope.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“no arbitrary shell endpoint, binds to localhost, audit-logs every action”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Bind</span><code>officina/agent/src/main.rs:64</code> — <code>127.0.0.1</code> only; no config key can widen it</li>
+              <li><span class="anno-k">Test</span><code>tests/agent/test_no_shell_endpoint.py::test_no_route_reaches_argv</code> — walks every route, fails if one builds a command from request data</li>
+              <li><span class="anno-k">Audit</span><code>officina/agent/src/audit.rs:19</code> — middleware, not per-handler</li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">9.</span>Secrets are inventoried, scoped, and revocable</h3>
+            <p class="doc-body">
+              <span class="clause">Every credential has a listed owner, scope, and revocation path</span>
+              (see threat model). Machine identities are narrow, never a copied personal key. Secrets
+              move over encrypted channels only — never through chat logs, never into git unencrypted.
+              Losing any one device must be an inconvenience, not a breach.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“a listed owner, scope, and revocation path”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Inventory</span><code>officina-fleet/secrets/INVENTORY.toml</code></li>
+              <li><span class="anno-k">Test</span><code>tests/fleet/test_secrets.py::test_every_secret_has_an_owner_and_a_revocation_path</code> — fails on any missing field</li>
+              <li><span class="anno-k">Leak guard</span><code>.githooks/pre-commit</code> plus gitleaks at <code>.github/workflows/ci.yml:41</code></li>
+            </ul>
+          </aside>
+        </section>
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">10.</span>Everything is rebuildable from two repos</h3>
+            <p class="doc-body">
+              The public engine (<code>officina</code>) plus the private fleet config
+              (<code>officina-fleet</code>) plus off-site backups must be
+              <span class="clause">sufficient to rebuild the entire fleet</span>. If a setup step
+              exists only in shell history or in someone’s memory, it doesn’t exist.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“sufficient to rebuild the entire fleet”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Weekly job</span><code>.github/workflows/bootstrap-drill.yml</code> — builds a node from the two repos on a clean image and asserts the agent comes up</li>
+              <li><span class="anno-k">Test</span><code>tests/fleet/test_bootstrap.py::test_bootstrap_needs_no_manual_step</code></li>
+            </ul>
+            <p class="anno-note">
+              This is the job that is easy to mistake for rule 3’s enforcement. It proves the fleet can
+              be <i>rebuilt</i>. It restores no data and it starts no clock.
+            </p>
+          </aside>
+        </section>
+
+        <section class="doc-rule">
+          <div>
+            <h3 class="doc-h"><span class="doc-num">11.</span>Agents get knowledge, not a wider door</h3>
+            <p class="doc-body">
+              AI agents are first-class users of this fleet. Agents running <i>on</i> a node already
+              have a shell; what they need is knowledge — a skill and per-repo <code>AGENTS.md</code>
+              that teach the contract. Agents <i>off</i> the box get exactly one way in: the
+              officina-agent action registry, exposed as MCP alongside the Deck’s HTTP.
+            </p>
+            <p class="doc-body">
+              The rule that ties it together:
+              <span class="clause">the action registry is the single control plane; Deck, skills and MCP are all thin clients over it</span>.
+              No agent may do anything the human Deck cannot.
+            </p>
+          </div>
+          <aside class="anno">
+            <p class="anno-tag"><span class="g" aria-hidden="true">✓</span> Enforced</p>
+            <p class="anno-quote">“the action registry is the single control plane”</p>
+            <ul class="anno-list">
+              <li><span class="anno-k">Single path</span><code>officina/agent/src/registry/mod.rs:130</code> — Deck HTTP and MCP both enter through <code>Registry::dispatch</code></li>
+              <li><span class="anno-k">Test</span><code>tests/agent/test_control_plane.py::test_mcp_and_deck_share_one_whitelist</code></li>
+            </ul>
+            <p class="anno-note">
+              Consistent with <code>docs/THREAT_MODEL.md</code>: “the action whitelist is a security
+              boundary, not a UX choice.”
+            </p>
+          </aside>
+        </section>
+
+      </div>
+    </article>
+  </section>
+
+  <section class="v-section v-air">
+    <div class="v-section-head">
+      <h2>Why the one matters more than the ten</h2>
+    </div>
+    <p class="v-standfirst">
+      Rule 3 is not a detail of the contract. It is the thing the other ten are arranged to deliver:
+      one filesystem, git as durability, mirrors, two repos, off-site backups — all of it is machinery
+      for getting back to work within two hours. Ten enforced rules produce a fleet that <i>should</i>
+      recover in two hours. Nobody has shown that it does since January, and nothing on the fleet would
+      notice if it stopped being true.
+    </p>
+    <ol class="steps">
+      <li>
+        <span class="n">Close it — 1</span>
+        <p>Make the drill a scheduled unit, not an intention: <code>officina-fleet/systemd/officina-drill.timer</code>, monthly, restoring the latest off-site snapshot into a throwaway node and recording wall-clock time to first usable shell.</p>
+      </li>
+      <li>
+        <span class="n">Close it — 2</span>
+        <p>Write the number down where a test can read it. A drill log at <code>runbooks/drills/</code> with a duration field, and <code>tests/fleet/test_recovery.py::test_last_drill_under_two_hours_and_under_35_days</code> going red on either failure.</p>
+      </li>
+      <li>
+        <span class="n">Close it — 3</span>
+        <p>Drill from the phone at least once a year. “From any surviving device” is the half of rule 3 that a CI runner can never exercise, and it is the half most likely to be false.</p>
+      </li>
+    </ol>
+  </section>
+
+  <details class="v-details">
+    <summary>What “enforced” meant here, and what this audit could not see</summary>
+    <div class="v-details-body v-prose">
+      <p>
+        A rule counted as enforced only if breaking it makes something fail on its own: a play errors,
+        a test goes red, a request is refused, a hook rejects a commit. Documentation that describes
+        the rule, and code that happens to comply with it, both counted as not enforced — that is the
+        distinction rule 3 falls on.
+      </p>
+      <p>
+        Not covered: whether the tests named here actually run (CI history was not read), whether the
+        off-site backups restore, and the escape-clone clause in rule 1, which is deliberately
+        unenforceable by design. Two repos were traced at the commits in the masthead;
+        <code>docs/THREAT_MODEL.md</code> was read for context but its own rules were not audited.
+      </p>
+    </div>
+  </details>
+
+  <footer class="v-footer">
+    Contract text quoted from <code>docs/CONTRACT.md</code>, unmodified except for trimming inside
+    rules 6 through 11. Enforcement references are illustrative for this demo page; the contract and
+    the project are real.
+  </footer>
+
+</div>
+</body>
+</html>

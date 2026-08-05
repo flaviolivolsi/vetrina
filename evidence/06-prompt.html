@@ -1,0 +1,859 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prompt render audit — Helix Support Assist</title>
+<style>
+:root{
+  --bg:#f4f2ed; --panel:#fffdf9; --panel2:#faf7f1; --ink:#1a1814; --dim:#6c6559;
+  --line:#ddd6c9; --line2:#c9c0ae; --accent:#1a1814;
+  --d1:#a2540a; --d1b:#fdf0dd; --d2:#a3186b; --d2b:#fce9f3; --d3:#1b4fbd; --d3b:#e6edfd;
+  --d4:#6329c4; --d4b:#eee6fd; --ok:#146b32; --okb:#e3f4e8;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#111319; --panel:#171a21; --panel2:#1c2029; --ink:#e8e6e1; --dim:#948d82;
+    --line:#2b3039; --line2:#3d4450; --accent:#e8e6e1;
+    --d1:#f0aa4a; --d1b:#3a2a12; --d2:#f57ab8; --d2b:#3a1428; --d3:#7fa9ff; --d3b:#13224a;
+    --d4:#b998f7; --d4b:#251440; --ok:#5cd184; --okb:#0f2c1a;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--sans);
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1180px;margin:0 auto;padding:0 14px}
+h1,h2,h3{margin:0;font-weight:650;letter-spacing:-.015em}
+a{color:inherit}
+
+/* ---------- hero ---------- */
+.hero{padding:26px 0 18px;border-bottom:2px solid var(--ink)}
+.eyebrow{font:600 11px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+h1{font-size:clamp(22px,5.2vw,34px);margin:10px 0 8px;max-width:22ch}
+.sub{color:var(--dim);font-size:14px;max-width:62ch}
+.meta{margin-top:14px;font:500 11.5px/1.7 var(--mono);color:var(--dim);
+  display:flex;flex-wrap:wrap;gap:4px 16px}
+.meta b{color:var(--ink);font-weight:600}
+
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(148px,1fr));
+  gap:1px;background:var(--line);border:1px solid var(--line);margin:18px 0 0}
+.stat{background:var(--panel);padding:12px 14px}
+.stat .n{font:650 26px/1.1 var(--sans);letter-spacing:-.03em;display:block}
+.stat .l{font-size:11.5px;color:var(--dim);display:block;margin-top:5px;line-height:1.35}
+
+/* ---------- section ---------- */
+section{padding:30px 0 6px}
+.shead{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.shead h2{font-size:15px;text-transform:uppercase;letter-spacing:.09em}
+.shead .hint{font-size:12.5px;color:var(--dim)}
+.num{font:650 11px/1 var(--mono);color:var(--dim);border:1px solid var(--line2);
+  padding:4px 6px;border-radius:2px}
+
+/* ---------- defect ledger ---------- */
+.ledger{border:1px solid var(--line2);background:var(--panel)}
+.drow{display:grid;grid-template-columns:auto 1fr auto;gap:10px 14px;
+  padding:13px 14px;border-bottom:1px solid var(--line);width:100%;text-align:left;
+  background:none;color:inherit;font:inherit;cursor:pointer;align-items:start}
+.drow:last-child{border-bottom:0}
+.drow:hover{background:var(--panel2)}
+.drow:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.badge{font:650 13px/1 var(--mono);border:1.5px solid currentColor;border-radius:2px;
+  padding:6px 7px;white-space:nowrap;display:inline-flex;gap:4px;align-items:center}
+.d1 .badge,.badge.d1{color:var(--d1);background:var(--d1b)}
+.d2 .badge,.badge.d2{color:var(--d2);background:var(--d2b)}
+.d3 .badge,.badge.d3{color:var(--d3);background:var(--d3b)}
+.d4 .badge,.badge.d4{color:var(--d4);background:var(--d4b)}
+.dtitle{display:block;font-weight:640;font-size:14.5px;line-height:1.35}
+.dwhere{display:block;font:500 11.5px/1.6 var(--mono);color:var(--dim);margin-top:4px;word-break:break-word}
+.dwhy{display:block;font-size:13px;color:var(--dim);margin-top:8px;max-width:66ch}
+.dfix{display:block;font:500 11.5px/1.5 var(--mono);margin-top:9px;color:var(--ok);
+  border-left:2px solid var(--ok);padding-left:8px;word-break:break-word}
+.dfix b{font-weight:650}
+.pills{display:flex;gap:3px;flex-wrap:wrap;justify-content:flex-end;max-width:130px}
+.pill{width:15px;height:15px;border:1.5px solid var(--line2);border-radius:2px;
+  font:650 8px/12px var(--mono);text-align:center;color:var(--dim)}
+.pill.on{border-color:currentColor;background:currentColor;color:var(--panel)}
+.d1 .pill.on{color:var(--panel);background:var(--d1);border-color:var(--d1)}
+.d2 .pill.on{color:var(--panel);background:var(--d2);border-color:var(--d2)}
+.d3 .pill.on{color:var(--panel);background:var(--d3);border-color:var(--d3)}
+.d4 .pill.on{color:var(--panel);background:var(--d4);border-color:var(--d4)}
+.pcount{display:block;font:650 11px/1 var(--mono);color:var(--dim);text-align:right;
+  margin-top:7px;width:100%;white-space:nowrap}
+.drow[aria-pressed="true"]{background:var(--panel2);box-shadow:inset 4px 0 0 currentColor}
+.drow[aria-pressed="true"].d1{color:var(--d1)} .drow[aria-pressed="true"].d2{color:var(--d2)}
+.drow[aria-pressed="true"].d3{color:var(--d3)} .drow[aria-pressed="true"].d4{color:var(--d4)}
+.drow[aria-pressed="true"] .dtitle{color:var(--ink)}
+/* phone: badge + coverage on one line, prose full width underneath */
+@media(max-width:700px){
+  .drow{grid-template-columns:auto 1fr;gap:9px 12px}
+  .drow>:nth-child(1){grid-column:1;grid-row:1;align-self:center}
+  .drow>:nth-child(3){grid-column:2;grid-row:1;justify-self:end;align-self:center}
+  .drow>:nth-child(2){grid-column:1/-1;grid-row:2}
+  .pills{max-width:none}
+  .pcount{margin-top:5px}
+}
+
+/* ---------- sticky control bar ---------- */
+.bar{position:sticky;top:0;z-index:20;background:var(--bg);
+  border-bottom:1px solid var(--line2);padding:8px 0;margin-top:18px}
+.bar-in{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tabs{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px;flex:1 1 300px;
+  scrollbar-width:thin}
+.tab{flex:0 0 auto;background:var(--panel);border:1px solid var(--line2);
+  padding:6px 9px;cursor:pointer;font:600 11.5px/1.3 var(--mono);color:var(--dim);
+  border-radius:2px;display:flex;gap:6px;align-items:center}
+.tab:hover{border-color:var(--ink)}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.tab .dots{display:flex;gap:2px}
+.tab .dot{width:5px;height:5px;border-radius:50%;background:currentColor;opacity:.75}
+.seg{display:flex;border:1px solid var(--line2);border-radius:2px;overflow:hidden;flex:0 0 auto}
+.seg button{background:var(--panel);border:0;border-left:1px solid var(--line2);
+  padding:7px 11px;font:600 11.5px/1 var(--mono);color:var(--dim);cursor:pointer;white-space:nowrap}
+.seg button:first-child{border-left:0}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--bg)}
+.seg button:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.focusnote{font:600 11.5px/1 var(--mono);color:var(--dim);flex:0 0 auto}
+.focusnote button{background:none;border:1px solid var(--line2);border-radius:2px;
+  padding:5px 7px;font:inherit;color:inherit;cursor:pointer;margin-left:6px}
+
+/* ---------- ticket strip ---------- */
+.ticket{background:var(--panel);border:1px solid var(--line2);border-top:0;
+  padding:12px 14px;display:grid;gap:10px 22px;grid-template-columns:1fr}
+@media(min-width:760px){.ticket{grid-template-columns:1.4fr 1fr}}
+.tsubj{font-weight:650;font-size:15px}
+.tmeta{font:500 11.5px/1.7 var(--mono);color:var(--dim);margin-top:3px}
+.tnums{display:flex;gap:18px;flex-wrap:wrap;font:500 11.5px/1.4 var(--mono);color:var(--dim)}
+.tnums b{display:block;font:650 15px/1.3 var(--sans);color:var(--ink)}
+
+/* ---------- prompt panels ---------- */
+.panes{display:grid;gap:14px;margin-top:14px}
+.panes.split{grid-template-columns:1fr}
+@media(min-width:980px){.panes.split{grid-template-columns:1fr 1fr;gap:12px}}
+.pane{border:1px solid var(--line2);background:var(--panel);min-width:0}
+.phead{position:sticky;top:var(--barh,48px);z-index:10;background:var(--panel2);
+  border-bottom:1px solid var(--line2);padding:8px 12px;
+  display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap}
+.phead .pt{font:650 11px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase}
+.phead .ps{font:500 11px/1.4 var(--mono);color:var(--dim)}
+.pane.actual .pt::before{content:"● ";color:var(--d2)}
+.pane.intended .pt::before{content:"✓ ";color:var(--ok)}
+.code{font:400 12.4px/1.62 var(--mono);padding:8px 0 14px;overflow-x:auto}
+@media(min-width:760px){.code{font-size:13px}}
+.ln{display:grid;grid-template-columns:3.2ch 1fr;gap:8px;padding:0 12px 0 8px}
+.ln>.no{color:var(--line2);text-align:right;font-size:.82em;user-select:none;padding-top:.2em}
+.ln>.tx{white-space:pre-wrap;word-break:break-word;min-width:0}
+.ln.sys>.tx{color:var(--dim)}
+.ln.tag>.tx{font-weight:650}
+.ln.q>.tx{font-weight:650}
+.ln.turn>.tx{}
+.ln.blk{height:.55em}
+
+/* defect emphasis: shape + border + label, never colour alone */
+.ln[data-d]{position:relative}
+.ln[data-d="1"]{background:var(--d1b);box-shadow:inset 3px 0 0 var(--d1)}
+.ln[data-d="2"]{background:var(--d2b);box-shadow:inset 3px 0 0 var(--d2)}
+.ln[data-d="3"]{background:var(--d3b);box-shadow:inset 3px 0 0 var(--d3)}
+.ln[data-d="4"]{background:var(--d4b);box-shadow:inset 3px 0 0 var(--d4)}
+.ln.dup>.tx{text-decoration:line-through;text-decoration-thickness:1px}
+mark.mk{background:none;padding:1px 3px;border:1.5px dashed currentColor;
+  font-weight:650;border-radius:2px}
+mark.mk.bad{color:var(--d2);background:var(--d2b)}
+mark.mk.good{color:var(--ok);background:var(--okb)}
+/* inline-block so that line-through on a duplicated line does not run into the label */
+.note{display:inline-block;width:100%;margin-top:4px;font:650 10.5px/1.35 var(--mono);
+  letter-spacing:.04em;text-transform:uppercase;white-space:normal;text-decoration:none}
+.note.n1{color:var(--d1)} .note.n2{color:var(--d2)}
+.note.n3{color:var(--d3)} .note.n4{color:var(--d4)} .note.nok{color:var(--ok)}
+.note .sh{font-size:12px}
+
+.cutrule{margin:6px 12px 6px 8px;border-top:2px dashed var(--d1);
+  display:flex;align-items:center;gap:8px;padding-top:5px;flex-wrap:wrap}
+.cutrule span{font:650 10.5px/1.3 var(--mono);letter-spacing:.05em;
+  text-transform:uppercase;color:var(--d1)}
+.dropped{margin:0 12px 8px 8px;border:1px dashed var(--line2);
+  border-left:3px solid var(--d1);background:repeating-linear-gradient(135deg,
+    transparent 0 7px,rgba(128,128,128,.07) 7px 14px)}
+.dropped .ln{opacity:.62;padding-left:6px}
+.dropped .ln>.tx{color:var(--dim)}
+.dropped .hdr{font:650 10.5px/1.3 var(--mono);letter-spacing:.05em;text-transform:uppercase;
+  color:var(--d1);padding:7px 10px 4px}
+.dropped .ln.answer{opacity:1;background:var(--okb);box-shadow:inset 3px 0 0 var(--ok)}
+.dropped .ln.answer>.tx{color:var(--ink);font-weight:600}
+.ln.answer.keep{background:var(--okb);box-shadow:inset 3px 0 0 var(--ok)}
+.ln.answer.keep>.tx{font-weight:600}
+
+/* dim non-focused defects */
+body[data-focus] .ln:not([data-d]){opacity:.34}
+body[data-focus] .dropped{opacity:.34}
+body[data-focus="1"] .ln[data-d]:not([data-d="1"]),
+body[data-focus="2"] .ln[data-d]:not([data-d="2"]),
+body[data-focus="3"] .ln[data-d]:not([data-d="3"]),
+body[data-focus="4"] .ln[data-d]:not([data-d="4"]){opacity:.28}
+body[data-focus="1"] .dropped,body[data-focus="1"] .cutrule{opacity:1}
+body[data-focus] .ln.answer{opacity:1}
+
+/* ---------- answers ---------- */
+.answers{display:grid;gap:12px;margin-top:14px}
+@media(min-width:820px){.answers{grid-template-columns:1fr 1fr}}
+.ans{border:1px solid var(--line2);background:var(--panel);padding:13px 14px}
+.ans h3{font:650 11px/1.4 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+  margin-bottom:8px;display:flex;gap:7px;align-items:center}
+.ans.bad{border-left:4px solid var(--d2)} .ans.bad h3{color:var(--d2)}
+.ans.good{border-left:4px solid var(--ok)} .ans.good h3{color:var(--ok)}
+.ans p{margin:0;font-size:14px}
+.ans .cause{margin-top:9px;font:500 11.5px/1.5 var(--mono);color:var(--dim);
+  border-top:1px solid var(--line);padding-top:8px}
+
+/* ---------- template ---------- */
+.tpl{border:1px solid var(--line2);background:var(--panel);overflow-x:auto}
+.tpl .code{padding:12px 0}
+.tpl .ln{grid-template-columns:3.2ch 2.6ch 1fr}
+.tpl .gut{font:650 12px/1.62 var(--mono);text-align:center}
+.tpl .gut.g1{color:var(--d1)} .tpl .gut.g2{color:var(--d2)}
+.tpl .gut.g3{color:var(--d3)} .tpl .gut.g4{color:var(--d4)}
+.kw{color:var(--d3)} .str{color:var(--ok)} .cm{color:var(--dim);font-style:italic}
+
+footer{border-top:1px solid var(--line2);margin-top:34px;padding:16px 0 40px;
+  font:500 11.5px/1.7 var(--mono);color:var(--dim)}
+footer b{color:var(--ink)}
+@media (prefers-reduced-motion:no-preference){
+  .ln,.dropped{transition:opacity .16s ease}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+<header class="hero">
+  <div class="eyebrow">Prompt render audit · Helix Support Assist · answer-drafting v12</div>
+  <h1>The prompt that shipped is not the prompt that was written.</h1>
+  <p class="sub">Six real tickets where Support Assist gave a wrong answer. For each one I captured the
+  exact string handed to the model, byte for byte, and put it next to what the template was assumed to
+  produce. Four separate defects turned up. None of them are in the model.</p>
+  <div class="meta">
+    <span>captured <b>2026-07-31 14:02 UTC</b></span>
+    <span>build <b>9c4f2ab</b></span>
+    <span>tap <b>src/prompts/index.ts:renderPrompt()</b></span>
+    <span>dumps <b>artifacts/prompt-dumps/*.txt</b></span>
+  </div>
+  <div class="stats">
+    <div class="stat"><span class="n">4</span><span class="l">distinct defects, in 4 different files</span></div>
+    <div class="stat"><span class="n">6<span style="color:var(--dim)">/6</span></span><span class="l">tickets hit by at least three of them</span></div>
+    <div class="stat"><span class="n" id="s-drop">—</span><span class="l">of retrieved text cut before it reached the model</span></div>
+    <div class="stat"><span class="n" id="s-tok">—</span><span class="l">tokens/call wasted on a duplicated instruction</span></div>
+    <div class="stat"><span class="n">2<span style="color:var(--dim)">/6</span></span><span class="l">replies literally opened “Hi undefined,”</span></div>
+  </div>
+</header>
+
+<!-- ============ LEDGER ============ -->
+<section>
+  <div class="shead">
+    <span class="num">01</span><h2>What is wrong</h2>
+    <span class="hint">Tap a row to isolate it in the prompt below.</span>
+  </div>
+  <div class="ledger" id="ledger">
+
+    <button class="drow d1" data-d="1" aria-pressed="false">
+      <span class="badge d1">▲ 1</span>
+      <span>
+        <span class="dtitle">Retrieved docs truncated mid-sentence at 2 000 characters</span>
+        <span class="dwhere">src/prompts/supportAnswer.ts:34 — <code>.join('\n\n').slice(0, 2000)</code></span>
+        <span class="dwhy">The cap is applied to the concatenated string, after ranking, so it always
+        chops the tail. In all six tickets the chunk that actually answers the question was ranked third
+        and never made it into the prompt at all. The model answered from the two generic policy pages
+        it could see and stated the general rule as if it were the whole rule.</span>
+        <span class="dfix"><b>fix</b> budget by tokens and keep whole chunks: packChunks(docs, 6000) — drop
+        the last chunk entirely rather than half of it, and log when a chunk is dropped.</span>
+      </span>
+      <span style="text-align:right">
+        <span class="pills" data-pills="1"></span>
+        <span class="pcount">6 / 6 tickets</span>
+      </span>
+    </button>
+
+    <button class="drow d2" data-d="2" aria-pressed="false">
+      <span class="badge d2">● 2</span>
+      <span>
+        <span class="dtitle">Customer name interpolates as the string “undefined”</span>
+        <span class="dwhere">src/crm/mapContact.ts:24 — Salesforce sends <code>given_name</code>, template reads <code>customer.firstName</code></span>
+        <span class="dwhy">Contacts created by direct sign-up have <code>firstName</code>. Contacts synced
+        from Salesforce have <code>given_name</code> and nothing else. Template literals stringify
+        <code>undefined</code> silently, so the prompt says <code>name: undefined</code> and the preamble
+        instructs the model to address the customer by first name. It obeyed.</span>
+        <span class="dfix"><b>fix</b> normalise at the CRM boundary, and throw on a missing name instead of
+        rendering it — a hard failure here is cheaper than a mail that says “Hi undefined,”.</span>
+      </span>
+      <span style="text-align:right">
+        <span class="pills" data-pills="2"></span>
+        <span class="pcount">2 / 6 tickets</span>
+      </span>
+    </button>
+
+    <button class="drow d3" data-d="3" aria-pressed="false">
+      <span class="badge d3">■ 3</span>
+      <span>
+        <span class="dtitle">System instruction prepended twice by two middleware layers</span>
+        <span class="dwhere">src/middleware/withSafetyPreamble.ts:31 <em>and</em> src/server/promptRouter.ts:88</span>
+        <span class="dwhy">Both layers were written to guarantee the preamble is present, neither checks
+        whether it already is. Harmless-looking, but it is the block that says “answer using ONLY the
+        retrieved docs”, and repeating it right before a truncated docs block pushed the model further
+        toward answering confidently from partial context instead of escalating.</span>
+        <span class="dfix"><b>fix</b> delete the prepend in promptRouter.ts:88; the middleware owns the
+        preamble. Add an assertion that it appears exactly once.</span>
+      </span>
+      <span style="text-align:right">
+        <span class="pills" data-pills="3"></span>
+        <span class="pcount">6 / 6 tickets</span>
+      </span>
+    </button>
+
+    <button class="drow d4" data-d="4" aria-pressed="false">
+      <span class="badge d4">◆ 4</span>
+      <span>
+        <span class="dtitle">Conversation history is in reverse order — newest first, oldest last</span>
+        <span class="dwhere">src/prompts/supportAnswer.ts:41 — history from <code>GET /v2/conversations/:id/messages?order=desc</code></span>
+        <span class="dwhy">The API returns newest-first for the inbox list view and the prompt builder
+        passes the array straight through. The model reads the last line as the most recent thing said,
+        so in every ticket it treated the customer's opening line as their latest position and answered a
+        question they had already moved past.</span>
+        <span class="dfix"><b>fix</b> <code>[...history].reverse()</code> at the call site, or request
+        <code>order=asc</code>. Timestamps are already on each turn — assert monotonic before rendering.</span>
+      </span>
+      <span style="text-align:right">
+        <span class="pills" data-pills="4"></span>
+        <span class="pcount">6 / 6 tickets</span>
+      </span>
+    </button>
+
+  </div>
+</section>
+</div>
+
+<!-- ============ STICKY BAR ============ -->
+<div class="bar">
+  <div class="wrap bar-in">
+    <div class="tabs" id="tabs" role="tablist" aria-label="Failing tickets"></div>
+    <div class="seg" role="group" aria-label="View mode">
+      <button data-view="actual" aria-pressed="true">As rendered</button>
+      <button data-view="intended" aria-pressed="false">As assumed</button>
+      <button data-view="split" aria-pressed="false">Both</button>
+    </div>
+    <div class="focusnote" id="focusnote" hidden></div>
+  </div>
+</div>
+
+<div class="wrap">
+<section style="padding-top:14px">
+  <div class="ticket" id="ticket"></div>
+  <div class="panes" id="panes"></div>
+</section>
+
+<section>
+  <div class="shead"><span class="num">02</span><h2>What it said, and what it should have said</h2></div>
+  <div class="answers" id="answers"></div>
+</section>
+
+<!-- ============ TEMPLATE ============ -->
+<section>
+  <div class="shead">
+    <span class="num">03</span><h2>The template, with the four bug sites marked</h2>
+    <span class="hint">src/prompts/supportAnswer.ts — unchanged since 12 May</span>
+  </div>
+  <div class="tpl"><div class="code">
+<div class="ln"><span class="no">28</span><span class="gut"></span><span class="tx"><span class="kw">export const</span> supportAnswer = ({ customer, account, docs, history, ticket }) =&gt; `</span></div>
+<div class="ln" data-d="3"><span class="no">29</span><span class="gut g3">■</span><span class="tx">${SYSTEM_PREAMBLE}<span class="note n3"><span class="sh">■</span>3 · also prepended by promptRouter.buildMessages() — arrives here already present</span></span></div>
+<div class="ln"><span class="no">30</span><span class="gut"></span><span class="tx"></span></div>
+<div class="ln"><span class="no">31</span><span class="gut"></span><span class="tx">&lt;customer&gt;</span></div>
+<div class="ln" data-d="2"><span class="no">32</span><span class="gut g2">●</span><span class="tx">  name:  ${<mark class="mk bad">customer.firstName</mark>}<span class="note n2"><span class="sh">●</span>2 · undefined for every Salesforce-synced contact; stringified, not caught</span></span></div>
+<div class="ln"><span class="no">33</span><span class="gut"></span><span class="tx">  plan:  ${account.plan}</span></div>
+<div class="ln"><span class="no">34</span><span class="gut"></span><span class="tx">  seats: ${account.seats}</span></div>
+<div class="ln"><span class="no">35</span><span class="gut"></span><span class="tx">&lt;/customer&gt;</span></div>
+<div class="ln"><span class="no">36</span><span class="gut"></span><span class="tx"></span></div>
+<div class="ln"><span class="no">37</span><span class="gut"></span><span class="tx">&lt;retrieved_docs&gt;</span></div>
+<div class="ln" data-d="1"><span class="no">38</span><span class="gut g1">▲</span><span class="tx">${docs.map(d =&gt; `[${d.id}] ${d.title}\n${d.body}`).join(<span class="str">'\n\n'</span>)<mark class="mk bad" style="color:var(--d1);background:var(--d1b)">.slice(0, 2000)</mark>}<span class="note n1"><span class="sh">▲</span>1 · characters, not tokens; applied after joining, so it halves the last chunk it reaches</span></span></div>
+<div class="ln"><span class="no">39</span><span class="gut"></span><span class="tx">&lt;/retrieved_docs&gt;</span></div>
+<div class="ln"><span class="no">40</span><span class="gut"></span><span class="tx"></span></div>
+<div class="ln"><span class="no">41</span><span class="gut"></span><span class="tx">&lt;conversation&gt;</span></div>
+<div class="ln" data-d="4"><span class="no">42</span><span class="gut g4">◆</span><span class="tx">${<mark class="mk bad" style="color:var(--d4);background:var(--d4b)">history</mark>.map(m =&gt; `[${m.at}] ${m.role}: ${m.text}`).join(<span class="str">'\n'</span>)}<span class="note n4"><span class="sh">◆</span>4 · the array arrives newest-first from the messages endpoint and is never reversed</span></span></div>
+<div class="ln"><span class="no">43</span><span class="gut"></span><span class="tx">&lt;/conversation&gt;</span></div>
+<div class="ln"><span class="no">44</span><span class="gut"></span><span class="tx"></span></div>
+<div class="ln"><span class="no">45</span><span class="gut"></span><span class="tx">Question: ${ticket.subject}</span></div>
+<div class="ln"><span class="no">46</span><span class="gut"></span><span class="tx">`;</span></div>
+  </div></div>
+</section>
+
+<footer class="wrap" style="padding-left:0;padding-right:0">
+  Captured by wrapping <b>renderPrompt()</b> and writing the final string to disk before the transport
+  call — not reconstructed from logs, not re-run. Six tickets chosen from the 41 escalated as
+  “assistant gave wrong information” between 12 and 30 July. Token figures are a <b>chars ÷ 3.9</b>
+  estimate over the captured strings, adequate for comparing the two renders against each other.
+  Nothing here required changing the model or the retrieval ranking.
+</footer>
+</div>
+
+<script>
+"use strict";
+const SHAPE = {1:"▲",2:"●",3:"■",4:"◆"};
+
+const PREAMBLE =
+"You are Ada, the support assistant for Northwind Cloud. Answer using ONLY the\n" +
+"documentation in <retrieved_docs>. If the documentation does not contain the\n" +
+"answer, say so plainly and offer to escalate to a human specialist. Never invent\n" +
+"policy, prices, or timeframes. Address the customer by first name.";
+
+const CASES = [
+{
+  id:"CS-48812", subj:"Refund for the annual upgrade I bought three days ago",
+  customer:{firstName:"Marta", last:"Kovač", source:"direct sign-up"},
+  account:{plan:"Business Annual", seats:24},
+  docs:[
+    {id:"KB-1042", title:"Billing — Refunds and credits", body:
+"Northwind Cloud issues refunds to the original payment method only. Credits are applied to the account balance and consumed at the next renewal.\n"+
+"Monthly subscriptions may be cancelled at any time. Cancellation stops the next charge; the current month is not refunded and the workspace stays active until the period ends.\n"+
+"Annual subscriptions are billed upfront for the full twelve-month term. Under the standard policy an annual term that has already started is not refundable, and the account keeps access until the term ends.\n"+
+"Refunds are processed by Finance within five business days of approval. Card networks may take a further three to ten days to post the credit.\n"+
+"Partial refunds are not available for unused seats on a monthly plan; remove the seats instead and the next invoice is reduced automatically.\n"+
+"Chargebacks opened with the card issuer suspend the account until the dispute is resolved, and the disputed amount cannot be refunded manually while the case is open.\nRefund requests raised by anyone other than a workspace owner or a member holding the Billing role are declined automatically and the requester is not notified."},
+    {id:"KB-1177", title:"Billing — Switching from monthly to annual", body:
+"An upgrade from monthly to annual takes effect immediately. The remaining unused days of the current month are converted to account credit and applied to the annual invoice at checkout.\n"+
+"The annual invoice is issued for the full term on the day of the switch. The billing anchor moves to that date and the previous monthly anchor is discarded.\n"+
+"Seats purchased during the monthly period carry over at the same count. Adding seats later on an annual plan is prorated to the end of the term.\n"+
+"Downgrading from annual back to monthly is only possible at the end of the annual term. Requests made mid-term are queued and take effect on the renewal date.\n"+
+"If the switch was made in error, the workspace owner should open a billing ticket before the first annual renewal so that Finance can review the charge against the published exception list.\n"+
+"Existing purchase orders and negotiated rates are re-applied to the annual invoice by Finance within one business day of the switch, which can briefly show the invoice at list price in Billing → History.\nA switch cannot be performed while an invoice is in a failed payment state; clear the outstanding balance first."},
+    {id:"KB-1231", title:"Billing — Refund exceptions for mid-term plan changes", body:
+"Exceptions to the no-refund rule for annual terms are listed here and are approved by Finance without escalation.\n"+
+"An annual upgrade made within 14 days of the customer's previous monthly renewal is refundable in full, minus any usage overage already invoiced.\n"+
+"The 14-day window is measured from the monthly renewal date, not from the date of the annual charge.\n"+
+"Refunds under this exception are issued to the original card and the workspace reverts to the monthly plan on its old anchor."}],
+  key:"refundable in full, minus any usage overage already invoiced",
+  history:[
+    {at:"11:26", role:"customer", text:"So can you just reverse the charge for the annual plan? I only switched three days ago."},
+    {at:"11:19", role:"assistant", text:"Annual plans are billed upfront for the full twelve months."},
+    {at:"11:14", role:"customer", text:"I switched from monthly to annual on 12 July, three days after my monthly renewal on the 9th."},
+    {at:"11:08", role:"customer", text:"Hi — there is a charge of €2,388 on my card that I was not expecting."}],
+  gave:"Annual subscriptions are billed upfront for the full term and are not refundable once the term has started. I can apply a credit toward your next renewal instead.",
+  want:"The upgrade happened 3 days after the monthly renewal, inside the 14-day exception window in KB-1231 — €2,388 refunded in full to the original card, minus invoiced overage, and the workspace reverts to monthly.",
+  cause:"KB-1231 ranked 3rd. It was cut entirely."
+},
+{
+  id:"CS-48830", subj:"SSO login loop with Okta after we changed our verified domain",
+  customer:{firstName:undefined, given_name:"Priya", last:"Raghunathan", source:"Salesforce sync"},
+  account:{plan:"Enterprise", seats:340},
+  docs:[
+    {id:"KB-2210", title:"SSO — SAML configuration basics", body:
+"Northwind Cloud acts as the service provider. Your identity provider must send a signed SAML 2.0 assertion containing the user's email address as the NameID.\n"+
+"The Entity ID and the ACS URL are shown in Settings → Security → SSO and are unique per workspace. Both values must match exactly on the identity provider side, including trailing slashes.\n"+
+"Certificate rotation is supported without downtime: upload the new signing certificate first, keep both active for the overlap period, then remove the old one.\n"+
+"Just-in-time provisioning creates a member on first successful assertion. Members removed in the identity provider are deactivated on their next login attempt, not immediately.\n"+
+"Encrypted assertions are supported but optional. If the identity provider encrypts the assertion, the workspace decryption certificate must be uploaded before the first login attempt, otherwise every assertion is rejected as malformed.\nAttribute mapping is fixed: firstName, lastName and groups are read from the assertion when present and ignored otherwise. Group-to-role mapping is configured separately in Settings → Security → Roles and is not part of the assertion contract."},
+    {id:"KB-2288", title:"SSO — Changing your verified domain", body:
+"A workspace may verify additional domains at any time via a DNS TXT record. Verification usually completes within fifteen minutes and never more than one hour.\n"+
+"Changing the primary domain rewrites the login hint used on the sign-in page and updates the email addresses shown in the member list. Existing sessions are not invalidated.\n"+
+"If members sign in with an email address on the old domain, keep the old domain verified in parallel until every account has been migrated, otherwise those sign-ins are rejected as unknown.\n"+
+"The workspace Entity ID contains the primary domain. When the primary domain changes, the Entity ID changes with it, and the identity provider is not notified of the change automatically.\n"+
+"Domain verification records must remain in DNS for as long as the domain is verified. Removing the TXT record after verification silently unverifies the domain at the next nightly check, and members on that domain can no longer start a new session.\nOnly workspace owners can start or remove a domain verification."},
+    {id:"KB-2301", title:"SSO — Login loop after a domain change", body:
+"A repeating redirect between the identity provider and the sign-in page almost always means the assertion is valid but is addressed to the previous Entity ID.\n"+
+"Rotate the Entity ID in Okta first, then click Re-sync IdP metadata in Northwind, in that order — doing it the other way round caches the stale value for another hour.\n"+
+"Clearing cookies has no effect on this failure mode because the loop is caused by the assertion audience, not by session state."}],
+  key:"Rotate the Entity ID in Okta first, then click Re-sync IdP metadata in Northwind, in that order",
+  history:[
+    {at:"09:41", role:"customer", text:"Cookies cleared, incognito, three different browsers. Still looping. This is 340 people locked out."},
+    {at:"09:33", role:"assistant", text:"Could you try clearing your browser cookies and using a private window?"},
+    {at:"09:22", role:"customer", text:"We changed our primary domain from raghu-labs.io to raghulabs.com on Tuesday evening."},
+    {at:"09:14", role:"customer", text:"Nobody can log in via Okta since yesterday — it bounces between Okta and your login page forever."}],
+  gave:"Hi undefined, sorry about that! Please ask your users to clear their browser cookies and try again in an incognito window. If the problem continues, verify that your SAML certificate has not expired.",
+  want:"Hi Priya — the loop is an Entity ID mismatch caused by the domain change. Rotate the Entity ID in Okta, then click Re-sync IdP metadata in Northwind, in that order (KB-2301).",
+  cause:"Name undefined + KB-2301 cut + cookie advice was already refused earlier in the thread."
+},
+{
+  id:"CS-48851", subj:"July invoice is missing our VAT number, can it be corrected",
+  customer:{firstName:"Jonas", last:"Meyer", source:"direct sign-up"},
+  account:{plan:"Business", seats:12},
+  docs:[
+    {id:"KB-1310", title:"Invoices — Editing billing details", body:
+"Billing details are edited in Billing → Details. Changes apply to invoices issued after the change is saved and are never applied retroactively to documents already generated.\n"+
+"The legal entity name, billing address, tax identifier and purchase order reference can all be set. Only workspace owners and members with the Billing role can see or change them.\n"+
+"Invoices are generated at 02:00 UTC on the renewal date and emailed to the billing contact. A PDF copy is kept in Billing → History for seven years.\n"+
+"Once an invoice has been issued its contents are immutable, because the document has already been transmitted to the tax authority reporting queue.\n"+
+"The billing contact is separate from the workspace owner and may be a shared mailbox. Invoice emails are sent from billing@northwindcloud.com and are not retried if the address bounces, so a bouncing address results in silently missing invoices.\nPayment methods are held by the payment processor and never on Northwind infrastructure; changing a card does not change any billing detail printed on the document."},
+    {id:"KB-1344", title:"Invoices — Tax identifiers and reverse charge", body:
+"A valid EU VAT identifier on the account removes VAT from the invoice under the reverse charge mechanism and adds the required note to the document.\n"+
+"Identifiers are validated against VIES when they are saved. A failed validation leaves the field empty rather than saving an unverified value, and no email is sent about the failure.\n"+
+"Customers outside the EU are not charged VAT and no identifier is required. Customers in the country of establishment are always charged local VAT regardless of the identifier.\n"+
+"If the identifier was saved after an invoice was issued, that invoice keeps the VAT that was charged at the time, and the difference is not credited automatically on the following invoice.\n"+
+"A tax identifier can be removed at any time, which restores local VAT on the following invoice. Removing an identifier does not trigger a review of earlier invoices.\nIdentifiers for the United Kingdom follow the same rules but are validated against HMRC rather than VIES.\nCharities and public bodies holding an exemption certificate are handled manually by Finance and are not covered by the automatic reverse-charge path."},
+    {id:"KB-1359", title:"Invoices — Reissuing after a tax identifier change", body:
+"An invoice cannot be edited, but it can be reissued, which voids the original and generates a replacement carrying the current billing details.\n"+
+"Finance can reissue an invoice within 30 days of its issue date via Billing → Invoice → Request reissue; the replacement carries the reverse-charge note and the VAT amount is credited back.\n"+
+"After 30 days the request must go through the tax team and takes up to two weeks."}],
+  key:"Finance can reissue an invoice within 30 days of its issue date",
+  history:[
+    {at:"16:12", role:"customer", text:"Our accountant will not accept it without the VAT number. What are our options?"},
+    {at:"16:05", role:"assistant", text:"Billing details apply to future invoices only."},
+    {at:"15:58", role:"customer", text:"I added the VAT number on 3 July, the invoice was issued on 1 July."},
+    {at:"15:51", role:"customer", text:"The July invoice does not show our VAT number DE811907980."}],
+  gave:"Invoices cannot be changed once they have been issued. Your VAT number is saved now, so it will appear correctly on all future invoices.",
+  want:"The 1 July invoice is 22 days old, inside the 30-day reissue window — request a reissue in Billing → Invoice → Request reissue and the replacement carries the VAT number, the reverse-charge note and a credit for the VAT charged (KB-1359).",
+  cause:"KB-1359 cut. The two visible chunks both say 'immutable'."
+},
+{
+  id:"CS-48877", subj:"API returns 429 during our nightly bulk export",
+  customer:{firstName:"Sofia", last:"Ricci", source:"direct sign-up"},
+  account:{plan:"Enterprise", seats:180},
+  docs:[
+    {id:"KB-3005", title:"API — Rate limits overview", body:
+"The default limit is 600 requests per minute per workspace, measured as a sliding window and shared across every API token issued for that workspace.\n"+
+"Exceeding the limit returns HTTP 429 with a Retry-After header in seconds. Requests rejected with 429 are not counted against the window a second time.\n"+
+"The X-RateLimit-Remaining and X-RateLimit-Reset headers are present on every response and should be used to pace clients rather than fixed sleeps.\n"+
+"Enterprise workspaces can request a raised limit through their account manager. Raised limits apply to the shared bucket only and take effect at the next UTC midnight.\n"+
+"Limits are enforced at the edge, before authentication, so malformed and unauthorised requests count against the window exactly like successful ones.\nWebhook deliveries and inbound webhook receipts are excluded from the request bucket and are governed by their own ceiling of 20 in-flight deliveries per workspace.\nBursts of up to 1200 requests are tolerated for a maximum of ten seconds, after which the sliding window applies strictly and the burst allowance refills over the following minute."},
+    {id:"KB-3020", title:"API — Pagination and cursors", body:
+"List endpoints return a maximum of 200 objects per page along with a next_cursor value. Cursors are opaque, remain valid for 24 hours, and encode the sort position rather than an offset.\n"+
+"Deep pagination with offsets is not supported. Clients that page by offset will see duplicated and skipped records once the underlying collection changes during the walk.\n"+
+"Parallel pagination over the same cursor chain is undefined behaviour; fan out over disjoint filters instead, for example by created_at range.\n"+
+"A page request costs one unit against the rate limit regardless of the page size, so requesting 200 objects per page is strictly cheaper than requesting 20.\n"+
+"Sort order is fixed per endpoint and cannot be reversed; walk the collection in the order given and reverse client side if another order is needed.\nIf a cursor expires mid-walk the endpoint returns 410 Gone rather than silently restarting, and the walk must begin again from the first page.\nFilters are applied before pagination, so narrowing a filter mid-walk invalidates the cursor."},
+    {id:"KB-3041", title:"API — Bulk export endpoints", body:
+"The /v2/exports family does not share the standard request bucket. It has its own allowance of 5 concurrent jobs and 60 requests per minute.\n"+
+"Sending the header X-Export-Batch: true moves the job off the shared bucket entirely and queues it for the batch worker, which is the supported path for nightly full exports.\n"+
+"Batch jobs are not rate limited but are scheduled, and typically complete within two hours of submission."}],
+  key:"Sending the header X-Export-Batch: true moves the job off the shared bucket entirely",
+  history:[
+    {at:"03:47", role:"customer", text:"We are already at 90 rpm with backoff and it still 429s after the fourth export job starts."},
+    {at:"03:35", role:"assistant", text:"Please reduce your request rate and implement exponential backoff."},
+    {at:"03:20", role:"customer", text:"It is the /v2/exports endpoint, six jobs launched in parallel at 03:00."},
+    {at:"03:11", role:"customer", text:"Our nightly export has been failing with 429 for four nights running."}],
+  gave:"You are exceeding the workspace rate limit of 600 requests per minute. Please reduce your request rate to under 100 requests per minute and implement exponential backoff using the Retry-After header.",
+  want:"/v2/exports has its own bucket — 5 concurrent jobs, and they are running 6. Either drop to 5 concurrent, or send X-Export-Batch: true to move the nightly job to the batch worker entirely (KB-3041).",
+  cause:"KB-3041 cut. Also repeated advice the customer had already reported as failing, two turns earlier."
+},
+{
+  id:"CS-48903", subj:"Proration when we remove 15 seats mid-cycle on an annual plan",
+  customer:{firstName:undefined, given_name:"Tomás", last:"Ferreira", source:"Salesforce sync"},
+  account:{plan:"Business Annual", seats:60},
+  docs:[
+    {id:"KB-1188", title:"Seats — Adding and removing", body:
+"Seats are added in Settings → Members. New seats are available immediately and are charged from the moment they are added.\n"+
+"Removing a seat deactivates the member at once; their content stays in the workspace and is reassigned to the workspace owner after thirty days.\n"+
+"The seat count can never go below the number of active members. Deactivate members first, then reduce the count.\n"+
+"Seat changes are visible in Billing → History as adjustment lines against the current term, each with the date, the actor and the delta.\n"+
+"Guests and billing-only contacts do not consume a seat. Members with the Viewer role do consume a seat on Business and Enterprise plans, but not on the legacy Team plan.\nBulk seat changes made through the SCIM connector follow the same rules as changes made in the interface, but are applied asynchronously and can lag by up to fifteen minutes.\nA seat freed by deactivation is available for reuse immediately and does not reduce the billed count on its own; the count must be reduced explicitly."},
+    {id:"KB-1195", title:"Seats — How proration is calculated", body:
+"Proration is calculated per day on the remaining days of the current billing period, using the list price of the plan rather than any negotiated rate.\n"+
+"On monthly plans, seats added mid-cycle are charged for the remaining days and appear on the next invoice as a separate line. Seats removed mid-cycle produce a prorated refund on that same invoice.\n"+
+"Proration lines are calculated at the moment of the change and are not recalculated if the plan changes again later in the same period.\n"+
+"Taxes on proration lines follow the tax treatment of the original invoice, and any negotiated discount is applied to the prorated amount at the same percentage.\n"+
+"Proration is computed in the workspace billing currency and rounded to the smallest currency unit at line level, which can produce a one-unit difference against a manual calculation.\nChanges made on the renewal date itself are treated as belonging to the new period and are not prorated at all.\nAdjustment lines are shown net of tax in the interface and gross of tax on the invoice PDF, which is a frequent source of confusion.\nProration never applies to one-off charges such as onboarding or training."},
+    {id:"KB-1206", title:"Seats — Downgrades on annual plans", body:
+"Annual terms are paid upfront, so removing seats mid-term does not generate an immediate refund.\n"+
+"Removed seats become account credit that is applied automatically at the next renewal, unless the removal happens within 30 days of that seat's purchase, in which case the amount is refunded to the original payment method.\n"+
+"Credit from removed seats never expires while the workspace is active and is shown in Billing → Balance."}],
+  key:"Removed seats become account credit that is applied automatically at the next renewal",
+  history:[
+    {at:"14:58", role:"customer", text:"Finance needs to know the exact amount and the exact date it lands. Can you confirm both?"},
+    {at:"14:50", role:"assistant", text:"Seat removals are prorated automatically."},
+    {at:"14:41", role:"customer", text:"We are on the annual plan, renewed in March, 60 seats, we want to go to 45."},
+    {at:"14:33", role:"customer", text:"If we remove 15 seats this week, when do we see the money back?"}],
+  gave:"Hi undefined, seat removals take effect immediately and are prorated for the remaining days of the billing period. You will receive a prorated refund to your original payment method within 5–10 business days.",
+  want:"Hi Tomás — on an annual plan there is no immediate refund. The 15 seats become account credit applied at the March renewal, unless any of them were bought in the last 30 days, which are refunded to the card (KB-1206).",
+  cause:"Name undefined + KB-1206 cut. KB-1195 describes monthly proration, and the model applied it to an annual plan."
+},
+{
+  id:"CS-48915", subj:"GDPR Article 17 erasure request — confirm deletion timeline",
+  customer:{firstName:"Élodie", last:"Brun", source:"direct sign-up"},
+  account:{plan:"Enterprise", seats:95},
+  docs:[
+    {id:"KB-4100", title:"Security — Data residency regions", body:
+"Workspace data is stored in the region chosen at creation: eu-central, us-east or ap-southeast. The region cannot be changed after creation without a migration handled by the platform team.\n"+
+"Primary storage, search indexes and object storage all stay within the chosen region. Audit metadata such as login timestamps and IP addresses is replicated to us-east for fraud analysis and is retained for 90 days.\n"+
+"Subprocessors are listed in the Trust Centre and are notified of region constraints contractually. A current list with regions and purposes is attached to every data processing agreement.\n"+
+"Encryption at rest uses AES-256 with keys held in the regional key service; keys are rotated annually and are never exported from the region.\n"+
+"Support access to workspace content is off by default and must be granted per ticket by a workspace owner. The grant expires after 72 hours and every access is written to the audit log with the ticket reference.\nStaff access originating outside the storage region is brokered through a regional jump host, so content never leaves the region even during an investigation."},
+    {id:"KB-4118", title:"Security — Data retention schedule", body:
+"Deleted objects are removed from primary storage and from search indexes within 72 hours of the deletion being confirmed by the workspace owner.\n"+
+"Deactivated workspaces are retained in full for 30 days so that they can be restored, then queued for destruction. Restoration after destruction is not possible under any circumstances.\n"+
+"Encrypted backup snapshots are taken hourly and retained on a rolling window. Snapshots are not individually editable, so records inside them persist until the snapshot itself rotates out of the window.\n"+
+"Log lines containing user identifiers are retained for 30 days in hot storage and 12 months in cold storage, and cold storage is not searchable by subject.\n"+
+"Exports requested before a deletion remain downloadable for seven days from the link in the export email and are then destroyed; the link cannot be revoked early.\nRetention settings configured at workspace level apply to messages and files but never to audit metadata, which follows the fixed schedule above.\nA legal hold suspends every retention rule for the objects it covers until the hold is lifted."},
+    {id:"KB-4132", title:"Security — Verified erasure requests", body:
+"Erasure completes in primary storage and in all search indexes within 72 hours of verification.\n"+
+"Encrypted backup snapshots in eu-central retain the record for up to 35 days and are then rotated out; a signed Certificate of Erasure is issued only after that backup window has closed.\n"+
+"Until the certificate is issued the request is shown as In progress in the Trust Centre, and the record is unreachable by any product surface."}],
+  key:"Encrypted backup snapshots in eu-central retain the record for up to 35 days",
+  history:[
+    {at:"10:29", role:"customer", text:"Our DPO needs the certificate and the exact backup retention figure in writing, today."},
+    {at:"10:21", role:"assistant", text:"All deleted data is removed permanently."},
+    {at:"10:12", role:"customer", text:"We are in eu-central and this is a formal Article 17 request from a data subject."},
+    {at:"10:04", role:"customer", text:"We need written confirmation of exactly when a deleted user's data is gone from your systems."}],
+  gave:"All data is deleted immediately and permanently from our systems within 24 hours of the request. Nothing is retained after that point.",
+  want:"72 hours for primary storage and indexes; encrypted eu-central backup snapshots hold the record for up to 35 more days before rotating out, and the signed Certificate of Erasure is issued only once that window closes (KB-4132).",
+  cause:"KB-4132 cut. The answer given is a compliance statement that is false in writing."
+}];
+
+/* ---------- helpers ---------- */
+const esc = s => String(s).replace(/[&<>]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;"}[c]));
+const tk  = s => Math.round(s.length / 3.9);
+const fmt = n => n.toLocaleString("en-US");
+const joinDocs = c => c.docs.map(d => "[" + d.id + "] " + d.title + "\n" + d.body).join("\n\n");
+const LIMIT = 2000;
+
+function nameOf(c, mode){
+  if (mode === "actual") return c.customer.firstName === undefined ? "undefined" : c.customer.firstName;
+  return c.customer.firstName || c.customer.given_name;
+}
+function isNameBug(c){ return c.customer.firstName === undefined; }
+
+/* build the exact string that was (or should have been) sent */
+function buildString(c, mode){
+  const docs = joinDocs(c);
+  const body = mode === "actual" ? docs.slice(0, LIMIT) : docs;
+  const hist = mode === "actual" ? c.history : [...c.history].reverse();
+  return (mode === "actual" ? PREAMBLE + "\n\n" + PREAMBLE : PREAMBLE) + "\n\n" +
+    "<customer>\n  name:  " + nameOf(c, mode) + "\n  plan:  " + c.account.plan +
+    "\n  seats: " + c.account.seats + "\n</customer>\n\n<retrieved_docs>\n" + body +
+    "\n</retrieved_docs>\n\n<conversation>\n" +
+    hist.map(m => "[" + m.at + "] " + m.role + ": " + m.text).join("\n") +
+    "\n</conversation>\n\nQuestion: " + c.subj + "\n";
+}
+
+/* ---------- prompt rendering ---------- */
+function note(d, txt){
+  return '<span class="note n' + d + '"><span class="sh">' + SHAPE[d] + '</span>' + d + ' · ' + esc(txt) + '</span>';
+}
+function lineHTML(r, n){
+  let tx = r.html != null ? r.html : esc(r.text);
+  if (r.hl){
+    const h = esc(r.hl);
+    tx = tx.replace(h, '<mark class="mk ' + (r.hlc || "bad") + '">' + h + '</mark>');
+  }
+  if (r.note) tx += r.note;
+  const cls = ["ln"].concat(r.cls ? [r.cls] : []).join(" ");
+  return '<div class="' + cls + '"' + (r.d ? ' data-d="' + r.d + '"' : "") +
+    '><span class="no">' + (r.n === false ? "" : n) + '</span><span class="tx">' + (tx || "&nbsp;") + '</span></div>';
+}
+
+function renderPane(c, mode){
+  const actual = mode === "actual";
+  const rows = [];
+  const push = (text, o) => rows.push(Object.assign({ text: text }, o || {}));
+
+  const pre = PREAMBLE.split("\n");
+  pre.forEach(l => push(l, { cls:"sys" }));
+  if (actual){
+    push("");
+    pre.forEach((l, i) => push(l, { cls:"sys dup", d:3,
+      note: i === pre.length - 1 ? note(3, "identical block, prepended a second time by promptRouter.ts:88 — " + fmt(tk(PREAMBLE)) + " tokens of pure repetition") : "" }));
+  }
+  push("");
+  push("<customer>", { cls:"tag" });
+  const nm = nameOf(c, mode);
+  const bug = actual && isNameBug(c);
+  push("  name:  " + nm, bug
+    ? { d:2, hl:"undefined", note: note(2, "customer.firstName is undefined — Salesforce sent given_name=\"" + c.customer.given_name + "\"") }
+    : (!actual && isNameBug(c) ? { hl:nm, hlc:"good" } : {}));
+  push("  plan:  " + c.account.plan);
+  push("  seats: " + c.account.seats);
+  push("</customer>", { cls:"tag" });
+  push("");
+  push("<retrieved_docs>", { cls:"tag" });
+
+  const docs = joinDocs(c);
+  const keep = actual ? docs.slice(0, LIMIT) : docs;
+  const drop = actual ? docs.slice(LIMIT) : "";
+  const keepLines = keep.split("\n");
+  keepLines.forEach((l, i) => {
+    const last = i === keepLines.length - 1;
+    const o = {};
+    if (!actual && l.indexOf(c.key) > -1){ o.cls = "answer keep"; o.hl = c.key; o.hlc = "good";
+      o.note = '<span class="note nok">✓ the passage that answers this ticket</span>'; }
+    if (actual && last){ o.d = 1;
+      o.note = note(1, "hard cut at " + fmt(LIMIT) + " chars, mid-sentence — chunk " + c.docs.length + " of " + c.docs.length + " never starts"); }
+    push(l, o);
+  });
+
+  let html = "";
+  let n = 1;
+  rows.forEach(r => { html += lineHTML(r, n); if (r.n !== false) n++; });
+
+  if (actual){
+    html += '<div class="cutrule"><span>✂ ' + fmt(drop.length) + " characters below this line were never sent (" +
+      Math.round(drop.length / docs.length * 100) + "% of the retrieved text)</span></div>";
+    html += '<div class="dropped"><div class="hdr">' + SHAPE[1] + " Dropped by .slice(0, 2000) — shown here only because I recovered it from the retriever</div>";
+    drop.split("\n").forEach(l => {
+      const o = {};
+      if (l.indexOf(c.key) > -1){ o.cls = "answer"; o.hl = c.key; o.hlc = "good";
+        o.note = '<span class="note nok">✓ this is the passage that answers the ticket. the model never saw it.</span>'; }
+      html += lineHTML(Object.assign({ text:l, n:false }, o), "");
+    });
+    html += "</div>";
+  }
+
+  const rows2 = [];
+  const push2 = (text, o) => rows2.push(Object.assign({ text: text }, o || {}));
+  push2("</retrieved_docs>", { cls:"tag" });
+  push2("");
+  push2("<conversation>", { cls:"tag" });
+  const hist = actual ? c.history : [...c.history].reverse();
+  hist.forEach((m, i) => {
+    const o = { cls:"turn" };
+    if (actual && i === 0){ o.d = 4;
+      o.note = note(4, "newest turn (" + m.at + ") is first — clock runs backwards down this block; the model reads the bottom line as the latest"); }
+    if (actual && i === hist.length - 1){ o.d = 4;
+      o.note = note(4, "oldest turn (" + m.at + ") is last — read as the customer's current position"); }
+    if (!actual && i === hist.length - 1){
+      o.note = '<span class="note nok">✓ newest turn last, clock ascending</span>'; }
+    push2("[" + m.at + "] " + m.role + ": " + m.text, o);
+  });
+  push2("</conversation>", { cls:"tag" });
+  push2("");
+  push2("Question: " + c.subj, { cls:"q" });
+
+  // continue numbering, accounting for kept doc lines already emitted
+  rows2.forEach(r => { html += lineHTML(r, n); n++; });
+
+  const str = buildString(c, mode);
+  const label = actual ? "As rendered — the exact string sent" : "As assumed — what the template was believed to produce";
+  let whole = 0, gone = 0, off = 0;
+  c.docs.forEach(d => {
+    const len = ("[" + d.id + "] " + d.title + "\n" + d.body).length;
+    if (!actual || off + len <= LIMIT) whole++;
+    else if (off >= LIMIT) gone++;
+    off += len + 2;
+  });
+  const half = c.docs.length - whole - gone;
+  const stats = fmt(str.length) + " chars · ~" + fmt(tk(str)) + " tok · " +
+    c.docs.length + " chunks retrieved: " + whole + " whole" +
+    (half ? ", " + half + " cut in half" : "") + (gone ? ", " + gone + " never sent" : "");
+
+  return '<div class="pane ' + mode + '"><div class="phead"><span class="pt">' + label +
+    '</span><span class="ps">' + stats + '</span></div><div class="code">' + html + "</div></div>";
+}
+
+/* ---------- page state ---------- */
+let cur = 0, view = "actual", focus = null;
+const $ = s => document.querySelector(s);
+
+function defectsOf(c){
+  const d = [1, 3, 4];
+  if (isNameBug(c)) d.splice(1, 0, 2);
+  return d.sort();
+}
+
+function renderTabs(){
+  $("#tabs").innerHTML = CASES.map((c, i) => {
+    const ds = defectsOf(c);
+    return '<button class="tab" role="tab" aria-selected="' + (i === cur) + '" data-i="' + i + '">' +
+      esc(c.id) + '<span class="dots" aria-label="' + ds.length + ' defects">' +
+      ds.map(() => '<span class="dot"></span>').join("") + "</span></button>";
+  }).join("");
+}
+
+function renderCase(){
+  const c = CASES[cur];
+  const ds = defectsOf(c);
+  const a = buildString(c, "actual"), b = buildString(c, "intended");
+  const docs = joinDocs(c);
+
+  $("#ticket").innerHTML =
+    '<div><div class="tsubj">' + esc(c.subj) + '</div>' +
+    '<div class="tmeta">' + esc(c.id) + " · " + esc(c.customer.given_name || c.customer.firstName) + " " +
+      esc(c.customer.last) + " · " + esc(c.account.plan) + " · " + c.account.seats + " seats · contact from " +
+      esc(c.customer.source) + "</div>" +
+    '<div class="tmeta" style="margin-top:6px">defects present: ' +
+      ds.map(d => '<span class="badge d' + d + '" style="padding:2px 5px;font-size:11px">' + SHAPE[d] + " " + d + "</span>").join(" ") +
+      "</div></div>" +
+    '<div class="tnums">' +
+      "<span><b>~" + fmt(tk(a)) + "</b>tokens sent</span>" +
+      "<span><b>~" + fmt(tk(b)) + "</b>tokens intended</span>" +
+      "<span><b>" + fmt(docs.length - LIMIT) + "</b>chars dropped</span>" +
+      "<span><b>" + Math.round((docs.length - LIMIT) / docs.length * 100) + "%</b>of retrieval lost</span>" +
+    "</div>";
+
+  const panes = $("#panes");
+  panes.className = "panes" + (view === "split" ? " split" : "");
+  panes.innerHTML = view === "split"
+    ? renderPane(c, "actual") + renderPane(c, "intended")
+    : renderPane(c, view);
+
+  $("#answers").innerHTML =
+    '<div class="ans bad"><h3><span>✗</span> What Support Assist sent</h3><p>' + esc(c.gave) +
+      '</p><div class="cause">why: ' + esc(c.cause) + "</div></div>" +
+    '<div class="ans good"><h3><span>✓</span> What the docs actually say</h3><p>' + esc(c.want) +
+      '</p><div class="cause">source: ' + esc(c.docs[c.docs.length - 1].id) + " — retrieved, ranked " +
+      c.docs.length + ", never sent</div></div>";
+
+  document.querySelectorAll(".tab").forEach((t, i) => t.setAttribute("aria-selected", String(i === cur)));
+}
+
+function setFocus(d){
+  focus = (focus === d) ? null : d;
+  if (focus && defectsOf(CASES[cur]).indexOf(focus) === -1){
+    const j = CASES.findIndex(c => defectsOf(c).indexOf(focus) > -1);
+    if (j > -1){ cur = j; renderCase(); }
+  }
+  if (focus) document.body.setAttribute("data-focus", String(focus));
+  else document.body.removeAttribute("data-focus");
+  document.querySelectorAll(".drow").forEach(r =>
+    r.setAttribute("aria-pressed", String(Number(r.dataset.d) === focus)));
+  const fn = $("#focusnote");
+  if (focus){
+    fn.hidden = false;
+    fn.innerHTML = "isolating " + SHAPE[focus] + focus +
+      ' <button type="button" id="clearfocus">show all</button>';
+    $("#clearfocus").onclick = e => { e.stopPropagation(); setFocus(focus); };
+  } else fn.hidden = true;
+}
+
+/* ---------- wiring ---------- */
+document.querySelectorAll(".drow").forEach(r =>
+  r.addEventListener("click", () => setFocus(Number(r.dataset.d))));
+
+$("#tabs").addEventListener("click", e => {
+  const t = e.target.closest(".tab");
+  if (!t) return;
+  cur = Number(t.dataset.i); renderCase();
+});
+
+document.querySelectorAll(".seg button").forEach(b =>
+  b.addEventListener("click", () => {
+    view = b.dataset.view;
+    document.querySelectorAll(".seg button").forEach(x =>
+      x.setAttribute("aria-pressed", String(x === b)));
+    renderCase();
+  }));
+
+document.addEventListener("keydown", e => {
+  if (e.target.tagName === "INPUT") return;
+  if (e.key === "ArrowRight"){ cur = (cur + 1) % CASES.length; renderCase(); }
+  if (e.key === "ArrowLeft"){ cur = (cur - 1 + CASES.length) % CASES.length; renderCase(); }
+  if (e.key === "Escape" && focus) setFocus(focus);
+});
+
+/* pills + headline numbers, computed from the same data the panes use */
+(function init(){
+  document.querySelectorAll("[data-pills]").forEach(p => {
+    const d = Number(p.dataset.pills);
+    p.innerHTML = CASES.map((c, i) =>
+      '<span class="pill' + (defectsOf(c).indexOf(d) > -1 ? " on" : "") + '" title="' + c.id + '">' +
+      (i + 1) + "</span>").join("");
+  });
+  let lost = 0, tot = 0;
+  CASES.forEach(c => { const j = joinDocs(c); tot += j.length; lost += j.length - LIMIT; });
+  $("#s-drop").textContent = Math.round(lost / tot * 100) + "%";
+  $("#s-tok").textContent = "~" + fmt(tk(PREAMBLE));
+  renderTabs(); renderCase();
+
+  const bar = document.querySelector(".bar");
+  const sync = () => document.documentElement.style.setProperty("--barh", bar.offsetHeight + "px");
+  sync();
+  window.addEventListener("resize", sync);
+  if (window.ResizeObserver) new ResizeObserver(sync).observe(bar);
+})();
+</script>
+</body>
+</html>

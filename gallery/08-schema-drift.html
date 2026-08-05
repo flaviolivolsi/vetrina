@@ -1,0 +1,350 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gregario · outbox schema drift</title>
+<link rel="stylesheet" href="/_vetrina/kit.css">
+
+<style>
+  /* Only what the kit does not own: the paired declaration panels.
+     The kit gives the frame, the tokens, the type and the two-up layout;
+     this gives the line-for-line alignment and the in-place drift marks. */
+
+  .decl {
+    background: var(--v-sunken);
+    border: var(--v-hair) solid var(--v-line);
+    border-radius: var(--v-radius);
+    overflow: hidden;
+  }
+
+  /* Two fixed one-line rows, so both panel heads are always the same height
+     and row 01 on the left starts level with row 01 on the right. */
+  .decl-head {
+    padding: var(--v-3) var(--v-4);
+    background: var(--v-raised);
+    border-block-end: var(--v-hair) solid var(--v-line);
+  }
+  .decl-side {
+    font-size: var(--v-t-1);
+    letter-spacing: .18em;
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+  .decl-side .decl-engine { color: var(--v-fg-3); font-weight: 400; }
+  .decl-path {
+    display: block;
+    margin-block-start: var(--v-1);
+    font-size: var(--v-t-1);
+    color: var(--v-fg-3);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* The code scrolls inside itself. The page never moves. */
+  .decl-scroll { overflow-x: auto; overscroll-behavior-x: contain; }
+  .decl-body {
+    min-inline-size: max-content;
+    padding-block: var(--v-3);
+  }
+
+  .ln {
+    display: flex;
+    align-items: stretch;
+    background: var(--v-sunken);
+  }
+  /* The pair key. Sticky, so when the reader scrolls a long line sideways the
+     key it belongs to is still on screen. It is the same key on both sides. */
+  .ln-k {
+    flex: none;
+    position: sticky;
+    inset-inline-start: 0;
+    inline-size: 4.4em;
+    padding-inline: var(--v-2) var(--v-2);
+    background: inherit;
+    border-inline-start: 3px solid transparent;
+    border-inline-end: var(--v-hair) solid var(--v-line);
+    color: var(--v-fg-3);
+    font-size: var(--v-t-1);
+    letter-spacing: .06em;
+    line-height: 1.75;
+    text-align: end;
+    white-space: nowrap;
+  }
+  .ln-t {
+    padding-inline: var(--v-3) var(--v-5);
+    font-size: var(--v-t-2);
+    line-height: 1.75;
+    white-space: pre;
+  }
+  .ln-ghost { color: var(--v-fg-3); font-style: italic; }
+
+  /* The in-place mark. Never colour alone: every marked line carries a glyph in
+     the gutter and a spelled-out annotation on the line itself. */
+  .ann {
+    margin-inline-start: 3ch;
+    font-size: var(--v-t-1);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    white-space: pre;
+  }
+
+  .ln.d1, .ln.d2, .ln.d3 { background: var(--v-raised); }
+  .ln.d1 .ln-k { border-inline-start-color: var(--v-urgent); color: var(--v-urgent); }
+  .ln.d2 .ln-k { border-inline-start-color: var(--v-warn);   color: var(--v-warn); }
+  .ln.d3 .ln-k { border-inline-start-color: var(--v-idle);   color: var(--v-idle); }
+  .ln.d1 .ann { color: var(--v-urgent); }
+  .ln.d2 .ann { color: var(--v-warn); }
+  .ln.d3 .ann { color: var(--v-idle); }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--v-2) var(--v-5);
+    margin-block: var(--v-4) var(--v-5);
+    font-size: var(--v-t-1);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--v-fg-3);
+  }
+  .legend .g1 { color: var(--v-urgent); }
+  .legend .g2 { color: var(--v-warn); }
+  .legend .g3 { color: var(--v-idle); }
+
+  @media (forced-colors: active) {
+    .ln.d1 .ln-k, .ln.d2 .ln-k, .ln.d3 .ln-k { border-inline-start-color: CanvasText; }
+    .decl { border: 1px solid CanvasText; }
+  }
+</style>
+
+<div class="v-wrap">
+
+  <header class="v-rise">
+    <p class="v-kicker">
+      <span class="v-dot" aria-hidden="true"></span>
+      <span>Gregario</span>
+      <span>sync / outbox</span>
+      <span>schema drift</span>
+    </p>
+
+    <h1 class="v-headline">Three columns drifted. Only queued_at was on purpose.</h1>
+
+    <p class="v-standfirst">
+      Gregario is local-first: a ride is written to SQLite on the phone, queued in an
+      <code>outbox</code> table, and pushed to Postgres later with last-write-wins. That means
+      <code>outbox</code> is declared twice &mdash; once as an Expo SQLite migration, once as a Drizzle
+      table &mdash; and nothing in the build compares the two. Eleven columns, three of them no longer
+      agree. One divergence is deliberate and documented. The other two have been quietly changing
+      what syncs.
+    </p>
+
+    <ul class="v-meta">
+      <li>repo gregario &middot; main &middot; 9f2c1ab</li>
+      <li>apps/mobile &harr; apps/api</li>
+      <li>compared by hand, column for column</li>
+      <li>04 Aug 2026</li>
+    </ul>
+  </header>
+
+  <div class="v-stats v-rise">
+    <div class="v-stat">
+      <div class="v-stat-label">Columns compared</div>
+      <div class="v-stat-num">11</div>
+      <p class="v-stat-qual">One table, two declarations, no shared source of truth.</p>
+    </div>
+    <div class="v-stat is-warn">
+      <div class="v-stat-label">Drifted</div>
+      <div class="v-stat-num">3</div>
+      <p class="v-stat-qual">Nullability, timestamp precision, one extra column.</p>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Drifted on purpose</div>
+      <div class="v-stat-num">1</div>
+      <p class="v-stat-qual"><code>queued_at</code>. Local telemetry, never on the wire.</p>
+    </div>
+  </div>
+
+  <section class="v-hero">
+    <div class="v-section-head">
+      <h2>The two declarations</h2>
+      <span class="v-count">11 columns &middot; 3 marked</span>
+    </div>
+
+    <p class="v-section-note">
+      Line for line, in file order. The key in the left gutter is shared: <b>07</b> on the client is
+      <b>07</b> on the server, so when the two panels stack on a narrow screen you can still pair
+      them up. Long lines scroll inside their own panel. A drift is a break in the alignment, and
+      every broken line is marked in place.
+    </p>
+
+    <p class="legend">
+      <span><span class="g1">&#9670;</span> Drift 1 &mdash; nullability</span>
+      <span><span class="g2">&#9632;</span> Drift 2 &mdash; timestamp precision</span>
+      <span><span class="g3">&#9675;</span> Drift 3 &mdash; column on one side only</span>
+    </p>
+
+    <div class="v-pair">
+
+      <!-- ── CLIENT ────────────────────────────────────────────────── -->
+      <article class="decl">
+        <div class="decl-head">
+          <div class="decl-side">Client <span class="decl-engine">&mdash; SQLite, Expo</span></div>
+          <span class="decl-path">apps/mobile/src/db/migrations/0004_outbox.sql</span>
+        </div>
+        <div class="decl-scroll" tabindex="0" role="region" aria-label="Client declaration, SQLite migration">
+          <div class="decl-body">
+            <div class="ln"><span class="ln-k">01</span><span class="ln-t">CREATE TABLE outbox (</span></div>
+            <div class="ln"><span class="ln-k">02</span><span class="ln-t">  id          TEXT     PRIMARY KEY NOT NULL,</span></div>
+            <div class="ln d1"><span class="ln-k">&#9670; 03</span><span class="ln-t">  device_id   TEXT,<span class="ann">&#9670; Drift 1 &middot; nullable here</span></span></div>
+            <div class="ln"><span class="ln-k">04</span><span class="ln-t">  entity      TEXT     NOT NULL,</span></div>
+            <div class="ln"><span class="ln-k">05</span><span class="ln-t">  entity_id   TEXT     NOT NULL,</span></div>
+            <div class="ln"><span class="ln-k">06</span><span class="ln-t">  op          TEXT     NOT NULL,</span></div>
+            <div class="ln"><span class="ln-k">07</span><span class="ln-t">  payload     TEXT     NOT NULL,</span></div>
+            <div class="ln"><span class="ln-k">08</span><span class="ln-t">  attempts    INTEGER  NOT NULL DEFAULT 0,</span></div>
+            <div class="ln"><span class="ln-k">09</span><span class="ln-t">  last_error  TEXT,</span></div>
+            <div class="ln d2"><span class="ln-k">&#9632; 10</span><span class="ln-t">  updated_at  INTEGER  NOT NULL,               -- epoch milliseconds<span class="ann">&#9632; Drift 2 &middot; millisecond</span></span></div>
+            <div class="ln"><span class="ln-k">11</span><span class="ln-t">  synced_at   INTEGER,                        -- epoch milliseconds</span></div>
+            <div class="ln d3"><span class="ln-k">&#9675; 12</span><span class="ln-t">  queued_at   INTEGER  NOT NULL DEFAULT (unixepoch() * 1000)<span class="ann">&#9675; Drift 3 &middot; client only</span></span></div>
+            <div class="ln"><span class="ln-k">13</span><span class="ln-t">);</span></div>
+          </div>
+        </div>
+      </article>
+
+      <!-- ── SERVER ────────────────────────────────────────────────── -->
+      <article class="decl">
+        <div class="decl-head">
+          <div class="decl-side">Server <span class="decl-engine">&mdash; Drizzle, Postgres</span></div>
+          <span class="decl-path">apps/api/src/db/schema/outbox.ts</span>
+        </div>
+        <div class="decl-scroll" tabindex="0" role="region" aria-label="Server declaration, Drizzle schema">
+          <div class="decl-body">
+            <div class="ln"><span class="ln-k">01</span><span class="ln-t">export const outbox = pgTable("outbox", {</span></div>
+            <div class="ln"><span class="ln-k">02</span><span class="ln-t">  id:         uuid("id").primaryKey(),</span></div>
+            <div class="ln d1"><span class="ln-k">&#9670; 03</span><span class="ln-t">  deviceId:   text("device_id").notNull(),<span class="ann">&#9670; Drift 1 &middot; NOT NULL there</span></span></div>
+            <div class="ln"><span class="ln-k">04</span><span class="ln-t">  entity:     text("entity").notNull(),</span></div>
+            <div class="ln"><span class="ln-k">05</span><span class="ln-t">  entityId:   uuid("entity_id").notNull(),</span></div>
+            <div class="ln"><span class="ln-k">06</span><span class="ln-t">  op:         text("op").notNull(),</span></div>
+            <div class="ln"><span class="ln-k">07</span><span class="ln-t">  payload:    jsonb("payload").notNull(),</span></div>
+            <div class="ln"><span class="ln-k">08</span><span class="ln-t">  attempts:   integer("attempts").notNull().default(0),</span></div>
+            <div class="ln"><span class="ln-k">09</span><span class="ln-t">  lastError:  text("last_error"),</span></div>
+            <div class="ln d2"><span class="ln-k">&#9632; 10</span><span class="ln-t">  updatedAt:  timestamp("updated_at", { withTimezone: true, precision: 0 }).notNull(),<span class="ann">&#9632; Drift 2 &middot; whole seconds</span></span></div>
+            <div class="ln"><span class="ln-k">11</span><span class="ln-t">  syncedAt:   timestamp("synced_at",  { withTimezone: true, precision: 3 }),</span></div>
+            <div class="ln d3"><span class="ln-k">&#9675; 12</span><span class="ln-t"><span class="ln-ghost">  &middot;  no counterpart</span><span class="ann">&#9675; Drift 3 &middot; absent by design</span></span></div>
+            <div class="ln"><span class="ln-k">13</span><span class="ln-t">});</span></div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+  </section>
+
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>What each drift costs</h2>
+      <span class="v-count">2 to fix &middot; 1 to keep</span>
+    </div>
+
+    <p class="v-section-note">
+      Ordered by what it is doing to real rides right now, not by how old the divergence is.
+    </p>
+
+    <div class="v-card is-urgent">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#9670;</span>
+        <h3>Drift 1 &mdash; <code>device_id</code> is nullable on the phone and NOT NULL on the server</h3>
+        <span class="v-tag">Fix &middot; line 03</span>
+      </div>
+      <p>
+        The device id is read out of SecureStore asynchronously at launch. A ride started in the
+        first few hundred milliseconds after a cold start queues its first rows with
+        <code>device_id = NULL</code>. SQLite accepts them. The push then fails the whole batch on
+        the Postgres NOT NULL, the retry loop treats any non-2xx as &ldquo;still offline&rdquo;, and
+        the rows stay queued forever with <code>attempts</code> climbing.
+      </p>
+      <p class="v-why">
+        <b>Why it is silent:</b> the failure looks exactly like a tunnel. Nothing surfaces because
+        the outbox has no ceiling on <code>attempts</code> and no alert on queue age &mdash; the only
+        visible symptom is a queue that never reaches zero on a handful of devices.
+        <b>Fix on the client</b>, not the server: the server's constraint is the correct one.
+      </p>
+    </div>
+
+    <div class="v-card is-warn">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#9632;</span>
+        <h3>Drift 2 &mdash; <code>updated_at</code> keeps milliseconds locally, whole seconds on the server</h3>
+        <span class="v-tag">Fix &middot; line 10</span>
+      </div>
+      <p>
+        <code>precision: 0</code> rounds to whole seconds on insert, so two edits 300&nbsp;ms apart can arrive at the
+        server with identical <code>updated_at</code>. Last-write-wins compares with a strict
+        <code>&gt;</code>, an equal timestamp is not greater, and the incoming write loses. The
+        newer edit is discarded without an error, a log line or a conflict record.
+      </p>
+      <p class="v-why">
+        <b>The tell that this was a slip:</b> <code>synced_at</code> one line below is
+        <code>precision: 3</code>. Both columns store the same kind of value from the same clock;
+        only one of them was changed. <b>Also worth fixing:</b> the tie-break is currently whatever
+        order rows arrived in, which is not a decision anyone made.
+      </p>
+    </div>
+
+    <div class="v-card is-idle">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#9675;</span>
+        <h3>Drift 3 &mdash; <code>queued_at</code> exists only on the client</h3>
+        <span class="v-tag">By design &middot; line 12</span>
+      </div>
+      <p>
+        This is the intentional one. <code>queued_at</code> measures how long a row sat before it
+        synced; it feeds the queue-latency readout on the in-app debug screen and is meaningless on
+        the server, where the equivalent information is the request timestamp. It is not an
+        oversight and it should not be mirrored.
+      </p>
+      <p class="v-why">
+        <b>What keeps it safe:</b> <code>buildBatch()</code> names its columns explicitly rather
+        than selecting everything, so <code>queued_at</code> cannot reach the wire. That is the only
+        thing standing between a deliberate local column and an unknown-field rejection, and it is
+        one careless <code>SELECT *</code> away from stopping being true.
+      </p>
+    </div>
+  </section>
+
+  <section class="v-section v-air">
+    <div class="v-section-head">
+      <h2>What to change</h2>
+    </div>
+
+    <div class="v-prose">
+      <p>
+        Two of the three want a migration; the third wants a test. In order:
+      </p>
+      <ol>
+        <li>
+          Add <code>NOT NULL</code> to <code>device_id</code> in a new client migration and backfill
+          the queued NULL rows from SecureStore on next launch. Leave the server alone.
+        </li>
+        <li>
+          Change the server's <code>updated_at</code> to <code>precision: 3</code> so it matches
+          <code>synced_at</code> and the phone, then make the last-write-wins tie-break explicit
+          instead of leaving it to arrival order.
+        </li>
+        <li>
+          Keep <code>queued_at</code>, and add a test that asserts the push projection lists its
+          columns by name, so the deliberate drift stays deliberate.
+        </li>
+      </ol>
+      <p>
+        None of this is urgent in the sense of an outage. All of it is the kind of divergence that
+        gets harder to see the longer the two files live apart, which is the argument for generating
+        one declaration from the other before there is a fourth.
+      </p>
+    </div>
+  </section>
+
+  <footer class="v-footer">
+    Gregario &mdash; voice-first cycling copilot. Expo / React Native with SQLite on device,
+    Hono + Bun + Drizzle + Postgres on the server. Both declarations read at 9f2c1ab on 04 Aug 2026;
+    the comparison is by column name and by intent, not by a diff, because the two files are written
+    in different languages and a textual diff of them says everything is different.
+  </footer>
+
+</div>

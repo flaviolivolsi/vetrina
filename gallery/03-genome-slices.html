@@ -1,0 +1,391 @@
+<link rel="stylesheet" href="/_vetrina/kit.css">
+<title>Luxifare genome 41 — per-class gauntlet</title>
+
+<style>
+  /* The matrix. The kit gives the cells, the tint and the scroll container;
+     it deliberately does not pick a column count, so that is here. */
+  .m-matrix {
+    grid-template-columns:
+      minmax(8.5rem, 1.3fr)
+      repeat(5, minmax(4.6rem, 1fr));
+    align-items: stretch;
+  }
+  .m-row { display: contents; }
+
+  /* The class name has to stay readable while the measures scroll past it,
+     otherwise a phone reader loses which row they are in. */
+  .m-matrix .m-rowhead {
+    position: sticky;
+    inset-inline-start: 0;
+    z-index: 1;
+    background: var(--v-ground);
+    padding-inline-end: var(--v-3);
+    align-content: center;
+    text-transform: none;
+    letter-spacing: .04em;
+    font-size: var(--v-t-2);
+    color: var(--v-fg-2);
+  }
+  .m-matrix .m-corner { position: sticky; inset-inline-start: 0; z-index: 2; background: var(--v-ground); }
+  .m-rowhead .m-sub {
+    display: block;
+    font-size: var(--v-t-1);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--v-fg-3);
+  }
+  .m-rowhead.is-urgent { color: var(--v-urgent); }
+  .m-rowhead.is-urgent .m-sub { color: var(--v-urgent); }
+
+  .m-cell { align-content: center; }
+  /* The interval belongs next to the estimate, not in a column of its own. */
+  .m-err {
+    display: block;
+    font-size: var(--v-t-1);
+    letter-spacing: 0;
+    color: var(--v-fg-2);
+  }
+
+  .m-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--v-2) var(--v-5);
+    font-size: var(--v-t-1);
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--v-fg-3);
+    margin-block-start: var(--v-4);
+  }
+  .m-hint { color: var(--v-fg-3); }
+  @media (min-width: 720px) { .m-hint { display: none; } }
+
+  .m-net {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: var(--v-2) var(--v-4);
+    margin-block-start: var(--v-3);
+    padding-block-start: var(--v-3);
+    border-block-start: var(--v-hair) solid var(--v-line-strong);
+    font-size: var(--v-t-3);
+  }
+  .m-net b { font-weight: 600; }
+  .m-net .m-net-num { margin-inline-start: auto; }
+</style>
+
+<div class="v-wrap">
+
+  <header>
+    <p class="v-kicker">
+      <span><span class="v-dot"></span> luxifare</span>
+      <span>self-improving loop</span>
+      <span>run 41</span>
+    </p>
+
+    <h1 class="v-headline">Genome 41 is +22 Elo overall and &minus;24 in closed positions.</h1>
+
+    <p class="v-standfirst">
+      The gauntlet said the new genome was better and the aggregate was never wrong.
+      It was just incomplete. Split the same 9,600 games by position class and six of
+      seven classes improve, one regresses, and the regression is large enough that
+      its confidence interval never touches zero. This is the loop catching itself.
+    </p>
+
+    <ul class="v-meta">
+      <li>genome 41 vs genome 38</li>
+      <li>125 params / 32 concepts</li>
+      <li>9,600 games</li>
+      <li>8s + 0.08s</li>
+      <li>lichess 2535 rapid</li>
+    </ul>
+  </header>
+
+  <section class="v-hero" aria-labelledby="matrix-title">
+    <p class="v-kicker" id="matrix-title"><span>per-class breakdown</span><span>ordered worst first</span></p>
+
+    <div class="v-cells m-matrix v-rise" role="table" aria-label="Genome 41 versus genome 38 by position class">
+      <div class="m-row" role="row">
+        <div class="v-cell-head m-corner" role="columnheader">Position class</div>
+        <div class="v-cell-head" role="columnheader">Games</div>
+        <div class="v-cell-head" role="columnheader">Score %</div>
+        <div class="v-cell-head" role="columnheader">Elo &Delta;</div>
+        <div class="v-cell-head" role="columnheader">Draws %</div>
+        <div class="v-cell-head" role="columnheader">Length</div>
+      </div>
+
+      <div class="m-row" role="row">
+        <div class="v-cell-head m-rowhead is-urgent" role="rowheader">
+          <span class="v-glyph" aria-hidden="true">&#9660;</span> Closed
+          <span class="m-sub">regressed</span>
+        </div>
+        <div class="v-cell m-cell" role="cell" style="--v:.62">1,320</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.13">46.6</div>
+        <div class="v-cell m-cell is-urgent" role="cell" style="--v:.56">&minus;24<span class="m-err">&plusmn;13</span></div>
+        <div class="v-cell m-cell" role="cell" style="--v:1">52</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.74">78.2</div>
+      </div>
+
+      <div class="m-row" role="row">
+        <div class="v-cell-head m-rowhead" role="rowheader">Rook endgames</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.72">1,540</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.62">52.4</div>
+        <div class="v-cell m-cell is-ok" role="cell" style="--v:.40">+17<span class="m-err">&plusmn;12</span></div>
+        <div class="v-cell m-cell" role="cell" style="--v:.88">46</div>
+        <div class="v-cell m-cell" role="cell" style="--v:1">88.3</div>
+      </div>
+
+      <div class="m-row" role="row">
+        <div class="v-cell-head m-rowhead" role="rowheader">Pawn storms</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.34">720</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.68">53.1</div>
+        <div class="v-cell m-cell is-ok" role="cell" style="--v:.51">+22<span class="m-err">&plusmn;18</span></div>
+        <div class="v-cell m-cell" role="cell" style="--v:.46">24</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.23">58.9</div>
+      </div>
+
+      <div class="m-row" role="row">
+        <div class="v-cell-head m-rowhead" role="rowheader">Semi-open</div>
+        <div class="v-cell m-cell" role="cell" style="--v:1">2,140</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.74">53.9</div>
+        <div class="v-cell m-cell is-ok" role="cell" style="--v:.63">+27<span class="m-err">&plusmn;10</span></div>
+        <div class="v-cell m-cell" role="cell" style="--v:.65">34</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.39">64.8</div>
+      </div>
+
+      <div class="m-row" role="row">
+        <div class="v-cell-head m-rowhead" role="rowheader">Open</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.87">1,860</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.82">54.8</div>
+        <div class="v-cell m-cell is-ok" role="cell" style="--v:.77">+33<span class="m-err">&plusmn;11</span></div>
+        <div class="v-cell m-cell" role="cell" style="--v:.60">31</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.30">61.4</div>
+      </div>
+
+      <div class="m-row" role="row">
+        <div class="v-cell-head m-rowhead" role="rowheader">Minor-piece<span class="m-sub">endgames</span></div>
+        <div class="v-cell m-cell" role="cell" style="--v:.49">1,040</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.83">55.0</div>
+        <div class="v-cell m-cell is-ok" role="cell" style="--v:.81">+35<span class="m-err">&plusmn;14</span></div>
+        <div class="v-cell m-cell" role="cell" style="--v:.75">39</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.83">81.6</div>
+      </div>
+
+      <div class="m-row" role="row">
+        <div class="v-cell-head m-rowhead" role="rowheader">King attacks</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.46">980</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.93">56.2</div>
+        <div class="v-cell m-cell is-ok" role="cell" style="--v:1">+43<span class="m-err">&plusmn;15</span></div>
+        <div class="v-cell m-cell" role="cell" style="--v:.37">19</div>
+        <div class="v-cell m-cell" role="cell" style="--v:.07">52.7</div>
+      </div>
+    </div>
+
+    <p class="m-legend">
+      <span class="m-hint">&#9666; swipe the grid &#9656;</span>
+      <span>fill = share of that column&rsquo;s own maximum</span>
+      <span>score and Elo are genome 41&rsquo;s, from 38&rsquo;s side of the pairing</span>
+      <span>length in moves</span>
+    </p>
+
+    <div class="m-net">
+      <b>Net over all 9,600 games</b>
+      <span class="v-tag">53.1&#37; score</span>
+      <span class="m-net-num v-data">+21.6 Elo &plusmn;4.1</span>
+    </div>
+  </section>
+
+  <section class="v-stats" aria-label="Headline figures">
+    <div class="v-stat">
+      <div class="v-stat-label">Classes improved</div>
+      <div class="v-stat-num">6<span class="v-unit">of 7</span></div>
+      <div class="v-stat-qual">Every class except closed gained, by between 17 and 43 Elo.</div>
+    </div>
+    <div class="v-stat is-urgent">
+      <div class="v-stat-label">Closed positions</div>
+      <div class="v-stat-num">&minus;24<span class="v-unit">Elo</span></div>
+      <div class="v-stat-qual">46.6&#37; over 1,320 games. The &plusmn;13 interval does not reach zero, so this is not noise.</div>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Closed share of book</div>
+      <div class="v-stat-num">13.8<span class="v-unit">&#37;</span></div>
+      <div class="v-stat-qual">Small enough that the loss is worth 3.3 Elo of the aggregate, and invisible inside it.</div>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Params changed</div>
+      <div class="v-stat-num">7<span class="v-unit">of 125</span></div>
+      <div class="v-stat-qual">Four concepts touched. Two of the seven plausibly explain the closed-position loss.</div>
+    </div>
+  </section>
+
+  <section class="v-section" aria-labelledby="why">
+    <div class="v-section-head">
+      <h2 id="why">Why the aggregate hid it</h2>
+      <span class="v-count">contribution to the +21.6</span>
+    </div>
+    <p class="v-section-note">
+      Each class contributes its Elo delta weighted by its share of the book. The seven
+      contributions sum to the aggregate, which is exactly the problem: one negative term
+      of &minus;3.3 sits inside a total of +21.6 and never surfaces.
+    </p>
+
+    <div class="v-wf">
+      <div class="v-wf-row">
+        <span class="v-wf-label">Closed</span>
+        <span class="v-wf-neg" style="--v:.51"></span>
+        <span class="v-wf-pos"></span>
+        <span class="v-wf-value">&minus;3.3</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label">Pawn storms</span>
+        <span class="v-wf-neg"></span>
+        <span class="v-wf-pos" style="--v:.25"></span>
+        <span class="v-wf-value">+1.6</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label">Rook endgames</span>
+        <span class="v-wf-neg"></span>
+        <span class="v-wf-pos" style="--v:.42"></span>
+        <span class="v-wf-value">+2.7</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label">Minor-piece endgames</span>
+        <span class="v-wf-neg"></span>
+        <span class="v-wf-pos" style="--v:.58"></span>
+        <span class="v-wf-value">+3.8</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label">King attacks</span>
+        <span class="v-wf-neg"></span>
+        <span class="v-wf-pos" style="--v:.68"></span>
+        <span class="v-wf-value">+4.4</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label">Semi-open</span>
+        <span class="v-wf-neg"></span>
+        <span class="v-wf-pos" style="--v:.93"></span>
+        <span class="v-wf-value">+6.0</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label">Open</span>
+        <span class="v-wf-neg"></span>
+        <span class="v-wf-pos" style="--v:.98"></span>
+        <span class="v-wf-value">+6.4</span>
+      </div>
+    </div>
+
+    <div class="m-net">
+      <b>Sum</b>
+      <span class="v-tag">weighted by share of book</span>
+      <span class="m-net-num v-data">+21.6 Elo</span>
+    </div>
+  </section>
+
+  <section class="v-section" aria-labelledby="genome">
+    <div class="v-section-head">
+      <h2 id="genome">What moved in the genome</h2>
+      <span class="v-count">7 of 125 params</span>
+    </div>
+    <p class="v-section-note">
+      Genome 41 came from an LLM-proposed edit to four concepts, then 900 iterations of
+      numeric tuning on the surviving parameters. Two of the seven changes act almost
+      only when the pawn structure is locked, which is the definition of the class that
+      regressed.
+    </p>
+
+    <div class="v-card is-warn">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#9670;</span>
+        <h3><code>pawns.locked_chain_penalty</code></h3>
+        <span class="v-tag">prime suspect</span>
+      </div>
+      <p>
+        Introduced at &minus;18 cp, from nothing. The proposal was that a fixed chain
+        restricts the side that owns it, and in open and semi-open games it does. In a
+        genuinely closed position the chain is the asset, and the engine now pays to
+        avoid building one.
+      </p>
+      <p class="v-why">
+        <b>Evidence:</b> of the 1,320 closed games, 812 reached a position where this term
+        fired for more than 30 consecutive plies, and genome 41 scored 43.1&#37; in that
+        subset against 52.2&#37; in the rest.
+      </p>
+    </div>
+
+    <div class="v-card">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#9679;</span>
+        <h3><code>mobility.knight_blocked</code></h3>
+        <span class="v-tag">second suspect</span>
+      </div>
+      <p>
+        Deepened from &minus;5 to &minus;9 cp. Blocked knights are worth less in most
+        structures and worth more in closed ones, where they are the only piece that
+        travels. The tuner had no closed-position weight in its objective, so nothing
+        pushed back.
+      </p>
+    </div>
+
+    <details class="v-details">
+      <summary>All seven parameter changes, genome 38 &rarr; 41</summary>
+      <div class="v-details-body">
+        <table class="v-table">
+          <thead>
+            <tr>
+              <th scope="col">Parameter</th>
+              <th scope="col">Concept</th>
+              <th scope="col" class="v-num">G38</th>
+              <th scope="col" class="v-num">G41</th>
+              <th scope="col">Origin</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>pawns.locked_chain_penalty</code></td><td>Pawn structure</td><td class="v-num">0</td><td class="v-num">&minus;18</td><td>LLM proposal</td></tr>
+            <tr><td><code>mobility.knight_blocked</code></td><td>Mobility</td><td class="v-num">&minus;5</td><td class="v-num">&minus;9</td><td>tuner</td></tr>
+            <tr><td><code>mobility.bishop_open_diag</code></td><td>Mobility</td><td class="v-num">+21</td><td class="v-num">+35</td><td>LLM proposal</td></tr>
+            <tr><td><code>king.shelter_storm_scale</code></td><td>King safety</td><td class="v-num">1.00</td><td class="v-num">1.12</td><td>tuner</td></tr>
+            <tr><td><code>threats.hanging_minor</code></td><td>Threats</td><td class="v-num">+28</td><td class="v-num">+39</td><td>tuner</td></tr>
+            <tr><td><code>space.behind_pawn_bonus</code></td><td>Space</td><td class="v-num">+4</td><td class="v-num">+10</td><td>tuner</td></tr>
+            <tr><td><code>endgame.rook_activity</code></td><td>Endgame</td><td class="v-num">+52</td><td class="v-num">+59</td><td>tuner</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section class="v-section v-air" aria-labelledby="next">
+    <div class="v-section-head">
+      <h2 id="next">What the loop does with this</h2>
+    </div>
+    <div class="v-prose">
+      <p>
+        Genome 41 still ships. A net +21.6 Elo with a known, bounded, single-class
+        regression is a better position to be in than a net +21.6 Elo with an unknown
+        one, and the whole reason the evaluation is 125 named parameters rather than a
+        weight matrix is that a finding like this can be pointed at a line.
+      </p>
+      <p>
+        The next generation inherits three constraints: closed positions are lifted to a
+        fixed 25&#37; of the book so the tuner cannot ignore them again,
+        <code>pawns.locked_chain_penalty</code> is pinned as a candidate for reversion,
+        and every future gauntlet reports per class before it reports an aggregate. The
+        aggregate stops being the acceptance test.
+      </p>
+    </div>
+  </section>
+
+  <footer class="v-footer">
+    <p>
+      Luxifare is an explainable chess engine: its evaluation is a genome of 125 tunable
+      parameters across 32 named concepts, new genomes are produced by LLM-guided mutation
+      followed by numeric optimisation, and each candidate earns its place by beating the
+      incumbent in a gauntlet. Currently around 2535 rapid on Lichess.
+    </p>
+    <p>
+      Gauntlet: 9,600 games at 8s + 0.08s, openings drawn from a 4-ply book labelled by
+      position class at ply 16, both colours played from every book line. Elo intervals
+      are 95&#37;. The project is real; every number on this page is invented for
+      demonstration.
+    </p>
+  </footer>
+
+</div>

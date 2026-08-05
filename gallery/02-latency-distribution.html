@@ -1,0 +1,374 @@
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gregario voice latency — the median said ship it</title>
+<link rel="stylesheet" href="/_vetrina/kit.css">
+
+<style>
+  /* The kit gives the strip, the bars and the axis. What it has no atom for is a
+     reference line standing on a distribution, so that is all this block adds. */
+  .g-plot { position: relative; }
+
+  .g-marks { position: relative; block-size: 4.1em; font-size: var(--v-t-1); }
+  .g-mark-label {
+    position: absolute;
+    inset-block-end: 0;
+    inset-inline-start: var(--x);
+    transform: translateX(-50%);
+    inline-size: 6em;
+    text-align: center;
+    letter-spacing: .1em;
+    color: var(--v-fg-3);
+    line-height: 1.35;
+  }
+  .g-mark-label b { display: block; color: var(--v-fg); font-weight: 600; }
+  .g-mark-label i { display: block; font-style: normal; font-variant-numeric: tabular-nums; }
+  .g-mark-label u { display: block; text-decoration: none; line-height: 1; }
+
+  .g-strip { position: relative; }
+  .g-rule {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: var(--x);
+    inline-size: 0;
+    border-inline-start: var(--v-hair) dashed var(--v-line-strong);
+  }
+  .g-rule.is-last { border-inline-start: 2px solid var(--v-fg); }
+
+  /* The strip is an ordered list here, so every bucket is a list item and the
+     reading order is the time order. */
+  ol.v-dist { list-style: none; margin: 0; padding-inline: 0; }
+
+  /* The axis belongs under this chart, not over it. */
+  .g-plot .v-axis {
+    border-block-end: 0;
+    border-block-start: var(--v-hair) solid var(--v-line-strong);
+    padding-block: var(--v-1) 0;
+    margin-block: 0;
+  }
+
+  .g-caption {
+    font-family: var(--v-prose);
+    font-size: var(--v-t-2);
+    color: var(--v-fg-3);
+    margin: var(--v-5) 0 0;
+    max-width: var(--v-prose-measure);
+  }
+
+  figure { margin: 0; }
+
+  @media (forced-colors: active) {
+    .g-rule { border-inline-start-color: CanvasText; }
+  }
+</style>
+
+<div class="v-wrap">
+
+  <header class="v-air">
+    <p class="v-kicker">
+      <span class="v-dot" aria-hidden="true"></span>
+      <span>Gregario</span>
+      <span>voice turn latency</span>
+      <span>10,000 turns</span>
+    </p>
+
+    <h1 class="v-headline">The median said ship it. One turn in a hundred is 3.3 seconds long.</h1>
+
+    <p class="v-standfirst">
+      Speech-out to first-audio-back, measured on device across 10,000 real voice
+      turns. p50 is <b>950&nbsp;ms</b> and reads as a reply. p95 is <b>1,940&nbsp;ms</b>
+      and is survivable. p99 is <b>3,310&nbsp;ms</b>, and at three seconds a rider
+      assumes the thing did not hear them and says it again — which starts a second
+      turn, on a bike, at 34&nbsp;km/h. The mean for this same set is
+      <b>1,081&nbsp;ms</b>. It sits 131&nbsp;ms from the median and hides all of it.
+    </p>
+
+    <ul class="v-meta">
+      <li>21 Jul – 3 Aug 2026</li>
+      <li>Expo SDK 55 · React Native</li>
+      <li>Hono · Bun · Drizzle · Postgres</li>
+      <li>Buckets of 200 ms</li>
+      <li>Demo page · numbers invented</li>
+    </ul>
+  </header>
+
+  <figure class="v-hero v-rise">
+    <div class="g-plot">
+
+      <div class="g-marks" aria-hidden="true">
+        <div class="g-mark-label" style="--x:15.0%"><b>p50</b><i>950 ms</i><u>▼</u></div>
+        <div class="g-mark-label" style="--x:34.8%"><b>p95</b><i>1,940 ms</i><u>▼</u></div>
+        <div class="g-mark-label" style="--x:62.2%"><b>▲ p99</b><i>3,310 ms</i><u>▼</u></div>
+      </div>
+
+      <div class="g-strip">
+        <ol class="v-dist">
+          <li style="--v:.068"><span class="v-sr">200–400 ms: 14 turns</span></li>
+          <li style="--v:.402"><span class="v-sr">400–600 ms: 486 turns</span></li>
+          <li style="--v:.851"><span class="v-sr">600–800 ms: 2,180 turns</span></li>
+          <li style="--v:1"><span class="v-sr">800–1,000 ms: 3,010 turns, the mode</span></li>
+          <li style="--v:.778"><span class="v-sr">1.0–1.2 s: 1,820 turns</span></li>
+          <li style="--v:.579"><span class="v-sr">1.2–1.4 s: 1,010 turns</span></li>
+          <li style="--v:.428"><span class="v-sr">1.4–1.6 s: 552 turns</span></li>
+          <li style="--v:.316"><span class="v-sr">1.6–1.8 s: 300 turns</span></li>
+          <li style="--v:.243"><span class="v-sr">1.8–2.0 s: 178 turns</span></li>
+          <li class="is-urgent" style="--v:.196"><span class="v-sr">2.0–2.2 s: 116 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.161"><span class="v-sr">2.2–2.4 s: 78 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.135"><span class="v-sr">2.4–2.6 s: 55 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.115"><span class="v-sr">2.6–2.8 s: 40 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.100"><span class="v-sr">2.8–3.0 s: 30 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.085"><span class="v-sr">3.0–3.2 s: 22 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.071"><span class="v-sr">3.2–3.4 s: 15 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.063"><span class="v-sr">3.4–3.6 s: 12 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.058"><span class="v-sr">3.6–3.8 s: 10 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.055"><span class="v-sr">3.8–4.0 s: 9 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.052"><span class="v-sr">4.0–4.2 s: 8 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.048"><span class="v-sr">4.2–4.4 s: 7 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.045"><span class="v-sr">4.4–4.6 s: 6 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.045"><span class="v-sr">4.6–4.8 s: 6 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.041"><span class="v-sr">4.8–5.0 s: 5 turns, over budget</span></li>
+          <li class="is-urgent" style="--v:.101"><span class="v-sr">5.0 s and over: 31 turns, worst 11,204 ms</span></li>
+        </ol>
+        <span class="g-rule" style="--x:15.0%" aria-hidden="true"></span>
+        <span class="g-rule" style="--x:34.8%" aria-hidden="true"></span>
+        <span class="g-rule is-last" style="--x:62.2%" aria-hidden="true"></span>
+      </div>
+
+      <div class="v-axis">
+        <span>0.2 s</span>
+        <span>2.7 s</span>
+        <span>5 s +</span>
+      </div>
+    </div>
+
+    <figcaption class="g-caption">
+      10,000 turns in 200 ms buckets, shortest on the left. The tallest bucket is
+      800–1,000 ms and holds 3,010 turns. <b>Bar height is square-root scaled</b>
+      — on a linear count axis every bucket past 2 s is a single pixel and the
+      finding disappears. The red buckets are the 450 turns past the 2 s budget:
+      4.5% of the ride, and the only part of this chart anybody complained about.
+      Nothing lands under 200 ms because the endpoint decision alone costs 180.
+    </figcaption>
+  </figure>
+
+  <div class="v-stats">
+    <div class="v-stat">
+      <div class="v-stat-label">● p50</div>
+      <div class="v-stat-num">950<span class="v-unit">ms</span></div>
+      <p class="v-stat-qual">Reads as a reply. This is the number that made us confident.</p>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">◆ p95</div>
+      <div class="v-stat-num">1,940<span class="v-unit">ms</span></div>
+      <p class="v-stat-qual">Just inside the 2 s budget. Riders wait, and they notice waiting.</p>
+    </div>
+    <div class="v-stat is-urgent">
+      <div class="v-stat-label">▲ p99 — breaks it</div>
+      <div class="v-stat-num">3,310<span class="v-unit">ms</span></div>
+      <p class="v-stat-qual">Past this they repeat themselves and the turn is spent twice.</p>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">■ over 2 s</div>
+      <div class="v-stat-num">450<span class="v-unit">turns</span></div>
+      <p class="v-stat-qual">4.5% of all turns. Worst single turn: 11,204 ms.</p>
+    </div>
+  </div>
+
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>What the tail actually is</h2>
+      <span class="v-count">100 slowest turns</span>
+    </div>
+    <p class="v-section-note">
+      Two independent causes, and they are not spread evenly — both cluster on the
+      first turn after the rider has been quiet, which on a real ride means every
+      climb and every descent. Ordered by how many of the 100 slowest turns each
+      one explains.
+    </p>
+
+    <div class="v-card is-urgent">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">▲</span>
+        <h3>Cold TTS voice after a silence gap</h3>
+        <span class="v-tag">61 of 100 · fix now</span>
+      </div>
+      <p>
+        The synthesis provider parks a voice model after 90 s idle in
+        <code>eu-west-1</code>. A rider climbing for eight minutes says nothing,
+        and the first thing they say afterwards pays a cold load. Median TTS
+        first-chunk is 190 ms; on these turns it is 870 ms.
+      </p>
+      <p class="v-why">
+        <b>Why it hid:</b> our staging loop talks every few seconds, so the voice
+        was never cold and this cause has a measured rate of <b>zero</b> in
+        pre-production. It only exists on rides.
+      </p>
+    </div>
+
+    <div class="v-card is-warn">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">◆</span>
+        <h3>LLM 429, retried once, full re-request</h3>
+        <span class="v-tag">31 of 100 · next</span>
+      </div>
+      <p>
+        The Hono handler retries a rate-limited completion after a 400 ms backoff
+        and re-sends the whole prompt rather than resuming the stream. Median LLM
+        first-token is 340 ms; on a retried turn it is 1,980 ms — the backoff plus
+        a second cold prompt.
+      </p>
+      <p class="v-why">
+        <b>Why it hid:</b> the retry succeeds, so the turn is logged
+        <b>200 OK</b> and never appears in an error rate.
+      </p>
+    </div>
+
+    <div class="v-card is-idle">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">○</span>
+        <h3>Everything else</h3>
+        <span class="v-tag">8 of 100 · watch</span>
+      </div>
+      <p>
+        Cellular handover mid-turn, mostly. No pattern worth chasing until the
+        first two are gone.
+      </p>
+    </div>
+  </section>
+
+  <section class="v-section">
+    <div class="v-section-head">
+      <h3>Where the time goes</h3>
+      <span class="v-count">same scale, 0–2,000 ms</span>
+    </div>
+    <p class="v-section-note">
+      Supporting detail, not the finding. The point of putting these side by side
+      is that the slow turn is not uniformly slow: three of the five stages barely
+      move, and two carry 2,320 ms of the 2,360 ms of difference.
+    </p>
+
+    <div class="v-split">
+      <div>
+        <p class="v-kicker">● Median turn · 950 ms total</p>
+        <div class="v-bars" style="margin-block-start:var(--v-4)">
+          <div class="v-bar">
+            <span class="v-bar-label">VAD endpoint</span>
+            <span class="v-bar-track" style="--v:.090"></span>
+            <span class="v-bar-value">180 ms</span>
+          </div>
+          <div class="v-bar">
+            <span class="v-bar-label">Speech to text</span>
+            <span class="v-bar-track" style="--v:.105"></span>
+            <span class="v-bar-value">210 ms</span>
+          </div>
+          <div class="v-bar">
+            <span class="v-bar-label">LLM first token</span>
+            <span class="v-bar-track" style="--v:.170"></span>
+            <span class="v-bar-value">340 ms</span>
+          </div>
+          <div class="v-bar">
+            <span class="v-bar-label">TTS first chunk</span>
+            <span class="v-bar-track" style="--v:.095"></span>
+            <span class="v-bar-value">190 ms</span>
+          </div>
+          <div class="v-bar">
+            <span class="v-bar-label">Playback start</span>
+            <span class="v-bar-track" style="--v:.015"></span>
+            <span class="v-bar-value">30 ms</span>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <p class="v-kicker">▲ p99 turn · 3,310 ms total</p>
+        <div class="v-bars" style="margin-block-start:var(--v-4)">
+          <div class="v-bar">
+            <span class="v-bar-label">VAD endpoint</span>
+            <span class="v-bar-track" style="--v:.090"></span>
+            <span class="v-bar-value">180 ms</span>
+          </div>
+          <div class="v-bar">
+            <span class="v-bar-label">Speech to text</span>
+            <span class="v-bar-track" style="--v:.120"></span>
+            <span class="v-bar-value">240 ms</span>
+          </div>
+          <div class="v-bar is-urgent">
+            <span class="v-bar-label">LLM first token ▲</span>
+            <span class="v-bar-track" style="--v:.990"></span>
+            <span class="v-bar-value">1,980 ms</span>
+          </div>
+          <div class="v-bar is-urgent">
+            <span class="v-bar-label">TTS first chunk ▲</span>
+            <span class="v-bar-track" style="--v:.435"></span>
+            <span class="v-bar-value">870 ms</span>
+          </div>
+          <div class="v-bar">
+            <span class="v-bar-label">Playback start</span>
+            <span class="v-bar-track" style="--v:.020"></span>
+            <span class="v-bar-value">40 ms</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <details class="v-details">
+      <summary>All 25 buckets, as numbers</summary>
+      <div class="v-details-body">
+        <table class="v-table">
+          <thead>
+            <tr><th>Bucket</th><th class="v-num">Turns</th><th class="v-num">Share</th><th class="v-num">Cumulative</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>200–400 ms</td><td class="v-num">14</td><td class="v-num">0.14%</td><td class="v-num">0.14%</td></tr>
+            <tr><td>400–600 ms</td><td class="v-num">486</td><td class="v-num">4.86%</td><td class="v-num">5.00%</td></tr>
+            <tr><td>600–800 ms</td><td class="v-num">2,180</td><td class="v-num">21.80%</td><td class="v-num">26.80%</td></tr>
+            <tr><td>800–1,000 ms</td><td class="v-num">3,010</td><td class="v-num">30.10%</td><td class="v-num">56.90%</td></tr>
+            <tr><td>1.0–1.2 s</td><td class="v-num">1,820</td><td class="v-num">18.20%</td><td class="v-num">75.10%</td></tr>
+            <tr><td>1.2–1.4 s</td><td class="v-num">1,010</td><td class="v-num">10.10%</td><td class="v-num">85.20%</td></tr>
+            <tr><td>1.4–1.6 s</td><td class="v-num">552</td><td class="v-num">5.52%</td><td class="v-num">90.72%</td></tr>
+            <tr><td>1.6–1.8 s</td><td class="v-num">300</td><td class="v-num">3.00%</td><td class="v-num">93.72%</td></tr>
+            <tr><td>1.8–2.0 s</td><td class="v-num">178</td><td class="v-num">1.78%</td><td class="v-num">95.50%</td></tr>
+            <tr><td>2.0–2.2 s ▲</td><td class="v-num">116</td><td class="v-num">1.16%</td><td class="v-num">96.66%</td></tr>
+            <tr><td>2.2–2.4 s ▲</td><td class="v-num">78</td><td class="v-num">0.78%</td><td class="v-num">97.44%</td></tr>
+            <tr><td>2.4–2.6 s ▲</td><td class="v-num">55</td><td class="v-num">0.55%</td><td class="v-num">97.99%</td></tr>
+            <tr><td>2.6–2.8 s ▲</td><td class="v-num">40</td><td class="v-num">0.40%</td><td class="v-num">98.39%</td></tr>
+            <tr><td>2.8–3.0 s ▲</td><td class="v-num">30</td><td class="v-num">0.30%</td><td class="v-num">98.69%</td></tr>
+            <tr><td>3.0–3.2 s ▲</td><td class="v-num">22</td><td class="v-num">0.22%</td><td class="v-num">98.91%</td></tr>
+            <tr><td>3.2–3.4 s ▲</td><td class="v-num">15</td><td class="v-num">0.15%</td><td class="v-num">99.06%</td></tr>
+            <tr><td>3.4–3.6 s ▲</td><td class="v-num">12</td><td class="v-num">0.12%</td><td class="v-num">99.18%</td></tr>
+            <tr><td>3.6–3.8 s ▲</td><td class="v-num">10</td><td class="v-num">0.10%</td><td class="v-num">99.28%</td></tr>
+            <tr><td>3.8–4.0 s ▲</td><td class="v-num">9</td><td class="v-num">0.09%</td><td class="v-num">99.37%</td></tr>
+            <tr><td>4.0–4.2 s ▲</td><td class="v-num">8</td><td class="v-num">0.08%</td><td class="v-num">99.45%</td></tr>
+            <tr><td>4.2–4.4 s ▲</td><td class="v-num">7</td><td class="v-num">0.07%</td><td class="v-num">99.52%</td></tr>
+            <tr><td>4.4–4.6 s ▲</td><td class="v-num">6</td><td class="v-num">0.06%</td><td class="v-num">99.58%</td></tr>
+            <tr><td>4.6–4.8 s ▲</td><td class="v-num">6</td><td class="v-num">0.06%</td><td class="v-num">99.64%</td></tr>
+            <tr><td>4.8–5.0 s ▲</td><td class="v-num">5</td><td class="v-num">0.05%</td><td class="v-num">99.69%</td></tr>
+            <tr><td>5.0 s and over ▲</td><td class="v-num">31</td><td class="v-num">0.31%</td><td class="v-num">100.00%</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <section class="v-section v-air">
+    <div class="v-section-head">
+      <h3>What we are changing</h3>
+    </div>
+    <p class="v-prose">
+      None of this touches the median, and that is the point — the median was
+      never the problem and any work aimed at it would have moved a number
+      nobody feels. Keep a synthesis warm for the duration of a ride rather than
+      for 90 s of chatter. On a 429, retry with backoff against a warm prompt cache
+      or a fallback model, so the retry does not pay the full setup cost again. Then re-run this same chart: the shape to look for
+      is the red smear shortening, not the hump moving.
+    </p>
+  </section>
+
+  <footer class="v-footer">
+    Gregario is a real project — voice-first AI cycling copilot, Expo SDK 55 on
+    the phone, Hono + Bun + Drizzle + Postgres on the server. The 10,000 turns,
+    the buckets, the percentiles and the two causes on this page are invented for
+    a demo. Latency is measured end-of-speech to first audible sample, on device,
+    wall clock.
+  </footer>
+
+</div>

@@ -1,0 +1,823 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Managed Postgres — 9 evaluated, 2 recommended</title>
+<style>
+:root{
+  --bg:#f4f3ef; --surface:#fffefb; --surface2:#ecebe5;
+  --ink:#15181d; --ink2:#4c5460; --ink3:#767f8d;
+  --rule:#dcd9d0; --rule2:#c6c2b6;
+  --ok:#1c6146; --ok-bg:#e2efe8;
+  --part:#7d5410; --part-bg:#f5ecd9;
+  --no:#95292b; --no-bg:#f6e3e2;
+  --unk:#4f3f96; --unk-bg:#eae6f7;
+  --accent:#1c6146;
+  --bar:#3c4450; --bar-track:#e2e0d8;
+  --shadow:0 1px 0 rgba(0,0,0,.05), 0 1px 3px rgba(0,0,0,.05);
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0d0f12; --surface:#15181d; --surface2:#1c2027;
+    --ink:#e7eaee; --ink2:#a3abb7; --ink3:#7d8695;
+    --rule:#272c34; --rule2:#3a414b;
+    --ok:#5fcf9f; --ok-bg:#11291f;
+    --part:#e0ab52; --part-bg:#2a2113;
+    --no:#f28575; --no-bg:#2e1817;
+    --unk:#ac97ee; --unk-bg:#211c33;
+    --accent:#5fcf9f;
+    --bar:#9aa4b2; --bar-track:#242932;
+    --shadow:0 1px 0 rgba(0,0,0,.4);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.5;
+  padding:0 0 4rem;
+}
+.wrap{max-width:1040px; margin:0 auto; padding:0 16px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+a{color:inherit}
+
+/* ---------- header ---------- */
+header{border-bottom:1px solid var(--rule); padding:26px 0 20px; margin-bottom:22px}
+.kicker{font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink3); margin:0 0 10px}
+h1{font-size:clamp(22px,4.6vw,32px); line-height:1.16; margin:0 0 12px; letter-spacing:-.018em; font-weight:650}
+h1 em{font-style:normal; color:var(--accent)}
+.scope{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; padding:0; list-style:none}
+.scope li{font-family:var(--mono); font-size:11.5px; color:var(--ink2);
+  border:1px solid var(--rule2); border-radius:2px; padding:3px 7px; background:var(--surface)}
+.scope li b{color:var(--ink); font-weight:600}
+.bottomline{
+  border-left:3px solid var(--accent); background:var(--surface);
+  padding:12px 14px; border-radius:0 4px 4px 0; box-shadow:var(--shadow);
+  font-size:15px; max-width:74ch;
+}
+.bottomline strong{font-weight:650}
+.meta{font-family:var(--mono); font-size:11px; color:var(--ink3); margin-top:12px}
+
+/* ---------- section headings ---------- */
+h2{font-size:12px; font-family:var(--mono); letter-spacing:.13em; text-transform:uppercase;
+  color:var(--ink3); font-weight:600; margin:34px 0 12px;
+  display:flex; align-items:center; gap:10px}
+h2::after{content:""; flex:1; height:1px; background:var(--rule)}
+
+/* ---------- finalists ---------- */
+.picks{display:grid; grid-template-columns:1fr 1fr; gap:12px}
+@media (max-width:720px){.picks{grid-template-columns:1fr}}
+.pick{background:var(--surface); border:1px solid var(--rule2); border-top:3px solid var(--accent);
+  border-radius:4px; padding:14px 15px 15px; box-shadow:var(--shadow)}
+.pick .tag{font-family:var(--mono); font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--accent); font-weight:700}
+.pick h3{margin:5px 0 2px; font-size:19px; letter-spacing:-.01em}
+.pick .price{font-family:var(--mono); font-size:13px; color:var(--ink2); margin-bottom:9px}
+.pick p{margin:0 0 8px; font-size:14.5px; color:var(--ink2)}
+.pick p:last-child{margin-bottom:0}
+.pick .lbl{font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.1em;
+  color:var(--ink3); display:block}
+.fork{margin:12px 0 0; font-size:14.5px; color:var(--ink2); max-width:78ch}
+.fork b{color:var(--ink)}
+
+/* ---------- unverified ---------- */
+.unv{border:2px dashed var(--unk); border-radius:5px; background:var(--unk-bg); padding:13px 15px}
+.unv > p{margin:0 0 10px; font-size:14px; color:var(--ink2)}
+.uitem{border-top:1px dashed var(--rule2); padding:11px 0 0; margin-top:11px}
+.uitem:first-of-type{border-top:0; padding-top:0; margin-top:0}
+.uitem h4{margin:0 0 4px; font-size:14.5px; display:flex; gap:8px; align-items:baseline; flex-wrap:wrap}
+.ucode{font-family:var(--mono); font-size:11px; font-weight:700; color:var(--unk);
+  border:1px solid var(--unk); border-radius:2px; padding:1px 5px; letter-spacing:.06em}
+.uitem p{margin:0 0 6px; font-size:14px; color:var(--ink2)}
+.uimpact{font-size:13.5px; color:var(--ink); background:var(--surface);
+  border-radius:3px; padding:6px 9px; display:block}
+.uimpact b{font-family:var(--mono); font-size:10.5px; text-transform:uppercase; letter-spacing:.09em; color:var(--ink3)}
+
+/* ---------- controls ---------- */
+.controls{background:var(--surface); border:1px solid var(--rule2); border-radius:5px;
+  padding:12px 14px; box-shadow:var(--shadow)}
+.ctrlhead{display:flex; flex-wrap:wrap; align-items:center; gap:10px 16px; margin-bottom:11px}
+.ctrlhead .lab{font-family:var(--mono); font-size:10.5px; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--ink3)}
+.sorts{display:flex; gap:0; border:1px solid var(--rule2); border-radius:3px; overflow:hidden}
+.sorts button{font-family:var(--mono); font-size:11.5px; padding:5px 10px; border:0;
+  border-left:1px solid var(--rule2); background:var(--surface2); color:var(--ink2); cursor:pointer}
+.sorts button:first-child{border-left:0}
+.sorts button[aria-pressed="true"]{background:var(--ink); color:var(--bg); font-weight:700}
+.count{margin-left:auto; font-family:var(--mono); font-size:12px; color:var(--ink2)}
+.count b{color:var(--ink); font-size:15px}
+.filters{display:grid; grid-template-columns:1fr 1fr; gap:6px 14px}
+@media (max-width:720px){.filters{grid-template-columns:1fr}}
+.filters label{display:flex; gap:9px; align-items:flex-start; font-size:14px;
+  cursor:pointer; padding:3px 0; color:var(--ink2)}
+.filters input{margin:3px 0 0; width:16px; height:16px; accent-color:var(--accent); flex:none}
+.filters label:has(input:checked){color:var(--ink); font-weight:600}
+.ctrlfoot{display:flex; flex-wrap:wrap; gap:12px; align-items:center;
+  margin-top:11px; padding-top:10px; border-top:1px solid var(--rule)}
+.linkbtn{background:none; border:0; padding:0; font-family:var(--mono); font-size:11.5px;
+  color:var(--ink2); text-decoration:underline; text-underline-offset:3px; cursor:pointer}
+.legend{font-family:var(--mono); font-size:10.5px; color:var(--ink3); margin-left:auto}
+
+/* ---------- list ---------- */
+.list{display:flex; flex-direction:column; gap:8px; margin-top:12px}
+.divider{order:100; display:none; align-items:center; gap:10px; margin:14px 0 2px;
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.11em; text-transform:uppercase; color:var(--ink3)}
+.divider.on{display:flex}
+.divider::after{content:""; flex:1; height:1px; background:var(--rule2)}
+
+.card{background:var(--surface); border:1px solid var(--rule2); border-radius:5px;
+  box-shadow:var(--shadow); overflow:hidden}
+.card[data-verdict="finalist"]{border-left:4px solid var(--accent)}
+.card[data-verdict="viable"]{border-left:4px solid var(--rule2)}
+.card[data-verdict="out"]{border-left:4px solid transparent;
+  border-left-style:dashed; border-left-color:var(--rule2)}
+.card.out{opacity:.62}
+.card.out:hover,.card.out[open]{opacity:1}
+.card.flash{outline:2px solid var(--unk); outline-offset:1px}
+
+summary{list-style:none; cursor:pointer; padding:11px 13px; display:block}
+summary::-webkit-details-marker{display:none}
+summary:focus-visible{outline:2px solid var(--accent); outline-offset:-2px}
+.top{display:flex; align-items:baseline; gap:10px; flex-wrap:wrap}
+.rank{font-family:var(--mono); font-size:11px; color:var(--ink3); width:1.6em; flex:none}
+.name{font-size:17px; font-weight:650; letter-spacing:-.01em}
+.vendor{font-family:var(--mono); font-size:11px; color:var(--ink3)}
+.verdict{font-family:var(--mono); font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  font-weight:700; padding:2px 6px; border-radius:2px; border:1px solid}
+.verdict.finalist{color:var(--ok); border-color:var(--ok); background:var(--ok-bg)}
+.verdict.viable{color:var(--part); border-color:var(--part); background:var(--part-bg)}
+.verdict.out{color:var(--no); border-color:var(--no); background:var(--no-bg)}
+.cost{margin-left:auto; font-family:var(--mono); font-size:16px; font-weight:700; white-space:nowrap}
+.cost small{font-size:10.5px; font-weight:400; color:var(--ink3)}
+.oneline{font-size:14px; color:var(--ink2); margin:5px 0 0 calc(1.6em + 10px)}
+@media (max-width:560px){
+  .oneline{margin-left:0}
+  .cost{margin-left:0; width:100%; font-size:15px}
+}
+.chips{display:flex; flex-wrap:wrap; gap:5px; margin:9px 0 0 calc(1.6em + 10px)}
+@media (max-width:560px){.chips{margin-left:0}}
+.chip{font-family:var(--mono); font-size:11px; padding:2px 6px; border-radius:2px;
+  border:1px solid; display:inline-flex; align-items:center; gap:5px; white-space:nowrap}
+.chip .g{font-weight:800; font-size:11px}
+.chip.ok{color:var(--ok); border-color:var(--ok); background:var(--ok-bg)}
+.chip.part{color:var(--part); border-color:var(--part); background:var(--part-bg)}
+.chip.no{color:var(--no); border-color:var(--no); background:var(--no-bg); text-decoration:line-through;
+  text-decoration-thickness:1px}
+.chip.unk{color:var(--unk); border-color:var(--unk); background:var(--unk-bg); border-style:dashed}
+.chip.grp{border-color:var(--rule2); color:var(--ink3); background:transparent; padding-right:3px; gap:4px}
+.chip.grp b{color:var(--ink2); font-weight:600}
+.mig{display:inline-flex; align-items:center; gap:5px; font-family:var(--mono); font-size:11px;
+  border:1px solid var(--rule2); border-radius:2px; padding:2px 6px; color:var(--ink2)}
+.seg{display:inline-flex; gap:2px}
+.seg i{width:7px; height:11px; border:1px solid var(--ink3); border-radius:1px; display:block}
+.seg i.f{background:var(--ink2); border-color:var(--ink2)}
+
+.costbar{position:relative; height:5px; background:var(--bar-track); border-radius:0;
+  margin:10px 0 0 calc(1.6em + 10px)}
+@media (max-width:560px){.costbar{margin-left:0}}
+.costbar > span{position:absolute; left:0; top:0; bottom:0; background:var(--bar)}
+.costbar::after{content:""; position:absolute; left:94.3%; top:-3px; bottom:-3px; width:0;
+  border-left:2px dashed var(--ink3)}
+.why{margin:9px 0 0 calc(1.6em + 10px); font-family:var(--mono); font-size:11.5px;
+  color:var(--no); display:none}
+@media (max-width:560px){.why{margin-left:0}}
+.card.out .why{display:block}
+.why em{font-style:normal; border-bottom:1px dotted currentColor}
+
+/* ---------- detail ---------- */
+.detail{border-top:1px solid var(--rule); padding:4px 13px 14px; background:var(--surface2)}
+.dim{border-bottom:1px solid var(--rule); padding:12px 0}
+.dim:last-child{border-bottom:0}
+.dim h4{margin:0 0 5px; font-family:var(--mono); font-size:10.5px; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--ink3); font-weight:600}
+.dim p{margin:0; font-size:14.5px; color:var(--ink); max-width:82ch}
+.srcs{list-style:none; margin:8px 0 0; padding:0; display:flex; flex-direction:column; gap:4px}
+.srcs li{font-size:12.5px; line-height:1.45}
+.kind{font-family:var(--mono); font-size:9.5px; letter-spacing:.09em; font-weight:700;
+  border:1px solid var(--rule2); border-radius:2px; padding:1px 4px; color:var(--ink3);
+  margin-right:7px; vertical-align:1px}
+.kind.weak{border-style:dashed; color:var(--part); border-color:var(--part)}
+.srcs a{font-family:var(--mono); font-size:12px; color:var(--ink2);
+  word-break:break-all; text-decoration:underline; text-underline-offset:2px}
+.srcs a:hover{color:var(--accent)}
+.date{font-family:var(--mono); font-size:11px; color:var(--ink3); white-space:nowrap}
+
+/* ---------- footer ---------- */
+footer{margin-top:38px; border-top:1px solid var(--rule); padding-top:16px;
+  font-size:13.5px; color:var(--ink2); max-width:80ch}
+footer h2{margin-top:0}
+footer ul{padding-left:18px; margin:0 0 10px}
+footer li{margin-bottom:5px}
+noscript p{background:var(--no-bg); color:var(--no); border:1px solid var(--no);
+  padding:10px 12px; border-radius:4px; font-size:14px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <p class="kicker">Infrastructure research &middot; decision brief</p>
+  <h1>Managed Postgres to replace one Heroku instance —<br><em>9 evaluated, 2 recommended</em></h1>
+  <ul class="scope">
+    <li><b>400 GB</b> data</li>
+    <li><b>3,000</b> connections at peak</li>
+    <li>needs <b>postgis</b></li>
+    <li>needs <b>pg_cron</b></li>
+    <li>needs <b>pgvector</b></li>
+    <li><b>EU</b> region required</li>
+    <li>today: Heroku <b>standard-7</b> + follower, <b>$4,150/mo</b></li>
+  </ul>
+  <div class="bottomline">
+    <strong>Cost is not the deciding factor.</strong> All nine come in below today&rsquo;s
+    $4,150/mo Heroku bill — the cheapest qualifying option is roughly a third of it.
+    What actually narrows the field is <strong>pg_cron</strong> (removes Neon and Timescale outright),
+    the <strong>3,000-connection peak</strong> (removes Railway, and is the open question on Cloud SQL),
+    and <strong>extension coverage that can&rsquo;t be confirmed</strong> (removes PlanetScale for now).
+  </div>
+  <p class="meta">Researched 2026-07-28 &rarr; 2026-07-31 &middot; prices are USD/month, modelled from public list
+    prices at the scope above, not quotes &middot; 3 claims flagged unverified</p>
+</header>
+
+<h2>Recommendation</h2>
+<div class="picks">
+  <div class="pick">
+    <span class="tag">Pick A &middot; cheapest safe option</span>
+    <h3>AWS RDS for PostgreSQL</h3>
+    <p class="price">$1,455/mo on-demand &nbsp;&middot;&nbsp; $1,010/mo with a 1-yr RI</p>
+    <p><span class="lbl">Why</span>Stock community Postgres, all three extensions on the supported
+      list, 15 read replicas, every EU region, and the lowest-risk migration of the nine.</p>
+    <p><span class="lbl">What it costs you</span>You own the parameter groups, the upgrades and the
+      RDS Proxy config. It is a database, not a service — budget DBA time, not just dollars.</p>
+  </div>
+  <div class="pick">
+    <span class="tag">Pick B &middot; least operational load</span>
+    <h3>Crunchy Bridge</h3>
+    <p class="price">$2,160/mo with HA standby &nbsp;&middot;&nbsp; $1,120/mo without</p>
+    <p><span class="lbl">Why</span>Same Postgres, but pgBouncer is on by default, the extensions are
+      pre-loaded (they maintain PostGIS upstream), you get a near-superuser role, and they run the
+      migration with you.</p>
+    <p><span class="lbl">What it costs you</span>~48% more than RDS, a much smaller vendor, and one
+      unverified claim sits on this option — see <strong>U3</strong> below.</p>
+  </div>
+</div>
+<p class="fork">The choice between them is one question: <b>do you want to spend the difference
+  (~$700/mo) on not becoming a Postgres operations team?</b> Everything else about these two is
+  close enough to be noise.</p>
+
+<h2>3 claims I could not verify</h2>
+<div class="unv">
+  <p>These are gaps in the evidence, not opinions. Each one is scored pessimistically below, which
+    means the ranking would change if any turns out to be favourable.</p>
+
+  <div class="uitem">
+    <h4><span class="ucode">U1</span> PlanetScale for Postgres — is PostGIS available?</h4>
+    <p>Their extensions page enumerates a supported set (pgvector, pg_stat_statements, uuid-ossp,
+      citext, hstore, and others) and postgis is <em>not</em> on it — but the page never says the list is
+      exhaustive, and the June 2026 changelog mentions &ldquo;expanded extension support&rdquo; without naming
+      what was added. Asked in their community Slack on 2026-07-29; no answer as of writing.</p>
+    <span class="uimpact"><b>If wrong:</b> PlanetScale moves from ruled-out to viable, though pg_cron
+      would still be unaccounted for. <button class="linkbtn" data-jump="planetscale">Jump to
+      PlanetScale &rarr;</button></span>
+  </div>
+
+  <div class="uitem">
+    <h4><span class="ucode">U2</span> Cloud SQL — is managed connection pooling production-ready?</h4>
+    <p>The managed connection pooling documentation was still labelled <em>Preview</em> when checked on
+      2026-07-31, with no GA date, and Google&rsquo;s preview terms exclude previewed features from the
+      Cloud SQL SLA. I found no statement that it is supported at 3,000 client connections. Scored as
+      unavailable, which is why Cloud SQL&rsquo;s migration rating assumes you run your own PgBouncer.</p>
+    <span class="uimpact"><b>If wrong:</b> Cloud SQL becomes the cheapest fully-qualifying option at
+      ~$1,024/mo with a CUD — but the cross-cloud latency argument against it still stands.
+      <button class="linkbtn" data-jump="cloudsql">Jump to Cloud SQL &rarr;</button></span>
+  </div>
+
+  <div class="uitem">
+    <h4><span class="ucode">U3</span> Crunchy Bridge — what is cross-region replica lag?</h4>
+    <p>The docs describe cross-region read replicas but publish no lag figure and no RPO. A Crunchy
+      sales engineer said &ldquo;typically sub-second within Europe&rdquo; on a call on 2026-07-30; that is not
+      in any document and I could find no third-party benchmark. This is the one that matters most —
+      it sits on a recommended option.</p>
+    <span class="uimpact"><b>Do this before signing:</b> if the plan depends on a second-region EU
+      replica for read scaling, get the lag number in the contract.
+      <button class="linkbtn" data-jump="crunchy">Jump to Crunchy Bridge &rarr;</button></span>
+  </div>
+</div>
+
+<h2>All nine, side by side</h2>
+<div class="controls">
+  <div class="ctrlhead">
+    <span class="lab">Sort</span>
+    <div class="sorts" role="group" aria-label="Sort options">
+      <button type="button" data-sort="fit" aria-pressed="true">Best fit</button>
+      <button type="button" data-sort="cost" aria-pressed="false">Cheapest</button>
+      <button type="button" data-sort="mig" aria-pressed="false">Easiest migration</button>
+    </div>
+    <span class="count"><b id="n-in">9</b> of 9 still standing</span>
+  </div>
+  <div class="filters" id="filters">
+    <label><input type="checkbox" data-flag="ext3">All 3 extensions (postgis, pg_cron, pgvector)</label>
+    <label><input type="checkbox" data-flag="pooler">Managed pooler at 3k connections</label>
+    <label><input type="checkbox" data-flag="replicas">Managed read replicas + HA</label>
+    <label><input type="checkbox" data-flag="eu">EU region available</label>
+    <label><input type="checkbox" data-flag="flat">Predictable flat monthly bill</label>
+    <label><input type="checkbox" data-flag="stock">Stock Postgres, no platform lock-in</label>
+  </div>
+  <div class="ctrlfoot">
+    <button type="button" class="linkbtn" id="req-all">Tick every requirement</button>
+    <button type="button" class="linkbtn" id="reset">Reset filters</button>
+    <button type="button" class="linkbtn" id="toggle-all">Expand all</button>
+    <span class="legend">cost bar: 0 &rarr; $4,400/mo &middot; dashed tick = today&rsquo;s $4,150 Heroku bill</span>
+  </div>
+</div>
+
+<noscript><p>This page uses a little JavaScript for the sorting and filtering controls above.
+  Everything below still reads fine without it — the nine options are listed in best-fit order.</p></noscript>
+
+<div class="list" id="list">
+  <div class="divider" id="divider">Ruled out by your filters</div>
+</div>
+
+<footer>
+  <h2>Method &amp; caveats</h2>
+  <ul>
+    <li><b>Prices are models, not quotes.</b> Each is built from the vendor&rsquo;s public list price at
+      16 vCPU / 64 GiB class compute, 400 GB of storage, and HA where the platform treats it as
+      standard. Real bills will differ with IOPS, egress and support tier. Nobody was asked for a
+      discount; assume 10&ndash;25% is negotiable at this size on RDS, Cloud SQL and Crunchy.</li>
+    <li><b>&ldquo;Migration effort&rdquo; is rated relative to a Heroku Postgres 16 origin</b>, assuming logical
+      replication from the existing follower and a short cutover window — not a dump/restore
+      maintenance weekend.</li>
+    <li><b>EU residency</b> here means &ldquo;an EU region exists and data stays in it by default&rdquo;. All nine
+      vendors except Cloud SQL are US-incorporated, so a transfer impact assessment is needed
+      regardless of where the bytes sit. That is a legal question, not one I answered.</li>
+    <li><b>Not evaluated:</b> support responsiveness, actual incident history, and anything requiring a
+      trial account. Two vendors (Crunchy, PlanetScale) would need a paid trial to test the extension
+      set against your real schema — worth doing for whichever of the two picks you lean toward.</li>
+    <li><b>Source strength is labelled.</b> <span class="kind">DOCS</span> and
+      <span class="kind">PRICING</span> are vendor-published and dated. <span class="kind weak">FORUM</span>
+      and <span class="kind weak">CALL</span> are weaker and are marked wherever they carry a claim.</li>
+  </ul>
+</footer>
+
+</div>
+
+<script>
+"use strict";
+
+/* --------------------------------------------------------------------------
+   Source tuple: [url, title, date, kind]  kind: DOCS | PRICING | BLOG | FORUM | CALL
+   -------------------------------------------------------------------------- */
+
+var DATA = [
+{
+  id:"rds", name:"AWS RDS for PostgreSQL", vendor:"Amazon Web Services",
+  fit:1, cost:1455, costNote:"$1,010 w/ 1-yr RI", verdict:"finalist",
+  oneline:"The boring correct answer. Stock Postgres, everything supported, cheapest of the qualifying set once reserved.",
+  ext:{postgis:"ok", pg_cron:"ok", pgvector:"ok"},
+  pool:["ok","Pooler: RDS Proxy"], repl:["ok","Replicas: 15 + cross-region"], eu:["ok","EU: 3 regions"],
+  mig:[1,"Migration: low"],
+  flags:{ext3:true,pooler:true,replicas:true,eu:true,flat:true,stock:true}, unk:{},
+  dims:[
+    {k:"Cost at 400 GB / 3k conns",
+     v:"db.m7g.4xlarge (16 vCPU / 64 GiB) Multi-AZ, 400 GB gp3 with 12,000 provisioned IOPS, plus RDS Proxy at $0.015 per vCPU-hour. On-demand that is $1,455/mo. A 1-year no-upfront Reserved Instance takes the compute from ~$1,120 to ~$685, landing all-in at roughly $1,010/mo. Each additional read replica is a full-price instance, ~$560/mo.",
+     src:[["https://aws.amazon.com/rds/postgresql/pricing/","RDS for PostgreSQL pricing, eu-central-1","2026-07-30","PRICING"],
+          ["https://aws.amazon.com/rds/proxy/pricing/","RDS Proxy pricing","2026-07-30","PRICING"]]},
+    {k:"postgis / pg_cron / pgvector",
+     v:"All three on the RDS PostgreSQL 17 supported-extension list: postgis 3.4.2, pg_cron 1.6.4, pgvector 0.8.0. pg_cron has to be added to shared_preload_libraries via a custom parameter group and only schedules on the writer instance — a one-time reboot, then your existing jobs port across unchanged.",
+     src:[["https://docs.aws.amazon.com/AmazonRDS/latest/PostgreSQLReleaseNotes/postgresql-extensions.html","Extension versions for Amazon RDS for PostgreSQL","2026-07-30","DOCS"],
+          ["https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/PostgreSQL_pg_cron.html","Scheduling maintenance with pg_cron","2026-07-30","DOCS"]]},
+    {k:"3,000 connections at peak",
+     v:"max_connections on a 4xlarge defaults to around 5,000, but AWS documents memory pressure well before that and recommends pooling above a few hundred. RDS Proxy is the supported answer: it multiplexes 3k client connections down to a couple hundred backends and survives failover without dropping clients. Adds ~$175/mo at this size.",
+     src:[["https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/rds-proxy.html","Using Amazon RDS Proxy","2026-07-30","DOCS"]]},
+    {k:"Read replicas",
+     v:"Up to 15 in-region read replicas, cross-region supported, each billed as a full instance. Asynchronous, typical lag in the single-digit seconds under normal write load. No shared storage, so building a replica off 400 GB takes roughly 40 minutes.",
+     src:[["https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_ReadRepl.html","Working with read replicas","2026-07-30","DOCS"]]},
+    {k:"EU data residency",
+     v:"eu-central-1 (Frankfurt), eu-west-1 (Ireland), eu-west-3 (Paris). Data stays in-region unless you explicitly replicate out. The AWS DPA and the EU Data Boundary commitments cover the contractual side; AWS is still a US company, so a transfer impact assessment is on your legal team either way.",
+     src:[["https://aws.amazon.com/compliance/eu-data-protection/","AWS EU data protection & sovereignty","2026-07-30","DOCS"]]},
+    {k:"Migration effort — LOW",
+     v:"The lowest-risk path of the nine. Stock community Postgres at the same major version you run on Heroku, so a logical replication stream from your existing follower plus a two-minute cutover is realistic. The only friction is the absence of superuser: extension installs and shared_preload_libraries changes go through a parameter group with one reboot, and a handful of Heroku-era GRANTs on the heroku_ext schema need rewriting.",
+     src:[["https://docs.aws.amazon.com/dms/latest/userguide/CHAP_Source.PostgreSQL.html","DMS: using PostgreSQL as a source","2026-07-30","DOCS"]]}
+  ]
+},
+{
+  id:"crunchy", name:"Crunchy Bridge", vendor:"Crunchy Data",
+  fit:2, cost:2160, costNote:"$1,120 without HA", verdict:"finalist",
+  oneline:"Same Postgres, far less of it left to you. Pooler on by default, extensions pre-loaded, assisted migration.",
+  ext:{postgis:"ok", pg_cron:"ok", pgvector:"ok"},
+  pool:["ok","Pooler: pgBouncer built in"], repl:["ok","Replicas: HA + cross-region"], eu:["ok","EU: 4 regions"],
+  mig:[1,"Migration: low"],
+  flags:{ext3:true,pooler:true,replicas:true,eu:true,flat:true,stock:true}, unk:{},
+  dims:[
+    {k:"Cost at 400 GB / 3k conns",
+     v:"A standard-16 instance (16 vCPU / 64 GiB) is $1,046/mo. A synchronous high-availability standby doubles that, and 500 GB of storage at $0.15/GB adds $75 — $2,160/mo all in. Drop the standby and it is $1,120/mo, which is the number to compare against RDS single-AZ. The pooler, backups within the retention window, and the assisted migration are not billed separately.",
+     src:[["https://www.crunchydata.com/pricing/calculator","Crunchy Bridge pricing calculator","2026-07-31","PRICING"]]},
+    {k:"postgis / pg_cron / pgvector",
+     v:"All three, current versions, no parameter-group dance — they are in the default extension set and CREATE EXTENSION just works. Crunchy Data employs PostGIS core maintainers and ships postgis 3.5 with the raster and topology modules enabled, which is more than most managed providers bother with. Best extension story in the field for this particular trio.",
+     src:[["https://docs.crunchybridge.com/concepts/extensions","Crunchy Bridge: available extensions","2026-07-31","DOCS"],
+          ["https://www.crunchydata.com/blog/postgis-3-5-on-crunchy-bridge","PostGIS 3.5 on Crunchy Bridge","2026-07-31","BLOG"]]},
+    {k:"3,000 connections at peak",
+     v:"pgBouncer runs on the instance and is enabled by default on a separate port alongside the direct 5432 connection, so you can move services over one at a time. 3k client connections in transaction mode is inside their documented envelope for this instance size. No extra line on the bill.",
+     src:[["https://docs.crunchybridge.com/how-to/pgbouncer","Connection pooling with pgBouncer","2026-07-31","DOCS"]]},
+    {k:"Read replicas",
+     v:"A synchronous HA standby plus any number of read-only replicas, including in other regions, all promotable. The feature set is right; what is missing is a published lag or RPO figure for the cross-region case — that is unverified claim U3, and it is the reason this option is not an unconditional first pick.",
+     src:[["https://docs.crunchybridge.com/how-to/replicas","High availability and read replicas","2026-07-31","DOCS"],
+          ["https://docs.crunchybridge.com/how-to/replicas#cross-region","Cross-region replicas (no lag figure published)","2026-07-31","DOCS"],
+          ["#call-crunchy-2026-07-30","Call with Crunchy solutions engineer — “typically sub-second within Europe”, not documented","2026-07-30","CALL"]]},
+    {k:"EU data residency",
+     v:"AWS eu-central-1 and eu-west-1, GCP europe-west1, Azure westeurope — you pick the underlying cloud per cluster, which is unusual and useful if you ever want the database next to something else. Crunchy is US-based (Charleston, SC), so the transfer impact assessment applies as it does to everyone here except Google.",
+     src:[["https://docs.crunchybridge.com/concepts/regions","Crunchy Bridge regions","2026-07-31","DOCS"]]},
+    {k:"Migration effort — LOW",
+     v:"You get a postgres role with CREATE EXTENSION, pg_signal_backend and pg_read_all_data, so your Heroku dump restores close to as-is and you are not fighting the platform over grants. They run a free assisted migration with a scheduled cutover call, which is worth real money at 400 GB. Same logical-replication path as RDS otherwise.",
+     src:[["https://docs.crunchybridge.com/how-to/migrations","Migrating an existing database to Crunchy Bridge","2026-07-31","DOCS"]]}
+  ]
+},
+{
+  id:"aurora", name:"Aurora Serverless v2", vendor:"Amazon Web Services",
+  fit:3, cost:2290, costNote:"widest error bar", verdict:"viable",
+  oneline:"Best replica architecture here, and the least predictable bill. Good if your load is spiky; yours is not.",
+  ext:{postgis:"ok", pg_cron:"ok", pgvector:"ok"},
+  pool:["part","Pooler: RDS Proxy required"], repl:["ok","Replicas: 15, &lt;100 ms"], eu:["ok","EU: 3 regions"],
+  mig:[3,"Migration: medium"],
+  flags:{ext3:true,pooler:true,replicas:true,eu:true,flat:false,stock:false}, unk:{},
+  dims:[
+    {k:"Cost at 400 GB / 3k conns",
+     v:"Modelled at an 8 ACU floor, 48 ACU peak and ~20 ACU average: $2,290/mo on I/O-Optimized ($0.16/ACU-hour) plus $40 of storage. On standard pricing ACUs are $0.12 but you then pay $0.20 per million I/O requests, which at your write volume is both larger and much harder to forecast. This is the widest error bar in the table and the main reason it is not a pick — a steady 24/7 workload is exactly the shape serverless pricing punishes.",
+     src:[["https://aws.amazon.com/rds/aurora/pricing/","Aurora pricing — Serverless v2 and I/O-Optimized","2026-07-30","PRICING"]]},
+    {k:"postgis / pg_cron / pgvector",
+     v:"All three supported on Aurora PostgreSQL 16.x. Note that Aurora tracks community Postgres a minor version or two behind: pgvector was 0.7.x on Aurora when checked versus 0.8.0 on plain RDS. If you are actively tuning HNSW index parameters that gap will occasionally annoy you.",
+     src:[["https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Extensions.html","Extension versions for Aurora PostgreSQL","2026-07-30","DOCS"]]},
+    {k:"3,000 connections at peak",
+     v:"max_connections scales with ACU, and at the 8 ACU floor it lands around 1,000 — under your peak. So either RDS Proxy is mandatory (+~$175/mo) or you raise the ACU floor and give back the saving that made serverless attractive. Both answers are fine; neither is free.",
+     src:[["https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/aurora-serverless-v2.html","Aurora Serverless v2 capacity and connections","2026-07-30","DOCS"]]},
+    {k:"Read replicas",
+     v:"The best in the field, straightforwardly. Up to 15 replicas on shared storage means lag typically under 100 ms and replica creation is near-instant regardless of the 400 GB. Failover completes in around 30 seconds. Aurora Global Database can put a read-only copy in a second EU region.",
+     src:[["https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/Aurora.Replication.html","Replication with Amazon Aurora","2026-07-30","DOCS"]]},
+    {k:"EU data residency",
+     v:"Same EU regions as RDS — eu-central-1, eu-west-1, eu-west-3 — under the same AWS DPA.",
+     src:[["https://aws.amazon.com/compliance/eu-data-protection/","AWS EU data protection & sovereignty","2026-07-30","DOCS"]]},
+    {k:"Migration effort — MEDIUM",
+     v:"The restore works, but Aurora is not stock Postgres underneath: the storage layer is AWS's own, some tuning knobs behave differently, and a few pg_stat_* behaviours differ from what your monitoring expects. The part worth thinking about is the exit — moving off Aurora later is a full dump-and-restore, not a replication stream.",
+     src:[["https://docs.aws.amazon.com/AmazonRDS/latest/AuroraUserGuide/AuroraPostgreSQL.Migrating.html","Migrating data to Aurora PostgreSQL","2026-07-30","DOCS"]]}
+  ]
+},
+{
+  id:"supabase", name:"Supabase", vendor:"Supabase Inc.",
+  fit:4, cost:2110, costNote:"Team plan + 8XL", verdict:"viable",
+  oneline:"Extensions are effortless, but you inherit a whole application platform you did not ask for.",
+  ext:{postgis:"ok", pg_cron:"ok", pgvector:"ok"},
+  pool:["ok","Pooler: Supavisor"], repl:["ok","Replicas: managed, GA"], eu:["ok","EU: 4 regions"],
+  mig:[4,"Migration: high"],
+  flags:{ext3:true,pooler:true,replicas:true,eu:true,flat:true,stock:false}, unk:{},
+  dims:[
+    {k:"Cost at 400 GB / 3k conns",
+     v:"Team plan at $599/mo — needed for the 14-day PITR window and the SOC 2 report — plus an 8XL compute instance at $1,411/mo (32 vCPU / 64 GiB) plus roughly $100 of disk, so $2,110/mo. Each read replica is a second full compute instance at the same rate, which makes scaling reads here noticeably more expensive than on RDS.",
+     src:[["https://supabase.com/pricing","Supabase pricing — Team plan","2026-07-29","PRICING"],
+          ["https://supabase.com/docs/guides/platform/compute-and-disk","Compute and disk add-on pricing","2026-07-29","PRICING"]]},
+    {k:"postgis / pg_cron / pgvector",
+     v:"All three, enabled from the dashboard with a single toggle each — the least friction of the nine, and pgvector in particular is a first-class product surface for them rather than an afterthought. If the vector workload is the part of your roadmap you care most about, this is the strongest argument in Supabase's favour.",
+     src:[["https://supabase.com/docs/guides/database/extensions","Supabase: database extensions","2026-07-28","DOCS"]]},
+    {k:"3,000 connections at peak",
+     v:"Supavisor is the managed pooler and handles well past 3k in transaction mode. The caveat is worth a grep before you commit: transaction mode drops session-level behaviour — prepared statements, SET that outlives a single statement, and advisory locks held across calls. On a codebase that grew up against Heroku's direct connections there is usually at least one of those hiding somewhere.",
+     src:[["https://supabase.com/docs/guides/database/supavisor","Supavisor connection pooler","2026-07-29","DOCS"]]},
+    {k:"Read replicas",
+     v:"GA, same-region and cross-region, managed from the dashboard. Reads go through a separate connection string; there is no automatic read/write splitting, so the routing decision stays in your application code.",
+     src:[["https://supabase.com/docs/guides/platform/read-replicas","Read replicas","2026-07-29","DOCS"]]},
+    {k:"EU data residency",
+     v:"eu-central-1, eu-west-1, eu-west-2, eu-west-3. Supabase is a US company; same transfer impact assessment note as everyone else in this list bar Google.",
+     src:[["https://supabase.com/docs/guides/platform/regions","Supabase regions","2026-07-29","DOCS"]]},
+    {k:"Migration effort — HIGH",
+     v:"High for organisational rather than technical reasons. You inherit auth, storage, realtime, PostgREST and an RLS-first role model whether you use them or not; the postgres role is deliberately restricted and several Heroku-era grants need rewriting against their schema conventions. It is a good product — it is simply more platform than a team that wants Postgres-and-nothing-else is asking for.",
+     src:[["https://supabase.com/docs/guides/platform/migrating-to-supabase/postgres","Migrating from a Postgres database","2026-07-29","DOCS"]]}
+  ]
+},
+{
+  id:"cloudsql", name:"Google Cloud SQL", vendor:"Google Cloud",
+  fit:5, cost:1365, costNote:"$1,024 w/ 1-yr CUD", verdict:"viable",
+  oneline:"Cheapest of the technically-qualifying set — but the pooler is in Preview and your app is not on GCP.",
+  ext:{postgis:"ok", pg_cron:"ok", pgvector:"ok"},
+  pool:["unk","Pooler: Preview only (U2)"], repl:["ok","Replicas: 10 + cross-region"], eu:["ok","EU: 4 regions"],
+  mig:[3,"Migration: medium"],
+  flags:{ext3:true,pooler:false,replicas:true,eu:true,flat:true,stock:true}, unk:{pooler:true},
+  dims:[
+    {k:"Cost at 400 GB / 3k conns",
+     v:"db-custom-16-65536 with regional HA is about $1,093/mo, and 400 GB of SSD billed at the HA rate of $0.34/GB adds $272 — $1,365/mo. A 1-year committed use discount brings it to roughly $1,024/mo, the cheapest number in this table that comes with HA. Read replicas bill as full instances.",
+     src:[["https://cloud.google.com/sql/pricing","Cloud SQL pricing, europe-west3","2026-07-30","PRICING"]]},
+    {k:"postgis / pg_cron / pgvector",
+     v:"All three supported on Cloud SQL for PostgreSQL 16: postgis 3.4, pg_cron 1.6, pgvector 0.8. pg_cron needs the cloudsql.enable_pg_cron database flag set and only schedules against the primary, same shape as RDS.",
+     src:[["https://cloud.google.com/sql/docs/postgres/extensions","Configure PostgreSQL extensions","2026-07-30","DOCS"]]},
+    {k:"3,000 connections at peak",
+     v:"This is the blocker to resolve. max_connections is configurable well past 3,000, but without pooling that is 3,000 real backends on the instance, which at 64 GiB is not a plan. Managed connection pooling exists but was still marked Preview on 2026-07-31 with no GA date — unverified claim U2. The realistic fallback is running your own PgBouncer on GKE, which hands the operations burden straight back to your team and is what the migration rating below assumes.",
+     src:[["https://cloud.google.com/sql/docs/postgres/managed-connection-pooling","Managed connection pooling (Preview)","2026-07-31","DOCS"],
+          ["https://cloud.google.com/sql/docs/postgres/quotas#fixed-limits","Cloud SQL connection limits","2026-07-30","DOCS"]]},
+    {k:"Read replicas",
+     v:"Up to 10 read replicas, cross-region supported, cascading replicas supported, promotion is a single command. No complaints here.",
+     src:[["https://cloud.google.com/sql/docs/postgres/replication/create-replica","Create read replicas","2026-07-30","DOCS"]]},
+    {k:"EU data residency",
+     v:"europe-west1 (Belgium), europe-west3 (Frankfurt), europe-west4 (Netherlands), europe-west9 (Paris). The one genuine differentiator in this row: Assured Workloads can contractually pin both data and support personnel to the EU, which no other vendor here offers. Only relevant if a customer ever demands it — but if one does, this becomes the only option.",
+     src:[["https://cloud.google.com/assured-workloads/docs/control-package-eu-regions-support","Assured Workloads: EU Regions and Support","2026-07-30","DOCS"]]},
+    {k:"Migration effort — MEDIUM",
+     v:"Technically it is low: Database Migration Service does continuous logical replication from an external Postgres, Heroku included, with a clean cutover. The real cost is topological. Your application runs on Heroku, which is AWS underneath, so you would be paying cross-cloud egress and eating roughly 15&ndash;25 ms of extra round-trip on every single query until the application moves too. That is a bigger architectural decision than picking a database.",
+     src:[["https://cloud.google.com/database-migration/docs/postgres","Database Migration Service for PostgreSQL","2026-07-30","DOCS"]]}
+  ]
+},
+{
+  id:"neon", name:"Neon", vendor:"Neon / Databricks",
+  fit:6, cost:1240, costNote:"modelled, not quoted", verdict:"out",
+  oneline:"Elegant architecture, excellent replicas, no pg_cron. That single gap ends it.",
+  ext:{postgis:"ok", pg_cron:"no", pgvector:"ok"},
+  pool:["ok","Pooler: built-in, 10k"], repl:["ok","Replicas: instant, no copy"], eu:["ok","EU: 2 regions"],
+  mig:[3,"Migration: medium"],
+  flags:{ext3:false,pooler:true,replicas:true,eu:true,flat:false,stock:true}, unk:{},
+  dims:[
+    {k:"Cost at 400 GB / 3k conns",
+     v:"Business plan, modelled at a 4 CU floor and 16 CU autoscaling peak: roughly $1,100/mo of compute plus 400 GB at $0.35/GB-month for $140, so ~$1,240/mo. Flagging this as a model rather than a quote — Neon prices compute in CU-hours and the autoscaler's behaviour under a connection-heavy but CPU-light workload is not documented anywhere I could find.",
+     src:[["https://neon.com/pricing","Neon pricing — Business plan","2026-07-28","PRICING"]]},
+    {k:"postgis / pg_cron / pgvector",
+     v:"postgis and pgvector: yes, both current. pg_cron: no — it is absent from the supported-extension list, and the reason is architectural rather than an oversight. Neon separates compute from storage and scales compute to zero, which is fundamentally at odds with an in-database scheduler that expects a process to be running. It is unlikely to appear. This is the disqualifier.",
+     src:[["https://neon.com/docs/extensions/pg-extensions","Supported Postgres extensions","2026-07-28","DOCS"],
+          ["https://community.neon.tech/t/pg-cron-support/1180","Community thread: pg_cron support — staff reply, no plans","2026-07-28","FORUM"]]},
+    {k:"3,000 connections at peak",
+     v:"Genuinely strong. PgBouncer is built into the endpoint and the pooled connection string handles up to 10,000 client connections with no separate service to run or pay for. If pg_cron were not an issue this would be one of the better answers in the table.",
+     src:[["https://neon.com/docs/connect/connection-pooling","Connection pooling","2026-07-28","DOCS"]]},
+    {k:"Read replicas",
+     v:"Read replicas are additional compute endpoints reading the same storage — no data copy, near-zero lag, and you pay only for the compute. Architecturally the nicest replica story here after Aurora, and cheaper than Aurora's.",
+     src:[["https://neon.com/docs/introduction/read-replicas","Read replicas","2026-07-28","DOCS"]]},
+    {k:"EU data residency",
+     v:"aws-eu-central-1 (Frankfurt) and azure-gwc (Germany West Central). Neon is US-incorporated and now part of Databricks, so the usual transfer note applies.",
+     src:[["https://neon.com/docs/introduction/regions","Neon regions","2026-07-28","DOCS"]]},
+    {k:"Migration effort — MEDIUM (moot)",
+     v:"The data move itself is unremarkable — logical replication in, standard cutover. But every pg_cron job would first have to be rewritten against an external scheduler (Heroku Scheduler, a GitHub Actions cron, or a small worker dyno) before this platform is even a candidate. That is a prerequisite project, not a migration step.",
+     src:[["https://neon.com/docs/import/migrate-from-postgres","Migrate from another Postgres","2026-07-28","DOCS"]]}
+  ]
+},
+{
+  id:"timescale", name:"Timescale Cloud", vendor:"TigerData",
+  fit:7, cost:1680, costNote:"compressed-storage assumption", verdict:"out",
+  oneline:"No pg_cron by design, and you would be paying for hypertables you do not have.",
+  ext:{postgis:"ok", pg_cron:"no", pgvector:"ok"},
+  pool:["ok","Pooler: managed"], repl:["ok","Replicas: HA + read"], eu:["ok","EU: 2 regions"],
+  mig:[3,"Migration: medium"],
+  flags:{ext3:false,pooler:true,replicas:true,eu:true,flat:true,stock:false}, unk:{},
+  dims:[
+    {k:"Cost at 400 GB / 3k conns",
+     v:"16 CPU / 64 GiB compute at roughly $1,430/mo, an HA replica, and 400 GB of usage-based storage at $0.05/GB-month compressed, coming to about $1,680/mo. Note the assumption buried in that: their storage pricing model assumes compression ratios that apply to time-series-shaped tables. On a general OLTP schema you should expect the storage line to be meaningfully higher than the headline rate implies.",
+     src:[["https://www.tigerdata.com/pricing","TigerData / Timescale Cloud pricing","2026-07-31","PRICING"]]},
+    {k:"postgis / pg_cron / pgvector",
+     v:"postgis and pgvector yes — they actively promote pgvectorscale as a faster superset of pgvector, which is a real strength. pg_cron: no, and deliberately so. Timescale does not ship it because scheduling is handled by their own user-defined actions API instead. Same disqualifier as Neon, but here with a specific rewrite target attached rather than an external scheduler.",
+     src:[["https://docs.tigerdata.com/use-timescale/latest/extensions/","Supported extensions","2026-07-31","DOCS"],
+          ["https://docs.tigerdata.com/use-timescale/latest/jobs/","User-defined actions (the pg_cron replacement)","2026-07-31","DOCS"]]},
+    {k:"3,000 connections at peak",
+     v:"A connection pooler is included on all production services and 3,000 is comfortably inside spec. Not a problem here.",
+     src:[["https://docs.tigerdata.com/use-timescale/latest/services/connection-pooling/","Connection pooling","2026-07-31","DOCS"]]},
+    {k:"Read replicas",
+     v:"HA replicas in synchronous or asynchronous mode plus separate read replicas, both fully managed. Solid, unremarkable, does what you need.",
+     src:[["https://docs.tigerdata.com/use-timescale/latest/ha-replicas/","High availability and read replicas","2026-07-31","DOCS"]]},
+    {k:"EU data residency",
+     v:"eu-central-1 (Frankfurt) and eu-west-1 (Ireland).",
+     src:[["https://docs.tigerdata.com/use-timescale/latest/regions/","Available regions","2026-07-31","DOCS"]]},
+    {k:"Migration effort — MEDIUM",
+     v:"The restore is straightforward, but you would be running on a distribution tuned around hypertables you do not use, paying for a specialisation that does nothing for you, and rewriting your scheduled jobs on the way in. Worth revisiting only if a genuinely time-series workload appears on the roadmap — at which point it becomes a strong option rather than a poor one.",
+     src:[["https://docs.tigerdata.com/migrate/latest/","Migrating to Timescale Cloud","2026-07-31","DOCS"]]}
+  ]
+},
+{
+  id:"planetscale", name:"PlanetScale for Postgres", vendor:"PlanetScale",
+  fit:8, cost:1590, costNote:"M-320 Metal cluster", verdict:"out",
+  oneline:"Two of your three extensions are unconfirmed on the newest product in the set. Not shortlistable this quarter.",
+  ext:{postgis:"unk", pg_cron:"no", pgvector:"ok"},
+  pool:["ok","Pooler: PSBouncer"], repl:["ok","Replicas: multi-node + failover"], eu:["ok","EU: 3 regions"],
+  mig:[4,"Migration: high"],
+  flags:{ext3:false,pooler:true,replicas:true,eu:true,flat:true,stock:true}, unk:{ext3:true},
+  dims:[
+    {k:"Cost at 400 GB / 3k conns",
+     v:"An M-320 Metal cluster — three nodes on locally attached NVMe — is about $1,590/mo at 400 GB. Metal means storage and compute are sized together, so growing past roughly 800 GB is a full tier jump rather than dragging a storage slider. Worth modelling against your 18-month growth curve before committing, because the step function is steep.",
+     src:[["https://planetscale.com/pricing","PlanetScale pricing — Postgres Metal tiers","2026-07-29","PRICING"]]},
+    {k:"postgis / pg_cron / pgvector",
+     v:"pgvector: yes, explicitly documented. pg_cron: not listed, and nothing in the changelog suggests it is coming. postgis: not listed either way — this is unverified claim U1, and I have scored it pessimistically. Two of your three hard requirements are therefore unconfirmed on the youngest product in this comparison, which is enough on its own.",
+     src:[["https://planetscale.com/docs/postgres/extensions","Supported Postgres extensions (postgis absent from list)","2026-07-29","DOCS"],
+          ["https://planetscale.com/changelog","Changelog — “expanded extension support”, June 2026, unspecified","2026-07-29","BLOG"],
+          ["https://planetscale.com/community","Question posted in community Slack, unanswered","2026-07-29","FORUM"]]},
+    {k:"3,000 connections at peak",
+     v:"PSBouncer is the managed pooler and is on by default. 3,000 client connections is inside spec. This part of the product is fine.",
+     src:[["https://planetscale.com/docs/postgres/connection-pooling","Connection pooling with PSBouncer","2026-07-29","DOCS"]]},
+    {k:"Read replicas",
+     v:"Multi-node clusters with automatic failover and read-only replicas. This is the most mature part of the offering — the operational machinery is inherited from years of running their MySQL product at scale, and it shows.",
+     src:[["https://planetscale.com/docs/postgres/cluster-configuration","Cluster configuration and replicas","2026-07-29","DOCS"]]},
+    {k:"EU data residency",
+     v:"AWS eu-west-1 (Dublin) and eu-central-1 (Frankfurt), plus GCP europe-west regions.",
+     src:[["https://planetscale.com/docs/postgres/regions","Available regions","2026-07-29","DOCS"]]},
+    {k:"Migration effort — HIGH",
+     v:"Newest product in the set — Postgres went GA in mid-2025 — so the smallest body of production experience to lean on, and the import tooling still carries obvious MySQL heritage. Combined with the unverified postgis question this is not something to bet a 400 GB production database on right now. Revisit in two or three quarters.",
+     src:[["https://planetscale.com/blog/planetscale-for-postgres-ga","PlanetScale for Postgres is GA","2026-07-29","BLOG"]]}
+  ]
+},
+{
+  id:"railway", name:"Railway", vendor:"Railway Corp.",
+  fit:9, cost:610, costNote:"single node, no standby", verdict:"out",
+  oneline:"Less than half the price of anything else, because it is not really managed. No replicas, no HA, no pooler.",
+  ext:{postgis:"ok", pg_cron:"ok", pgvector:"ok"},
+  pool:["no","Pooler: none, DIY"], repl:["no","Replicas: none managed"], eu:["ok","EU: 1 region"],
+  mig:[2,"Migration: low-med"],
+  flags:{ext3:true,pooler:false,replicas:false,eu:true,flat:false,stock:true}, unk:{},
+  dims:[
+    {k:"Cost at 400 GB / 3k conns",
+     v:"Cheapest by a wide margin: Pro at $20/seat plus usage, and 16 vCPU / 32 GiB with a 500 GB volume comes to roughly $610/mo. That number is not comparable to anything else in this table, because it buys a single node with no standby, no replica and no pooler. The right way to read it is that Railway is not selling the same thing the other eight are.",
+     src:[["https://railway.com/pricing","Railway pricing — Pro plan and usage rates","2026-07-31","PRICING"]]},
+    {k:"postgis / pg_cron / pgvector",
+     v:"All three available, and easily — you are running a Postgres container image and can install whatever you like, pg_cron included. This is simultaneously the best extension answer in the table and the clearest sign that the platform is not managing the database for you.",
+     src:[["https://docs.railway.com/guides/postgresql","Deploying PostgreSQL on Railway","2026-07-31","DOCS"]]},
+    {k:"3,000 connections at peak",
+     v:"No managed pooler exists. Supporting 3,000 connections means deploying and operating your own PgBouncer service next to the database and owning its upgrades, monitoring and failure modes. A blocker against this requirement as written.",
+     src:[["https://docs.railway.com/guides/postgresql#connection-limits","PostgreSQL connection limits","2026-07-31","DOCS"]]},
+    {k:"Read replicas",
+     v:"None, managed. No managed HA either. Streaming replication is something people do by hand and discuss on the community forum; it is not a product feature with a support contract behind it. This is the hard disqualifier, independent of everything else.",
+     src:[["https://station.railway.com/questions/postgres-read-replica-setup","Community thread: setting up a read replica by hand","2026-07-31","FORUM"]]},
+    {k:"EU data residency",
+     v:"europe-west4 (Amsterdam) is available on the Pro plan. One region, no second EU region to fail over to.",
+     src:[["https://docs.railway.com/reference/regions","Railway regions","2026-07-31","DOCS"]]},
+    {k:"Migration effort — LOW to arrive, HIGH to live on",
+     v:"Trivially easy to move to and genuinely pleasant to operate at small scale. The problem is what you give up: backups are daily snapshots on the standard offering, with no point-in-time recovery to the second. For a 400 GB production database that is a step down in operational safety from the Heroku instance you are already outgrowing, which makes it the wrong direction regardless of price.",
+     src:[["https://docs.railway.com/reference/backups","Backups and restore","2026-07-31","FORUM"]]}
+  ]
+}
+];
+
+/* -------------------------------------------------------------------------- */
+
+var GLYPH = {ok:"✓", part:"◑", no:"✕", unk:"?"};
+var WORD  = {ok:"supported", part:"partial", no:"not available", unk:"unverified"};
+var FLAG_NAME = {
+  ext3:"all 3 extensions", pooler:"managed pooler at 3k", replicas:"managed replicas + HA",
+  eu:"EU region", flat:"flat monthly bill", stock:"stock Postgres"
+};
+var COST_MAX = 4400;
+
+function esc(s){ return String(s).replace(/&(?![a-z#0-9]+;)/g,"&amp;").replace(/</g,"&lt;"); }
+
+function chip(state, label){
+  return '<span class="chip '+state+'"><span class="g" aria-hidden="true">'+GLYPH[state]+
+         '</span>'+label+'<span class="sr"> — '+WORD[state]+'</span></span>';
+}
+
+function migBar(level, label){
+  var s = "";
+  for(var i=1;i<=4;i++) s += '<i class="'+(i<=level?"f":"")+'"></i>';
+  return '<span class="mig"><span class="seg" aria-hidden="true">'+s+'</span>'+label+'</span>';
+}
+
+function srcList(src){
+  var out = '<ul class="srcs">';
+  for(var i=0;i<src.length;i++){
+    var s = src[i], weak = (s[3]==="FORUM"||s[3]==="CALL"||s[3]==="BLOG") ? " weak" : "";
+    var href = s[0].charAt(0)==="#" ? "" : ' href="'+s[0]+'" target="_blank" rel="noreferrer"';
+    out += '<li><span class="kind'+weak+'">'+s[3]+'</span>'+
+           (href ? '<a'+href+'>'+esc(s[1])+'</a>' : '<span>'+esc(s[1])+'</span>')+
+           ' <span class="date">· checked '+s[2]+'</span></li>';
+  }
+  return out+"</ul>";
+}
+
+function card(d){
+  var el = document.createElement("details");
+  el.className = "card";
+  el.id = "p-"+d.id;
+  el.setAttribute("data-verdict", d.verdict);
+  el.setAttribute("data-id", d.id);
+
+  var chips =
+      '<span class="chip grp"><b>ext</b></span>' +
+      chip(d.ext.postgis,"postgis") + chip(d.ext.pg_cron,"pg_cron") + chip(d.ext.pgvector,"pgvector") +
+      chip(d.pool[0], d.pool[1]) + chip(d.repl[0], d.repl[1]) + chip(d.eu[0], d.eu[1]) +
+      migBar(d.mig[0], d.mig[1]);
+
+  var vlabel = d.verdict==="finalist" ? "Recommended" : (d.verdict==="viable" ? "Viable" : "Ruled out");
+  var pct = Math.round(d.cost / COST_MAX * 1000) / 10;
+
+  var head =
+    '<summary>' +
+      '<div class="top">' +
+        '<span class="rank">'+d.fit+'</span>' +
+        '<span class="name">'+esc(d.name)+'</span>' +
+        '<span class="vendor">'+esc(d.vendor)+'</span>' +
+        '<span class="verdict '+d.verdict+'">'+vlabel+'</span>' +
+        '<span class="cost">$'+d.cost.toLocaleString("en-US")+'<small>/mo &nbsp;'+esc(d.costNote)+'</small></span>' +
+      '</div>' +
+      '<p class="oneline">'+d.oneline+'</p>' +
+      '<div class="chips">'+chips+'</div>' +
+      '<div class="costbar" role="img" aria-label="Estimated $'+d.cost+' per month against today’s $4,150 Heroku bill"><span style="width:'+pct+'%"></span></div>' +
+      '<p class="why"></p>' +
+    '</summary>';
+
+  var body = '<div class="detail">';
+  for(var i=0;i<d.dims.length;i++){
+    body += '<div class="dim"><h4>'+esc(d.dims[i].k)+'</h4><p>'+d.dims[i].v+'</p>'+srcList(d.dims[i].src)+'</div>';
+  }
+  body += '</div>';
+
+  el.innerHTML = head + body;
+  return el;
+}
+
+var list = document.getElementById("list");
+var divider = document.getElementById("divider");
+var nodes = {};
+DATA.forEach(function(d){
+  var el = card(d);
+  nodes[d.id] = el;
+  list.insertBefore(el, divider);
+});
+
+/* ---- sorting + filtering ------------------------------------------------- */
+
+var sortKey = "fit";
+
+function rankOf(d){
+  if(sortKey === "cost") return d.cost;
+  if(sortKey === "mig")  return d.mig[0]*1000 + d.fit;
+  return d.fit;
+}
+
+function apply(){
+  var active = [];
+  document.querySelectorAll("#filters input").forEach(function(cb){
+    if(cb.checked) active.push(cb.getAttribute("data-flag"));
+  });
+
+  var kept = [], dropped = [];
+  DATA.forEach(function(d){
+    var fails = active.filter(function(f){ return !d.flags[f]; });
+    (fails.length ? dropped : kept).push({d:d, fails:fails});
+  });
+
+  function place(arr, base){
+    arr.sort(function(a,b){ return rankOf(a.d) - rankOf(b.d); });
+    arr.forEach(function(x, i){
+      var el = nodes[x.d.id];
+      el.style.order = base + i;
+      el.classList.toggle("out", base > 0);
+      var why = el.querySelector(".why");
+      if(x.fails.length){
+        why.innerHTML = "✕ fails: " + x.fails.map(function(f){
+          var u = x.d.unk && x.d.unk[f];
+          return '<em>' + FLAG_NAME[f] + (u ? " (unverified, scored as no)" : "") + '</em>';
+        }).join(", ");
+      } else { why.innerHTML = ""; }
+    });
+  }
+
+  place(kept, 0);
+  place(dropped, 200);
+  divider.classList.toggle("on", dropped.length > 0);
+  document.getElementById("n-in").textContent = kept.length;
+}
+
+document.querySelectorAll("#filters input").forEach(function(cb){
+  cb.addEventListener("change", apply);
+});
+
+document.querySelectorAll(".sorts button").forEach(function(b){
+  b.addEventListener("click", function(){
+    sortKey = b.getAttribute("data-sort");
+    document.querySelectorAll(".sorts button").forEach(function(o){
+      o.setAttribute("aria-pressed", String(o === b));
+    });
+    apply();
+  });
+});
+
+document.getElementById("req-all").addEventListener("click", function(){
+  document.querySelectorAll("#filters input").forEach(function(cb){ cb.checked = true; });
+  apply();
+});
+document.getElementById("reset").addEventListener("click", function(){
+  document.querySelectorAll("#filters input").forEach(function(cb){ cb.checked = false; });
+  apply();
+});
+
+var openAll = false;
+var toggleBtn = document.getElementById("toggle-all");
+toggleBtn.addEventListener("click", function(){
+  openAll = !openAll;
+  DATA.forEach(function(d){ nodes[d.id].open = openAll; });
+  toggleBtn.textContent = openAll ? "Collapse all" : "Expand all";
+});
+
+document.querySelectorAll("[data-jump]").forEach(function(b){
+  b.addEventListener("click", function(){
+    var el = nodes[b.getAttribute("data-jump")];
+    el.open = true;
+    el.scrollIntoView({behavior:"smooth", block:"start"});
+    el.classList.add("flash");
+    setTimeout(function(){ el.classList.remove("flash"); }, 2200);
+  });
+});
+
+apply();
+</script>
+</body>
+</html>

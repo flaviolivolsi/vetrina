@@ -1,0 +1,338 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Luxifare — why the engine played Nxe5</title>
+<link rel="stylesheet" href="/_vetrina/kit.css">
+<style>
+  /* Only what the kit does not cover: a scale header that stays aligned to the
+     waterfall's baseline column, and the two extra row shapes the waterfall
+     needs (a break, a total). Both mirror .v-wf-row's grid exactly, including
+     its 560px collapse, so the baseline is one straight line top to bottom. */
+  .wf-scale {
+    display: grid;
+    grid-template-columns: minmax(6rem, 13rem) 1fr 1fr minmax(3.5rem, auto);
+    gap: var(--v-2);
+    font-size: var(--v-t-1);
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--v-fg-3);
+    padding-block-end: var(--v-2);
+  }
+  .wf-scale .wf-scale-neg { text-align: end; }
+  @media (max-width: 560px) {
+    .wf-scale { grid-template-columns: 1fr 1fr minmax(3.5rem, auto); }
+    .wf-scale .wf-scale-pad { display: none; }
+  }
+
+  .wf-break {
+    grid-column: 1 / -1;
+    font-size: var(--v-t-1);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+    color: var(--v-fg-3);
+    margin-block-start: var(--v-4);
+    padding-block-start: var(--v-3);
+    border-block-start: var(--v-hair) dotted var(--v-line-strong);
+  }
+
+  .wf-total { margin-block-start: var(--v-3); padding-block-start: var(--v-3); border-block-start: var(--v-hair) solid var(--v-line-strong); }
+  .wf-total .v-wf-label,
+  .wf-total .v-wf-value { color: var(--v-fg); font-weight: 600; }
+  /* The total is not a vote, so it does not take a vote's colour. */
+  .wf-total .v-wf-pos::before { background: var(--v-fill); }
+
+  .wf-lead .v-wf-label { color: var(--v-fg); font-weight: 600; }
+
+  .wf-dir { display: inline-block; inline-size: 1.1em; }
+
+  .fen { font-size: var(--v-t-2); color: var(--v-fg-3); margin: var(--v-4) 0 0; max-width: 100%; }
+  .fen-k { font-size: var(--v-t-1); letter-spacing: .16em; text-transform: uppercase; margin-inline-end: var(--v-2); }
+
+  .evals { list-style: none; margin: var(--v-4) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--v-2) var(--v-4); font-size: var(--v-t-1); letter-spacing: .1em; color: var(--v-fg-3); }
+</style>
+</head>
+<body>
+<div class="v-wrap">
+
+  <header class="v-air">
+    <p class="v-kicker"><span class="v-dot"></span> Luxifare · evaluation trace <span>move 10, White to play</span> <span>demo data</span></p>
+
+    <h1 class="v-headline">Nxe5 wins the pawn and mortgages the king</h1>
+
+    <p class="v-standfirst">Thirty-two concepts scored this position. Four of them produced 61&nbsp;% of the evaluation's weight, and two of those four argue <em>against</em> the move the engine actually played. The final <strong>+0.74</strong> is a net, not a consensus.</p>
+
+    <p class="fen v-data"><span class="fen-k">FEN</span><code>r1bq1rk1/pp3ppp/2nb1n2/3pp3/8/2NP1NP1/PPP1PPBP/R1BQ1RK1 w - - 2 10</code></p>
+
+    <ul class="v-meta">
+      <li>Best move Nxe5</li>
+      <li>Depth 34</li>
+      <li>41.2M nodes</li>
+      <li>1.9 s</li>
+      <li>125 tunable parameters</li>
+      <li>Engine v0.9.3</li>
+    </ul>
+  </header>
+
+  <!-- ── The dominant element ───────────────────────────────────────── -->
+  <section class="v-hero" aria-labelledby="wf-h">
+    <h2 id="wf-h" class="v-kicker" style="margin-block-end:var(--v-4)">Contribution to the score, in centipawns <span>32 concepts</span></h2>
+
+    <div class="wf-scale" aria-hidden="true">
+      <span class="wf-scale-pad"></span>
+      <span class="wf-scale-neg">120 cp ◂ against Nxe5</span>
+      <span class="wf-scale-pos">for Nxe5 ▸ 120 cp</span>
+      <span></span>
+    </div>
+
+    <div class="v-wf">
+
+      <div class="v-wf-row wf-lead">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">▶</span>Material + PST <span class="v-sr">, for</span></span>
+        <span class="v-wf-neg" style="--v:0"></span>
+        <span class="v-wf-pos" style="--v:1"></span>
+        <span class="v-wf-value">+118</span>
+      </div>
+
+      <div class="v-wf-row wf-lead">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">◀</span>King safety <span class="v-sr">, against</span></span>
+        <span class="v-wf-neg" style="--v:0.627"></span>
+        <span class="v-wf-pos" style="--v:0"></span>
+        <span class="v-wf-value">−74</span>
+      </div>
+
+      <div class="v-wf-row wf-lead">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">▶</span>Rook activity <span class="v-sr">, for</span></span>
+        <span class="v-wf-neg" style="--v:0"></span>
+        <span class="v-wf-pos" style="--v:0.517"></span>
+        <span class="v-wf-value">+61</span>
+      </div>
+
+      <div class="v-wf-row wf-lead">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">◀</span>Pawn structure <span class="v-sr">, against</span></span>
+        <span class="v-wf-neg" style="--v:0.322"></span>
+        <span class="v-wf-pos" style="--v:0"></span>
+        <span class="v-wf-value">−38</span>
+      </div>
+
+      <p class="wf-break">The other 28 concepts — 39 % of the weight between them</p>
+
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">▶</span>Mobility</span>
+        <span class="v-wf-neg" style="--v:0"></span>
+        <span class="v-wf-pos" style="--v:0.178"></span>
+        <span class="v-wf-value">+21</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">▶</span>Outposts</span>
+        <span class="v-wf-neg" style="--v:0"></span>
+        <span class="v-wf-pos" style="--v:0.144"></span>
+        <span class="v-wf-value">+17</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">◀</span>Threats</span>
+        <span class="v-wf-neg" style="--v:0.119"></span>
+        <span class="v-wf-pos" style="--v:0"></span>
+        <span class="v-wf-value">−14</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">◀</span>Safe checks</span>
+        <span class="v-wf-neg" style="--v:0.093"></span>
+        <span class="v-wf-pos" style="--v:0"></span>
+        <span class="v-wf-value">−11</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">▶</span>Space</span>
+        <span class="v-wf-neg" style="--v:0"></span>
+        <span class="v-wf-pos" style="--v:0.076"></span>
+        <span class="v-wf-value">+9</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">◀</span>Bishop vs knight</span>
+        <span class="v-wf-neg" style="--v:0.068"></span>
+        <span class="v-wf-pos" style="--v:0"></span>
+        <span class="v-wf-value">−8</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">▶</span>Pawn breaks</span>
+        <span class="v-wf-neg" style="--v:0"></span>
+        <span class="v-wf-pos" style="--v:0.051"></span>
+        <span class="v-wf-value">+6</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">▶</span>Endgame technique</span>
+        <span class="v-wf-neg" style="--v:0"></span>
+        <span class="v-wf-pos" style="--v:0.034"></span>
+        <span class="v-wf-value">+4</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">▶</span>Conversion</span>
+        <span class="v-wf-neg" style="--v:0"></span>
+        <span class="v-wf-pos" style="--v:0.025"></span>
+        <span class="v-wf-value">+3</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">◀</span>Dominance</span>
+        <span class="v-wf-neg" style="--v:0.017"></span>
+        <span class="v-wf-pos" style="--v:0"></span>
+        <span class="v-wf-value">−2</span>
+      </div>
+      <div class="v-wf-row">
+        <span class="v-wf-label"><span class="wf-dir" aria-hidden="true">◀</span>18 smaller concepts, net</span>
+        <span class="v-wf-neg" style="--v:0.153"></span>
+        <span class="v-wf-pos" style="--v:0"></span>
+        <span class="v-wf-value">−18</span>
+      </div>
+
+      <div class="v-wf-row wf-total">
+        <span class="v-wf-label">Evaluation after Nxe5</span>
+        <span class="v-wf-neg" style="--v:0"></span>
+        <span class="v-wf-pos" style="--v:0.627"></span>
+        <span class="v-wf-value">+74</span>
+      </div>
+
+    </div>
+
+    <p class="v-section-note">Ordered by absolute contribution, largest first, not by concept family. Bars are scaled to the largest single term (118&nbsp;cp); the four leaders sit above the rule, the remaining 28 below it. Every value is signed: <span aria-hidden="true">▶</span> and a <code>+</code> argue for the move, <span aria-hidden="true">◀</span> and a <code>−</code> argue against it.</p>
+  </section>
+
+  <!-- ── The two-second read ────────────────────────────────────────── -->
+  <div class="v-stats">
+    <div class="v-stat">
+      <div class="v-stat-label">Concepts scored</div>
+      <div class="v-stat-num">32</div>
+      <p class="v-stat-qual">Across 125 tunable parameters in the Rust hot path.</p>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Decided the move</div>
+      <div class="v-stat-num">4 <span class="v-unit">of 32</span></div>
+      <p class="v-stat-qual">61 % of the total absolute weight, 291 cp of 474 cp.</p>
+    </div>
+    <div class="v-stat is-warn">
+      <div class="v-stat-label">Of those, opposed</div>
+      <div class="v-stat-num">2 <span class="v-unit">↓ −112 cp</span></div>
+      <p class="v-stat-qual">King safety and pawn structure both say don't.</p>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Final evaluation</div>
+      <div class="v-stat-num">+0.74</div>
+      <p class="v-stat-qual">Down from +1.86 if the two objectors are ignored.</p>
+    </div>
+  </div>
+
+  <!-- ── Dense evidence: the objection ──────────────────────────────── -->
+  <section class="v-section v-dense">
+    <div class="v-section-head">
+      <h2>What the move pays for the pawn</h2>
+      <span class="v-count">2 objecting concepts · −112 cp</span>
+    </div>
+
+    <div class="v-card is-warn">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">▼</span>
+        <h3>King safety</h3>
+        <span class="v-tag">Against · −74 cp</span>
+      </div>
+      <p>This is the term that decides the move, and it is the one the engine is least able to defend in words. Three sub-terms move at once: shelter quality, attacker count in the king zone, and light-square control around the castled king.</p>
+      <p class="v-why"><b>Fires because</b> the g2 bishop carries the light squares around the king on its own, and the term weights that single point of failure heavily. <b>Term weights</b> shelter −29, attackers −27, diagonal −18.</p>
+    </div>
+
+    <div class="v-card is-warn">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">▼</span>
+        <h3>Pawn structure</h3>
+        <span class="v-tag">Against · −38 cp</span>
+      </div>
+      <p>Opening the e-file cuts both ways. The d3 pawn ends up on a half-open file, and the two pawns defending it can only keep doing so by staying where they are.</p>
+      <p class="v-why"><b>Fires because</b> c2 and e2 defend d3 only from their starting squares, so the term reads the queenside majority as frozen rather than mobile. <b>Term weights</b> backward pawn −24, half-open file exposure −14.</p>
+    </div>
+  </section>
+
+  <!-- ── Air ────────────────────────────────────────────────────────── -->
+  <section class="v-section v-air">
+    <div class="v-section-head">
+      <h2>What the second system says out loud</h2>
+      <span class="v-count">5 of 16 evaluators fired</span>
+    </div>
+
+    <div class="v-prose">
+      <p>You are winning a clean pawn, and the e-file opens for whoever can use it first. That is the case for Nxe5, and it is worth about a pawn and a quarter on its own.</p>
+
+      <p>You are paying for it with the squares around your own king. The knight that leaves f6 was the piece holding that side together, and g3 does not heal. If you are going to play this, plan on spending a tempo on h3 or Re1 before Black's queen finds the diagonal.</p>
+
+      <p>The engine still plays it, at about three quarters of a pawn. Treat the score as a bet you have taken, not a position you have won.</p>
+
+      <ul class="evals">
+        <li>material_swing</li>
+        <li>file_opening</li>
+        <li>shelter_decay</li>
+        <li>structure_debt</li>
+        <li>tempo_budget</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ── The tally, folded ──────────────────────────────────────────── -->
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>All 32 concepts</h2>
+      <span class="v-count">sums to +74 cp</span>
+    </div>
+
+    <details class="v-details">
+      <summary>Every scored concept and its contribution</summary>
+      <div class="v-details-body">
+        <table class="v-table">
+          <thead>
+            <tr><th scope="col">Concept</th><th scope="col">Side</th><th scope="col" class="v-num">cp</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Material + PST</td><td>for</td><td class="v-num">+118</td></tr>
+            <tr><td>King safety</td><td>against</td><td class="v-num">−74</td></tr>
+            <tr><td>Rook activity</td><td>for</td><td class="v-num">+61</td></tr>
+            <tr><td>Pawn structure</td><td>against</td><td class="v-num">−38</td></tr>
+            <tr><td>Mobility</td><td>for</td><td class="v-num">+21</td></tr>
+            <tr><td>Outposts</td><td>for</td><td class="v-num">+17</td></tr>
+            <tr><td>Threats</td><td>against</td><td class="v-num">−14</td></tr>
+            <tr><td>Safe checks</td><td>against</td><td class="v-num">−11</td></tr>
+            <tr><td>Space</td><td>for</td><td class="v-num">+9</td></tr>
+            <tr><td>Bishop vs knight</td><td>against</td><td class="v-num">−8</td></tr>
+            <tr><td>Pawn breaks</td><td>for</td><td class="v-num">+6</td></tr>
+            <tr><td>Endgame technique</td><td>for</td><td class="v-num">+4</td></tr>
+            <tr><td>Conversion</td><td>for</td><td class="v-num">+3</td></tr>
+            <tr><td>Dominance</td><td>against</td><td class="v-num">−2</td></tr>
+            <tr><td>Bishop pair</td><td>for</td><td class="v-num">+12</td></tr>
+            <tr><td>Tempo</td><td>for</td><td class="v-num">+7</td></tr>
+            <tr><td>Open files</td><td>for</td><td class="v-num">+6</td></tr>
+            <tr><td>Piece coordination</td><td>for</td><td class="v-num">+4</td></tr>
+            <tr><td>Candidate passers</td><td>for</td><td class="v-num">+3</td></tr>
+            <tr><td>Connected rooks</td><td>for</td><td class="v-num">+2</td></tr>
+            <tr><td>Blockade</td><td>for</td><td class="v-num">+1</td></tr>
+            <tr><td>Trapped pieces</td><td>neither</td><td class="v-num">0</td></tr>
+            <tr><td>Pawn storm</td><td>neither</td><td class="v-num">0</td></tr>
+            <tr><td>Pawn islands</td><td>against</td><td class="v-num">−2</td></tr>
+            <tr><td>Colour complex</td><td>against</td><td class="v-num">−3</td></tr>
+            <tr><td>Queen activity</td><td>against</td><td class="v-num">−4</td></tr>
+            <tr><td>Minor piece placement</td><td>against</td><td class="v-num">−5</td></tr>
+            <tr><td>Weak squares</td><td>against</td><td class="v-num">−6</td></tr>
+            <tr><td>Fianchetto integrity</td><td>against</td><td class="v-num">−6</td></tr>
+            <tr><td>Pawn shelter</td><td>against</td><td class="v-num">−8</td></tr>
+            <tr><td>King zone control</td><td>against</td><td class="v-num">−9</td></tr>
+            <tr><td>Initiative</td><td>against</td><td class="v-num">−10</td></tr>
+          </tbody>
+          <tfoot>
+            <tr><td>Evaluation after Nxe5</td><td>for</td><td class="v-num">+74</td></tr>
+          </tfoot>
+        </table>
+      </div>
+    </details>
+  </section>
+
+  <footer class="v-footer">
+    <p>Luxifare decomposes every evaluation into named concepts rather than returning a single number, so a move can be argued with. The Rust hot path scores the 32 concepts above; an Elixir second system turns them into the coaching text. The project is real and plays around 2535 rapid on Lichess. <strong>The position, the search statistics and every centipawn figure on this page are invented for demonstration.</strong></p>
+  </footer>
+
+</div>
+</body>
+</html>

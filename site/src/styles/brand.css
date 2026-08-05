@@ -1,0 +1,61 @@
+/**
+ * Vetrina brand tokens.
+ *
+ * Deliberately NOT the tokens in examples/build-console.html. That page was
+ * built inside Gregario and inherited Gregario's palette, which is the
+ * design-kit rule working exactly as intended: a vetrina page rendered inside
+ * a host project should look like that project. Vetrina's own surfaces must
+ * not.
+ *
+ *   #14110d warm brown-black ground  →  cool blue-neutral street
+ *   #f5f4ef warm cream foreground    →  cool white
+ *   #22d3ee cyan accent              →  tungsten amber
+ *
+ * TYPE: mono-led, and that is the point.
+ *
+ * A first pass swapped Fraunces for Instrument Serif and JetBrains Mono for DM
+ * Mono. Different families, identical *categories*, high-contrast display
+ * serif over neutral coding mono, so the page silhouette still read as
+ * Gregario from across the room. Changing the family inside a category does not
+ * change what the eye recognises.
+ *
+ * So there is no serif here at all. Headlines are Azeret Mono, a blocky
+ * geometric mono with real presence at display size; data and UI are DM Mono;
+ * prose is a quiet system sans that stays out of the way. A product whose
+ * entire output is text has no business borrowing a magazine's voice.
+ *
+ * Practical consequence worth knowing: mono sets roughly 40–60% wider than a
+ * serif at the same size, so display sizes here are smaller than they look like
+ * they should be, and headline copy has to stay short.
+ */
+:root {
+  /* the street */
+  --ground: #0a0c10;
+  --surface: #101319;
+  --raised: #161b23;
+
+  /* structure */
+  --border: #2a3140;
+  --hair: #1d232d;
+  --hair-2: #161b23;
+
+  /* type colour */
+  --fg: #eceff4;
+  --muted: #98a2b3;
+  --faint: #67707f;
+
+  /* the light. liveness only, never decoration. */
+  --live: #ffb03a;
+
+  /* state */
+  --st-good: #57c98a;
+  --st-warn: #e0a33d;
+  --st-bad: #e5544b;
+  --st-you: #8b7fd4;
+
+  --display: "Azeret Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --mono: "DM Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --measure: 64ch;
+}

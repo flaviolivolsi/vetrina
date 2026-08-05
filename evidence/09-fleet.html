@@ -1,0 +1,419 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Fleet · 5 agents</title>
+<style>
+  :root{
+    --bg:#f2f2ef; --panel:#ffffff; --panel2:#f7f7f5; --ink:#14161a; --mute:#5d6470;
+    --line:#d9d9d4; --line2:#c4c4be;
+    --need:#c02718; --need-bg:#fdeceb; --need-ink:#8c1a0f;
+    --run:#1f5fc4; --run-bg:#eaf1fd;
+    --ok:#166b45; --ok-bg:#e7f4ee;
+    --dead:#4a4f58; --dead-bg:#ececeb;
+    --warn:#8a5a00; --warn-bg:#fdf2dd;
+    --shadow:0 1px 0 rgba(0,0,0,.04), 0 2px 10px rgba(0,0,0,.05);
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,"DejaVu Sans Mono",monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0d0f12; --panel:#161a1f; --panel2:#1c2127; --ink:#e9ebee; --mute:#98a1ad;
+      --line:#282e36; --line2:#39414b;
+      --need:#ff6a54; --need-bg:#2c1512; --need-ink:#ffb3a6;
+      --run:#7aa9ff; --run-bg:#111b2e;
+      --ok:#57cd94; --ok-bg:#0f2419;
+      --dead:#98a1ad; --dead-bg:#1a1d21;
+      --warn:#e2ac48; --warn-bg:#2a2113;
+      --shadow:0 1px 0 rgba(0,0,0,.3), 0 2px 12px rgba(0,0,0,.35);
+    }
+  }
+
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--sans);
+    font-size:16px; line-height:1.45; -webkit-text-size-adjust:100%;
+    padding:0 0 48px; overflow-x:hidden;
+  }
+  .wrap{max-width:940px;margin:0 auto;padding:0 14px}
+
+  /* ---------- header ---------- */
+  header.top{
+    position:sticky; top:0; z-index:20; background:var(--bg);
+    border-bottom:1px solid var(--line);
+    padding-top:env(safe-area-inset-top);
+  }
+  .topbar{display:flex;align-items:baseline;gap:10px;padding:12px 0 8px}
+  .title{font-size:15px;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+  .clock{margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--mute)}
+  .clock .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px;vertical-align:1px;animation:beat 2s infinite}
+  @keyframes beat{0%,100%{opacity:1}50%{opacity:.25}}
+
+  /* fleet strip: 5 tiles, always visible, tap to jump */
+  .strip{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding-bottom:10px}
+  .tile{
+    display:block;text-decoration:none;color:inherit;background:var(--panel);
+    border:1px solid var(--line);border-radius:9px;padding:7px 4px 6px;text-align:center;
+    border-top-width:4px;
+  }
+  .tile .n{font-family:var(--mono);font-size:11px;color:var(--mute);letter-spacing:.06em}
+  .tile .mark{font-size:17px;line-height:1.1;font-weight:700}
+  .tile .w{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+           white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tile.t-need{border-top-color:var(--need);background:var(--need-bg)}
+  .tile.t-need .mark,.tile.t-need .w{color:var(--need-ink)}
+  .tile.t-run{border-top-color:var(--run)} .tile.t-run .mark,.tile.t-run .w{color:var(--run)}
+  .tile.t-ok{border-top-color:var(--ok)}  .tile.t-ok .mark,.tile.t-ok .w{color:var(--ok)}
+  .tile.t-dead{border-top-color:var(--dead);border-top-style:dashed} .tile.t-dead .mark,.tile.t-dead .w{color:var(--dead)}
+
+  /* ---------- cards ---------- */
+  main{padding-top:14px}
+  .grid{display:grid;gap:14px;grid-template-columns:1fr}
+  @media (min-width:760px){
+    .grid{grid-template-columns:1fr 1fr}
+    .card.span{grid-column:1/-1}
+  }
+
+  .card{
+    background:var(--panel); border:1px solid var(--line); border-radius:14px;
+    box-shadow:var(--shadow); overflow:hidden; scroll-margin-top:120px;
+  }
+  .card .head{display:flex;gap:11px;padding:13px 13px 10px;align-items:flex-start}
+
+  /* shape-coded badge: state readable without colour */
+  .badge{flex:none;width:38px;height:38px;display:grid;place-items:center;
+         font-weight:800;font-size:17px;border:2px solid currentColor;position:relative}
+  .badge span{transform:none}
+  .b-need{color:var(--need);border-radius:5px;transform:rotate(45deg)}   /* diamond */
+  .b-need span{transform:rotate(-45deg);font-size:20px}
+  .b-run{color:var(--run);border-radius:50%}                              /* circle */
+  .b-ok{color:var(--ok);border-radius:50%;border-style:double;border-width:4px} /* double circle */
+  .b-dead{color:var(--dead);border-radius:3px;border-style:dashed}        /* dashed square */
+
+  .b-run::after{content:"";position:absolute;inset:-7px;border-radius:50%;
+    border:2px solid currentColor;opacity:.35;animation:ring 1.8s ease-out infinite}
+  @keyframes ring{0%{transform:scale(.72);opacity:.5}100%{transform:scale(1.05);opacity:0}}
+
+  .hmeta{min-width:0;flex:1}
+  .stateline{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .state{font-size:12.5px;font-weight:800;letter-spacing:.1em;text-transform:uppercase}
+  .s-need{color:var(--need)} .s-run{color:var(--run)} .s-ok{color:var(--ok)} .s-dead{color:var(--dead)}
+  .timer{font-family:var(--mono);font-size:12.5px;color:var(--mute);margin-left:auto}
+  .timer b{color:var(--ink);font-weight:600}
+  .timer .s{opacity:.5}
+  .who{font-size:17px;font-weight:700;margin:2px 0 0;letter-spacing:-.01em}
+  .who .agent{font-family:var(--mono);font-size:13px;color:var(--mute);font-weight:600}
+  .repo{font-family:var(--mono);font-size:12.5px;color:var(--mute);margin-top:3px;
+        overflow-wrap:anywhere}
+  .repo .br{color:var(--ink);opacity:.75}
+
+  .body{padding:0 13px 13px}
+  .task{font-size:15px;margin:2px 0 10px}
+  .task .lbl{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute);display:block;margin-bottom:2px}
+
+  /* the blocked card */
+  .card.need{border-color:var(--need);border-width:2px;background:var(--need-bg)}
+  .card.need .stripe{height:8px;background:repeating-linear-gradient(135deg,var(--need) 0 9px,transparent 9px 18px);opacity:.5}
+  .question{
+    font-size:20px;line-height:1.3;font-weight:700;margin:6px 0 12px;
+    padding:12px 13px;background:var(--panel);border:1px solid var(--need);border-radius:10px;
+  }
+  .question::before{content:"“";opacity:.35;margin-right:2px}
+  .question::after{content:"”";opacity:.35}
+  .askrow{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:10px}
+  .cmd{font-family:var(--mono);font-size:13px;background:var(--panel);border:1px solid var(--line2);
+       border-radius:8px;padding:8px 10px;color:var(--ink);cursor:pointer;user-select:all}
+  .cmd:active{background:var(--panel2)}
+  .hint{font-size:12px;color:var(--mute)}
+  .halted{font-size:13px;color:var(--need-ink);font-weight:600}
+
+  /* step pips */
+  .steps{display:flex;gap:4px;margin:0 0 7px}
+  .pip{height:9px;flex:1;border-radius:3px;border:1px solid var(--line2);background:transparent}
+  .pip.done{background:var(--run);border-color:var(--run)}
+  .pip.now{background:repeating-linear-gradient(90deg,var(--run) 0 4px,transparent 4px 8px);border-color:var(--run)}
+  .pip.done.hold{background:var(--need);border-color:var(--need)}
+  .pip.now.hold{background:repeating-linear-gradient(90deg,var(--need) 0 4px,transparent 4px 8px);border-color:var(--need)}
+  .pip.done.dead{background:var(--dead);border-color:var(--dead)}
+  .pip.now.dead{background:transparent;border-color:var(--dead);border-style:dashed}
+  .steptxt{font-size:13.5px;margin:0 0 4px}
+  .steptxt .k{font-family:var(--mono);font-size:12px;color:var(--mute);letter-spacing:.03em}
+  .next{font-size:12.5px;color:var(--mute)}
+
+  /* progress bar */
+  .bar{height:12px;border:1px solid var(--line2);border-radius:7px;overflow:hidden;background:var(--panel2)}
+  .bar i{display:block;height:100%;background:var(--run);
+         background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.28) 0 6px,transparent 6px 14px)}
+  .barrow{display:flex;justify-content:space-between;font-family:var(--mono);font-size:12px;color:var(--mute);margin-top:5px}
+  .barrow b{color:var(--ink)}
+
+  .fails{margin:9px 0 0;padding:9px 10px;border:1px solid var(--warn);border-radius:9px;background:var(--warn-bg)}
+  .fails h3{margin:0 0 5px;font-size:11.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--warn)}
+  .fails ul{margin:0;padding:0;list-style:none;font-family:var(--mono);font-size:12px;line-height:1.55;word-break:break-word}
+  .fails li::before{content:"✕ ";color:var(--warn);font-weight:700}
+
+  .kv{display:flex;flex-wrap:wrap;gap:6px;margin:9px 0 0}
+  .chip{font-family:var(--mono);font-size:12px;border:1px solid var(--line2);border-radius:999px;
+        padding:3px 9px;color:var(--mute);background:var(--panel2)}
+  .chip b{color:var(--ink);font-weight:600}
+  .chip.good{border-color:var(--ok);color:var(--ok)}
+  .chip.bad{border-color:var(--need);color:var(--need)}
+
+  /* log line */
+  .log{margin-top:11px;border-top:1px dashed var(--line2);padding-top:9px}
+  .log .lbl{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--mute)}
+  .log p{margin:3px 0 0;font-family:var(--mono);font-size:12.5px;line-height:1.5;
+         color:var(--ink);word-break:break-word;opacity:.9}
+  .log p.err{color:var(--need)}
+
+  footer{margin-top:18px;font-size:12px;color:var(--mute);text-align:center;line-height:1.6}
+  footer code{font-family:var(--mono)}
+
+  @media (prefers-reduced-motion:reduce){
+    *{animation:none!important}
+    .b-run::after{opacity:.3;transform:none}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="wrap">
+    <div class="topbar">
+      <div class="title">Fleet</div>
+      <div class="clock"><span class="dot"></span>live · <span id="tick">0s</span> ago</div>
+    </div>
+    <nav class="strip" aria-label="All five agents">
+      <a class="tile t-need" href="#a3"><div class="n">03</div><div class="mark">◆?</div><div class="w">Needs you</div></a>
+      <a class="tile t-dead" href="#a5"><div class="n">05</div><div class="mark">✕</div><div class="w">Crashed</div></a>
+      <a class="tile t-run"  href="#a4"><div class="n">04</div><div class="mark">●</div><div class="w">Testing</div></a>
+      <a class="tile t-run"  href="#a1"><div class="n">01</div><div class="mark">●</div><div class="w">6/9</div></a>
+      <a class="tile t-ok"   href="#a2"><div class="n">02</div><div class="mark">✓</div><div class="w">Review</div></a>
+    </nav>
+  </div>
+</header>
+
+<main class="wrap">
+<div class="grid">
+
+  <!-- ============ AGENT 3 — THE ONE THAT MATTERS ============ -->
+  <article class="card need span" id="a3">
+    <div class="stripe" aria-hidden="true"></div>
+    <div class="head">
+      <div class="badge b-need" aria-hidden="true"><span>?</span></div>
+      <div class="hmeta">
+        <div class="stateline">
+          <span class="state s-need">Blocked — needs you</span>
+          <span class="timer">waiting <b class="dur" data-since="1560"></b></span>
+        </div>
+        <h2 class="who">Answer this and it resumes <span class="agent">agent-03</span></h2>
+        <div class="repo">acme/identity · <span class="br">feature/gdpr-erasure</span></div>
+      </div>
+    </div>
+    <div class="body">
+      <p class="question">Should deleted users keep their audit log entries?</p>
+
+      <div class="askrow">
+        <code class="cmd" data-copy="tmux attach -t agent-03">tmux attach -t agent-03</code>
+        <span class="hint">pane 2 · tap to copy</span>
+      </div>
+      <p class="halted">Nothing has moved for <span class="dur" data-since="1560"></span>. Every other step of GDPR erasure is done and waiting on this one answer.</p>
+
+      <div class="steps" aria-hidden="true">
+        <i class="pip done hold"></i><i class="pip done hold"></i><i class="pip done hold"></i>
+        <i class="pip now hold"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i>
+      </div>
+      <p class="steptxt"><span class="k">PAUSED AT STEP 4/7</span> — Hard-delete user PII on erasure request</p>
+      <p class="next">Blocked behind it: 5 · redact exports, 6 · tombstone rows, 7 · integration tests</p>
+
+      <div class="kv">
+        <span class="chip">context <b>ran 1h 04m before asking</b></span>
+        <span class="chip">touched <b>14 files</b></span>
+        <span class="chip">no commits yet</span>
+      </div>
+
+      <div class="log">
+        <div class="lbl">Last log line · 26m ago</div>
+        <p>audit_log.actor_id references users.id ON DELETE RESTRICT — cannot proceed without a policy decision. Awaiting human input…</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ============ AGENT 5 — CRASHED ============ -->
+  <article class="card" id="a5">
+    <div class="head">
+      <div class="badge b-dead" aria-hidden="true"><span>✕</span></div>
+      <div class="hmeta">
+        <div class="stateline">
+          <span class="state s-dead">Stopped — crashed</span>
+          <span class="timer">dead <b class="dur" data-since="480"></b></span>
+        </div>
+        <h2 class="who">Rate limit, no retry <span class="agent">agent-05</span></h2>
+        <div class="repo">acme/storefront-web · <span class="br">docs/api-reference-sync</span></div>
+      </div>
+    </div>
+    <div class="body">
+      <p class="task"><span class="lbl">Task</span>Regenerate the public API reference from OpenAPI specs</p>
+      <div class="steps" aria-hidden="true">
+        <i class="pip done dead"></i><i class="pip now dead"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i>
+      </div>
+      <p class="steptxt"><span class="k">DIED AT STEP 2/5</span> — Summarise 118 endpoint schemas</p>
+      <p class="next">Work so far is on the branch, uncommitted. Nothing is running.</p>
+      <div class="kv">
+        <span class="chip bad">exit code <b>1</b></span>
+        <span class="chip">ran <b>19m</b> before dying</span>
+        <span class="chip">restart is safe</span>
+      </div>
+      <div class="log">
+        <div class="lbl">Last log line · 8m ago</div>
+        <p class="err">Error: 429 rate_limit_error — retry after 60s. No retry policy configured; process exited.</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ============ AGENT 4 — TESTS ============ -->
+  <article class="card" id="a4">
+    <div class="head">
+      <div class="badge b-run" aria-hidden="true"><span>▶</span></div>
+      <div class="hmeta">
+        <div class="stateline">
+          <span class="state s-run">Running — test suite</span>
+          <span class="timer">up <b class="dur" data-since="1122"></b></span>
+        </div>
+        <h2 class="who">1,840 of 3,200 tests <span class="agent">agent-04</span></h2>
+        <div class="repo">acme/storefront-web · <span class="br">chore/upgrade-vitest-3</span></div>
+      </div>
+    </div>
+    <div class="body">
+      <p class="task"><span class="lbl">Task</span>Upgrade Vitest 1 → 3 and get the suite green again</p>
+      <div class="bar" role="img" aria-label="1840 of 3200 tests done, 58 percent"><i style="width:57.5%"></i></div>
+      <div class="barrow"><span><b>1,840</b> / 3,200 · 58%</span><span>~11m left</span></div>
+      <div class="fails">
+        <h3>3 failures so far</h3>
+        <ul>
+          <li>checkout/tax.spec.ts › applies EU VAT to digital goods</li>
+          <li>cart/persist.spec.ts › restores cart after session expiry</li>
+          <li>search/facets.spec.ts › debounces facet refetch (timer mock)</li>
+        </ul>
+      </div>
+      <div class="log">
+        <div class="lbl">Last log line · 4s ago</div>
+        <p>✓ src/product/gallery.spec.tsx (22 tests) 1.31s &nbsp;|&nbsp; shard 3/4</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ============ AGENT 1 — MIGRATION ============ -->
+  <article class="card" id="a1">
+    <div class="head">
+      <div class="badge b-run" aria-hidden="true"><span>▶</span></div>
+      <div class="hmeta">
+        <div class="stateline">
+          <span class="state s-run">Running — step 6 of 9</span>
+          <span class="timer">up <b class="dur" data-since="2400"></b></span>
+        </div>
+        <h2 class="who">Backfilling partitions <span class="agent">agent-01</span></h2>
+        <div class="repo">acme/ledger-core · <span class="br">migrate/partition-txns</span></div>
+      </div>
+    </div>
+    <div class="body">
+      <p class="task"><span class="lbl">Task</span>Partition the transactions table by month (12.4M rows)</p>
+      <div class="steps" aria-hidden="true">
+        <i class="pip done"></i><i class="pip done"></i><i class="pip done"></i><i class="pip done"></i><i class="pip done"></i>
+        <i class="pip now"></i><i class="pip"></i><i class="pip"></i><i class="pip"></i>
+      </div>
+      <p class="steptxt"><span class="k">STEP 6/9</span> — Backfill historical rows into monthly partitions</p>
+      <p class="next">Next: 7 · swap the view, 8 · drop the old table, 9 · verify row counts</p>
+      <div class="kv">
+        <span class="chip">rows <b>8.1M / 12.4M</b></span>
+        <span class="chip">3 commits</span>
+        <span class="chip good">no errors</span>
+      </div>
+      <div class="log">
+        <div class="lbl">Last log line · 22s ago</div>
+        <p>[backfill] 2024-07 → txns_p2024_07: 640k rows copied in 38s (65% overall)</p>
+      </div>
+    </div>
+  </article>
+
+  <!-- ============ AGENT 2 — DONE, WAITING REVIEW ============ -->
+  <article class="card" id="a2">
+    <div class="head">
+      <div class="badge b-ok" aria-hidden="true"><span>✓</span></div>
+      <div class="hmeta">
+        <div class="stateline">
+          <span class="state s-ok">Done — waiting for review</span>
+          <span class="timer">idle <b class="dur" data-since="720"></b></span>
+        </div>
+        <h2 class="who">PR #4471 is open <span class="agent">agent-02</span></h2>
+        <div class="repo">acme/ledger-core · <span class="br">fix/webhook-retry-jitter</span></div>
+      </div>
+    </div>
+    <div class="body">
+      <p class="task"><span class="lbl">Task</span>Add jitter to webhook retry backoff (fixes thundering herd on 5xx)</p>
+      <p class="steptxt"><span class="k">ALL 5 STEPS DONE</span> — agent has stopped, nothing running</p>
+      <div class="kv">
+        <span class="chip">+182 <b>/</b> −64 · 4 files</span>
+        <span class="chip good">checks <b>12/12 green</b></span>
+        <span class="chip">0 reviewers assigned</span>
+      </div>
+      <div class="log">
+        <div class="lbl">Last log line · 12m ago</div>
+        <p>opened PR #4471 → main · CI green · handing back to human, no further work queued.</p>
+      </div>
+    </div>
+  </article>
+
+</div>
+
+<footer>
+  <p>5 agents · 3 repos · 1 needs you, 2 running, 1 review, 1 dead.<br>
+  Snapshot page — nothing here talks to the network. Regenerate to refresh.</p>
+</footer>
+</main>
+
+<script>
+(function(){
+  function fmt(s){
+    if(s < 60) return s + '<span class="s">s</span>';
+    if(s < 3600){
+      var m = Math.floor(s/60), ss = String(s%60).padStart(2,'0');
+      return m + 'm <span class="s">' + ss + 's</span>';
+    }
+    var h = Math.floor(s/3600), m2 = String(Math.floor(s%3600/60)).padStart(2,'0');
+    return h + 'h <span class="s">' + m2 + 'm</span>';
+  }
+  var els = [].slice.call(document.querySelectorAll('.dur'));
+  var base = els.map(function(e){ return parseInt(e.dataset.since,10) || 0; });
+  var t0 = Date.now(), tickEl = document.getElementById('tick');
+
+  function paint(){
+    var d = Math.floor((Date.now() - t0)/1000);
+    els.forEach(function(e,i){ e.innerHTML = fmt(base[i] + d); });
+    tickEl.textContent = d < 60 ? d + 's' : Math.floor(d/60) + 'm';
+  }
+  paint();
+  setInterval(paint, 1000);
+
+  // tap-to-copy on the attach command
+  document.querySelectorAll('.cmd').forEach(function(c){
+    c.addEventListener('click', function(){
+      var txt = c.dataset.copy || c.textContent, done = function(){
+        var old = c.textContent;
+        c.textContent = 'copied ✓';
+        setTimeout(function(){ c.textContent = old; }, 1200);
+      };
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(done, function(){});
+      } else {
+        var r = document.createRange(); r.selectNodeContents(c);
+        var s = getSelection(); s.removeAllRanges(); s.addRange(r);
+      }
+    });
+  });
+})();
+</script>
+</body>
+</html>

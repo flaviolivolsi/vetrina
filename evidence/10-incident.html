@@ -1,0 +1,1035 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>INC-2419 — checkout degradation, 2026-07-31</title>
+<style>
+/* ---------- tokens ---------- */
+:root{
+  --paper:#f4f3ef;
+  --card:#ffffff;
+  --ink:#15171c;
+  --ink-2:#464b57;
+  --ink-3:#767c8a;
+  --rule:#dedcd4;
+  --rule-2:#ebe9e2;
+
+  --sig:#b3311c;        /* incident / error */
+  --sig-soft:#f7e2dc;
+  --warn:#8a5a06;       /* latent / caution */
+  --warn-soft:#f8ecd4;
+  --ok:#0f6b4a;         /* recovery */
+  --ok-soft:#dcefe4;
+  --human:#2a4d8f;      /* people track */
+  --human-soft:#dfe6f4;
+  --neutral:#8b8f99;
+  --neutral-soft:#eceae4;
+
+  --shadow:0 1px 0 rgba(20,22,28,.05), 0 2px 8px rgba(20,22,28,.05);
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,"Liberation Mono",monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --paper:#111318;
+    --card:#191c22;
+    --ink:#e9eaee;
+    --ink-2:#b0b5c0;
+    --ink-3:#848b99;
+    --rule:#2b2f38;
+    --rule-2:#22262e;
+
+    --sig:#f2765a;
+    --sig-soft:#3a1f18;
+    --warn:#e3a951;
+    --warn-soft:#33280f;
+    --ok:#4fc08d;
+    --ok-soft:#122c22;
+    --human:#7ba4ea;
+    --human-soft:#1a2438;
+    --neutral:#7d838f;
+    --neutral-soft:#232730;
+    --shadow:0 1px 0 rgba(0,0,0,.3), 0 2px 10px rgba(0,0,0,.28);
+  }
+}
+
+/* ---------- base ---------- */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:var(--sans); font-size:16px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+  padding:0 0 64px;
+}
+.wrap{max-width:1080px;margin:0 auto;padding:0 18px}
+@media(min-width:760px){.wrap{padding:0 32px}}
+
+h1,h2,h3{margin:0;line-height:1.2;letter-spacing:-.015em}
+p{margin:0}
+/* Metric names, paths and identifiers are single unbreakable words to a
+   browser, so on a narrow phone one of them widens the whole page. Anything
+   in the mono face is allowed to break mid-token rather than push. */
+code,.mono{font-family:var(--mono);overflow-wrap:anywhere}
+
+.sect{margin-top:34px}
+.sect-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+  padding-bottom:8px;border-bottom:1.5px solid var(--rule);margin-bottom:16px}
+.sect-head h2{font-size:.82rem;text-transform:uppercase;letter-spacing:.11em;font-weight:700}
+.sect-head .hint{font-size:.8rem;color:var(--ink-3)}
+
+/* ---------- masthead ---------- */
+header{border-bottom:1.5px solid var(--rule);background:var(--card);padding:22px 0 20px}
+.crumb{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-family:var(--mono);
+  font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.tag{display:inline-flex;align-items:center;gap:6px;border:1.5px solid currentColor;
+  border-radius:3px;padding:1px 7px;font-weight:700;font-size:.7rem;letter-spacing:.07em}
+.tag.sev{color:var(--sig)}
+.tag.res{color:var(--ok)}
+h1{font-size:clamp(1.45rem,4.6vw,2.2rem);margin-top:12px;font-weight:750}
+.standfirst{margin-top:12px;max-width:74ch;font-size:clamp(.98rem,2.6vw,1.09rem);
+  color:var(--ink-2);line-height:1.55}
+.standfirst b{color:var(--ink);font-weight:650}
+
+/* ---------- stat strip ---------- */
+.stats{display:grid;gap:10px;margin-top:22px;
+  grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.stat{background:var(--card);border:1.5px solid var(--rule);border-radius:7px;
+  padding:12px 13px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--neutral)}
+.stat.s-bad::before{background:var(--sig)} .stat.s-warn::before{background:var(--warn)}
+.stat.s-hum::before{background:var(--human)} .stat.s-ok::before{background:var(--ok)}
+.stat .k{font-size:.67rem;text-transform:uppercase;letter-spacing:.09em;color:var(--ink-3);font-weight:700}
+.stat .v{font-family:var(--mono);font-size:clamp(1.32rem,4.6vw,1.62rem);font-weight:700;
+  letter-spacing:-.02em;margin-top:5px;line-height:1.05}
+.stat .v .u{font-size:.62em;font-weight:600;color:var(--ink-2);margin-left:2px}
+.stat .s{font-size:.76rem;color:var(--ink-3);margin-top:4px;line-height:1.35}
+
+/* ---------- chart ---------- */
+.chartcard{background:var(--card);border:1.5px solid var(--rule);border-radius:7px;
+  box-shadow:var(--shadow);padding:12px 12px 6px}
+.readout{display:flex;gap:14px;align-items:baseline;flex-wrap:wrap;font-family:var(--mono);
+  font-size:.78rem;color:var(--ink-2);min-height:22px;padding:0 2px 6px}
+.readout .t{font-weight:700;color:var(--ink);font-size:.88rem}
+.readout .dim{color:var(--ink-3)}
+#chart{display:block;width:100%;height:auto;touch-action:pan-y}
+.chartcard .foot{font-size:.72rem;color:var(--ink-3);padding:4px 2px 6px}
+
+/* svg classes */
+.ax-line{stroke:var(--rule);stroke-width:1}
+.ax-grid{stroke:var(--rule-2);stroke-width:1}
+.ax-txt{fill:var(--ink-3);font-family:var(--mono);font-size:10px}
+.ax-txt.b{fill:var(--ink-2);font-weight:700}
+.area{fill:var(--sig);opacity:.16}
+.line{fill:none;stroke:var(--sig);stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.base-line{stroke:var(--ok);stroke-width:1.5;stroke-dasharray:2 3;opacity:.85}
+.pinline{stroke:var(--ink-3);stroke-width:1;stroke-dasharray:2 3;opacity:.75}
+.pindot{fill:var(--card);stroke:var(--ink);stroke-width:1.5;cursor:pointer}
+.pindot.hot{fill:var(--ink);stroke:var(--ink)}
+.pintxt{fill:var(--ink);font-family:var(--mono);font-size:10px;font-weight:700;
+  text-anchor:middle;dominant-baseline:central;pointer-events:none}
+.pintxt.hot{fill:var(--card)}
+.blk{stroke-width:1.5;rx:3}
+.blk-txt{font-family:var(--sans);font-size:10.5px;font-weight:700;letter-spacing:.02em;
+  dominant-baseline:central;pointer-events:none}
+.lane-lbl{fill:var(--ink-3);font-family:var(--mono);font-size:9px;font-weight:700;
+  letter-spacing:.09em;text-anchor:end;dominant-baseline:central}
+.cross{stroke:var(--ink);stroke-width:1;opacity:.55}
+.crossdot{fill:var(--sig);stroke:var(--card);stroke-width:2}
+
+/* chart legend */
+.clegend{display:grid;gap:7px;margin-top:12px;grid-template-columns:1fr}
+@media(min-width:700px){.clegend{grid-template-columns:1fr 1fr;gap:7px 22px}}
+.cl{display:flex;gap:9px;align-items:flex-start;font-size:.79rem;line-height:1.35;color:var(--ink-2)}
+.sw{flex:0 0 auto;width:22px;height:13px;border-radius:2px;border:1.5px solid var(--ink-3);margin-top:2px}
+.cl b{color:var(--ink);font-weight:650}
+
+/* ---------- time budget bar ---------- */
+.budget{background:var(--card);border:1.5px solid var(--rule);border-radius:7px;
+  box-shadow:var(--shadow);padding:14px}
+.bbar{display:flex;height:34px;border-radius:4px;overflow:hidden;border:1.5px solid var(--rule)}
+.bseg{position:relative;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:.68rem;font-weight:700;color:#fff;overflow:hidden;
+  border-right:1.5px solid rgba(255,255,255,.5)}
+.bseg:last-child{border-right:0}
+.bseg span{white-space:nowrap;padding:0 4px}
+.bbracket{display:flex;margin-top:6px;font-family:var(--mono);font-size:.7rem;color:var(--sig);font-weight:700}
+.bbracket .br{border-top:0;position:relative;padding-top:9px;text-align:center;
+  border-left:1.5px solid var(--sig);border-right:1.5px solid var(--sig)}
+.bbracket .br::before{content:"";position:absolute;left:0;right:0;top:0;border-top:1.5px solid var(--sig)}
+.blegend{margin-top:14px;display:grid;gap:8px}
+@media(min-width:700px){.blegend{grid-template-columns:1fr 1fr;gap:8px 22px}}
+.bl{display:flex;gap:9px;align-items:baseline;font-size:.8rem;color:var(--ink-2)}
+.bl .dot{flex:0 0 auto;width:11px;height:11px;border-radius:2px;border:1.5px solid rgba(128,128,128,.4)}
+.bbracket .thin{display:none}
+@media(max-width:660px){
+  .bseg.sm span{display:none}
+  .bbracket .wide{display:none}
+  .bbracket .thin{display:inline}
+  .bbracket{font-size:.64rem}
+  .snip{font-size:.66rem}
+}
+/* dark palette uses light fills in the bar, so the labels flip to dark ink */
+@media (prefers-color-scheme: dark){
+  .bseg{color:#0d0f14}
+  .bseg{border-right-color:rgba(0,0,0,.4)}
+}
+.bl .dur{font-family:var(--mono);font-weight:700;color:var(--ink);margin-left:auto;padding-left:10px}
+
+/* ---------- timeline ---------- */
+.tl{position:relative}
+.tl::before{content:"";position:absolute;left:62px;top:4px;bottom:18px;width:1.5px;
+  background:var(--rule)}
+@media(min-width:860px){.tl::before{left:50%;top:46px;transform:translateX(-1px)}}
+
+.tl-headrow{display:none}
+@media(min-width:860px){
+  .tl-headrow{display:grid;grid-template-columns:1fr 104px 1fr;position:relative;
+    padding-bottom:10px;border-bottom:1.5px solid var(--rule);margin-bottom:18px}
+  .tl-h{font-family:var(--mono);font-size:.68rem;letter-spacing:.1em;font-weight:700;
+    text-transform:uppercase;color:var(--ink-3)}
+  .tl-h.l{text-align:right}
+  .tl-h.m{text-align:center}
+}
+
+.ev{display:grid;grid-template-columns:70px 1fr;position:relative}
+@media(min-width:860px){.ev{grid-template-columns:1fr 104px 1fr}}
+.ev .time{grid-column:1;grid-row:1;font-family:var(--mono);font-size:.68rem;font-weight:700;
+  color:var(--ink-2);padding:13px 14px 0 0;text-align:right;white-space:nowrap}
+.ev .card{grid-column:2;grid-row:1;padding:0 0 16px 0;min-width:0}
+@media(min-width:860px){
+  .ev .time{grid-column:2;text-align:center;padding:14px 0 0 0;font-size:.73rem}
+  .ev .time span{background:var(--paper);padding:3px 7px;border-radius:3px;display:inline-block}
+  .ev.sys .card{grid-column:1;text-align:right;padding:0 20px 24px 0}
+  .ev.hum .card{grid-column:3;padding:0 0 24px 20px}
+  .ev.sys .cbody{margin-left:auto}
+}
+.cbody{background:var(--card);border:1.5px solid var(--rule);border-radius:7px;
+  padding:11px 13px;box-shadow:var(--shadow);max-width:520px;position:relative;
+  border-left-width:4px;border-left-color:var(--neutral);text-align:left}
+.ev.sys .cbody{border-left-color:var(--sig)}
+.ev.hum .cbody{border-left-color:var(--human)}
+.ev.wrong .cbody{border-left-color:var(--warn);
+  background-image:repeating-linear-gradient(135deg,transparent 0 9px,var(--warn-soft) 9px 18px)}
+.ev.fix .cbody{border-left-color:var(--ok)}
+@media(min-width:860px){
+  .ev.sys .cbody{border-left-width:1.5px;border-right-width:4px;border-right-color:var(--sig)}
+}
+.cmeta{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin-bottom:5px}
+@media(min-width:860px){.ev.sys .cmeta{justify-content:flex-end}}
+.glyph{display:inline-flex;align-items:center;justify-content:center;width:19px;height:19px;
+  border:1.5px solid currentColor;border-radius:3px;font-size:10px;font-weight:800;flex:0 0 auto;
+  font-family:var(--mono);line-height:1}
+.lane{font-family:var(--mono);font-size:.62rem;letter-spacing:.09em;font-weight:800;text-transform:uppercase}
+.ev.sys .glyph,.ev.sys .lane{color:var(--sig)}
+.ev.hum .glyph,.ev.hum .lane{color:var(--human)}
+.ev.fix .glyph,.ev.fix .lane{color:var(--ok)}
+.ev.wrong .glyph,.ev.wrong .lane{color:var(--warn)}
+.pinno{font-family:var(--mono);font-size:.62rem;font-weight:800;border-radius:50%;
+  width:17px;height:17px;display:inline-flex;align-items:center;justify-content:center;
+  background:var(--ink);color:var(--paper);flex:0 0 auto}
+.ctitle{font-size:.95rem;font-weight:670;line-height:1.32;letter-spacing:-.01em}
+.cdesc{font-size:.845rem;color:var(--ink-2);margin-top:5px;line-height:1.45}
+.cdesc b{color:var(--ink);font-weight:650}
+.who{display:inline-block;font-family:var(--mono);font-size:.73rem;color:var(--ink);
+  background:var(--neutral-soft);border-radius:3px;padding:0 5px;white-space:nowrap}
+.snip{font-family:var(--mono);font-size:.72rem;line-height:1.5;margin-top:8px;
+  background:var(--neutral-soft);border-radius:4px;padding:7px 9px;overflow-x:auto;
+  white-space:pre;color:var(--ink-2);text-align:left;border:1px solid var(--rule-2)}
+.snip .hl{color:var(--sig);font-weight:700}
+.flash{animation:fl 1.5s ease-out}
+@keyframes fl{0%,22%{box-shadow:0 0 0 3px var(--warn)}100%{box-shadow:var(--shadow)}}
+
+/* gap marker on the timeline */
+.gap{position:relative;display:flex;align-items:center;gap:12px;margin:0 0 20px;padding:10px 13px;
+  border:1.5px dashed var(--rule);border-radius:7px;background:var(--paper)}
+@media(max-width:859px){.gap{margin-left:70px}}
+.gap .big{font-family:var(--mono);font-weight:800;font-size:1.02rem;color:var(--ink);white-space:nowrap}
+.gap .txt{font-size:.82rem;color:var(--ink-2);line-height:1.4}
+
+/* ---------- cause ---------- */
+.two{display:grid;gap:14px}
+@media(min-width:820px){.two{grid-template-columns:1.15fr .85fr}}
+.panel{background:var(--card);border:1.5px solid var(--rule);border-radius:7px;
+  box-shadow:var(--shadow);padding:14px;
+  /* A grid item defaults to min-width:auto, so it refuses to shrink below the
+     min-content width of the pre-formatted diff inside it. On a phone that made
+     a 476px panel sit in a 390px viewport and took the whole page sideways with
+     it. min-width:0 lets the panel shrink; pre.diff already scrolls itself. */
+  min-width:0}
+.panel h3{font-size:.7rem;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-3);
+  font-weight:800;margin-bottom:10px;
+  /* These headings carry file paths, which a browser treats as one unbreakable
+     word. Widened further by the letter-spacing, that pushed the page sideways
+     on a phone even though the panel itself fitted. */
+  overflow-wrap:anywhere}
+pre.diff{font-family:var(--mono);font-size:.76rem;line-height:1.65;margin:0;overflow-x:auto;
+  background:var(--neutral-soft);border:1px solid var(--rule-2);border-radius:5px;padding:10px 0}
+pre.diff .ln{display:block;padding:0 12px;white-space:pre}
+pre.diff .del{background:var(--sig-soft);color:var(--sig);font-weight:700}
+pre.diff .add{background:var(--warn-soft);color:var(--warn);font-weight:700}
+pre.diff .hdr{color:var(--ink-3)}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:.815rem;margin-top:12px}
+.kv dt{font-family:var(--mono);font-size:.68rem;text-transform:uppercase;letter-spacing:.06em;
+  color:var(--ink-3);font-weight:700;padding-top:2px}
+.kv dd{margin:0;color:var(--ink-2)}
+.kv dd .mono{color:var(--ink)}
+
+/* metric table */
+table{width:100%;border-collapse:collapse;font-size:.81rem}
+th,td{text-align:left;padding:7px 9px;border-bottom:1px solid var(--rule-2);vertical-align:top}
+th{font-family:var(--mono);font-size:.64rem;text-transform:uppercase;letter-spacing:.08em;
+  color:var(--ink-3);font-weight:800;border-bottom:1.5px solid var(--rule)}
+td.n{font-family:var(--mono);white-space:nowrap;font-weight:600}
+td .up{color:var(--sig);font-weight:800}
+td .dn{color:var(--ok);font-weight:800}
+.tscroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+
+/* logs */
+pre.log{font-family:var(--mono);font-size:.735rem;line-height:1.62;margin:0;overflow-x:auto;
+  background:var(--neutral-soft);border:1px solid var(--rule-2);border-radius:5px;
+  padding:11px 12px;white-space:pre;color:var(--ink-2)}
+pre.log .er{color:var(--sig);font-weight:700}
+pre.log .wa{color:var(--warn);font-weight:700}
+pre.log .ts{color:var(--ink-3)}
+pre.log .em{color:var(--ink);font-weight:700}
+
+/* factors */
+ol.factors{list-style:none;counter-reset:f;margin:0;padding:0;display:grid;gap:10px}
+ol.factors li{counter-increment:f;background:var(--card);border:1.5px solid var(--rule);
+  border-radius:7px;padding:11px 13px 11px 46px;position:relative;box-shadow:var(--shadow);
+  font-size:.86rem;color:var(--ink-2);line-height:1.45}
+ol.factors li::before{content:counter(f);position:absolute;left:12px;top:11px;width:22px;height:22px;
+  border:1.5px solid var(--ink-3);border-radius:50%;display:flex;align-items:center;justify-content:center;
+  font-family:var(--mono);font-size:.72rem;font-weight:800;color:var(--ink)}
+ol.factors li b{color:var(--ink);font-weight:670;display:block;margin-bottom:2px;font-size:.9rem}
+
+/* actions */
+.act-state{display:inline-flex;align-items:center;gap:5px;font-family:var(--mono);font-size:.66rem;
+  font-weight:800;letter-spacing:.05em;text-transform:uppercase;border:1.5px solid currentColor;
+  border-radius:3px;padding:1px 6px;white-space:nowrap}
+.act-state.open{color:var(--sig)} .act-state.prog{color:var(--warn)} .act-state.done{color:var(--ok)}
+
+footer{margin-top:38px;padding-top:14px;border-top:1.5px solid var(--rule);
+  font-size:.75rem;color:var(--ink-3);font-family:var(--mono);line-height:1.6}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0)}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <div class="crumb">
+      <span class="tag sev">&#9679; SEV-1</span>
+      <span class="tag res">&#10003; RESOLVED</span>
+      <span>INC-2419</span><span>&middot;</span>
+      <span>svc-checkout</span><span>&middot;</span>
+      <span>2026-07-31 &middot; all times UTC</span>
+    </div>
+    <h1>Checkout failed for 26 minutes because a merge shrank the connection pool from 20 to 5</h1>
+    <p class="standfirst">
+      A one-line config change shipped at <b>14:02</b> and sat harmless for <b>38 minutes</b> — traffic was
+      too low to notice. At <b>14:40</b> the nightly reconcile job opened its connections, drained the
+      shrunken pool, and checkout error rate went from 0.1% to a peak of <b>34%</b>. The first two
+      responders spent <b>19 minutes</b> on a payment provider that was never involved, because that
+      provider happened to have an unrelated status-page notice open. A rollback at 15:03 fixed it;
+      recovery completed at 15:07.
+    </p>
+
+    <div class="stats">
+      <div class="stat s-bad">
+        <div class="k">Degraded checkout</div>
+        <div class="v">26<span class="u">min</span></div>
+        <div class="s">14:41:05 &rarr; 15:07:18</div>
+      </div>
+      <div class="stat s-bad">
+        <div class="k">Peak error rate</div>
+        <div class="v">34.0<span class="u">%</span></div>
+        <div class="s">baseline 0.1% &middot; peak at 14:56</div>
+      </div>
+      <div class="stat s-bad">
+        <div class="k">Failed orders</div>
+        <div class="v">~1,204</div>
+        <div class="s">of 5,391 attempts in window</div>
+      </div>
+      <div class="stat s-hum">
+        <div class="k">Spent on wrong cause</div>
+        <div class="v">19<span class="u">min</span></div>
+        <div class="s">14:44:10 &rarr; 15:03:12 &middot; 71% of the outage</div>
+      </div>
+      <div class="stat s-warn">
+        <div class="k">Change that caused it</div>
+        <div class="v">1<span class="u">line</span></div>
+        <div class="s">maximum-pool-size: 20 &rarr; 5</div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ============ CHART ============ -->
+  <section class="sect">
+    <div class="sect-head">
+      <h2>The shape of it</h2>
+      <span class="hint">Checkout error rate, per minute — with what the system was doing and what the team was looking at, on the same clock. Hover or drag across the chart.</span>
+    </div>
+    <div class="chartcard">
+      <div class="readout" id="readout">
+        <span class="t" id="ro-t">&mdash;&mdash;:&mdash;&mdash;</span>
+        <span id="ro-e" class="dim">move across the chart for a per-minute reading</span>
+        <span id="ro-o" class="dim"></span>
+      </div>
+      <svg id="chart" role="img" aria-labelledby="chart-desc"></svg>
+      <p class="sr" id="chart-desc">Checkout error rate stays at 0.1 percent from 14:00 to 14:40, rises steeply from 14:41 to a plateau near 34 percent between 14:53 and 15:03, then falls to baseline by 15:07.</p>
+      <div class="foot">Numbered pins <b>1</b>&ndash;<b>7</b> match the numbered events in the timeline below. Tap a pin to jump to it.</div>
+    </div>
+
+    <div class="clegend">
+      <div class="cl"><span class="sw" style="background:var(--neutral-soft)"></span><span><b>NORMAL</b> — 0.1% errors, 205 checkouts/min, pool at 3/20 per pod.</span></div>
+      <div class="cl"><span class="sw" style="background:var(--warn-soft)"></span><span><b>LATENT (38 min)</b> — bad pool size live in prod, no symptom, no alert.</span></div>
+      <div class="cl"><span class="sw" style="background:var(--sig-soft)"></span><span><b>DEGRADED (26 min)</b> — pool exhausted, checkout returning 503.</span></div>
+      <div class="cl"><span class="sw" style="background:repeating-linear-gradient(135deg,transparent 0 5px,var(--warn) 5px 10px)"></span><span><b>WRONG LEAD (striped)</b> — team investigating NordPay 3-D Secure notice.</span></div>
+      <div class="cl"><span class="sw" style="background:var(--human-soft)"></span><span><b>TEAM ACTIVITY</b> — paged, then correct cause found, then rollback.</span></div>
+      <div class="cl"><span class="sw" style="background:var(--ok-soft)"></span><span><b>RECOVERED</b> — error rate back under 0.2%, monitoring held for 30 min.</span></div>
+    </div>
+  </section>
+
+  <!-- ============ TIME BUDGET ============ -->
+  <section class="sect">
+    <div class="sect-head">
+      <h2>Where the 27 minutes went</h2>
+      <span class="hint">From pool exhaustion (14:40:22) to recovery (15:07:18) — 26 min 56 s.</span>
+    </div>
+    <div class="budget">
+      <div class="bbar" role="img" aria-label="Time breakdown: undetected 2 minutes 38 seconds, acknowledgement 1 minute 10 seconds, wrong lead 13 minutes 20 seconds, confirming the real cause 5 minutes 42 seconds, rollback and recovery 4 minutes 6 seconds.">
+        <div class="bseg sm" style="width:9.8%;background:var(--neutral)"><span>2m38s</span></div>
+        <div class="bseg sm" style="width:4.3%;background:var(--ink-3)"><span>1m10s</span></div>
+        <div class="bseg" style="width:49.5%;background:var(--warn);
+          background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.28) 0 6px,transparent 6px 12px)"><span>13m20s &nbsp;WRONG LEAD</span></div>
+        <div class="bseg" style="width:21.2%;background:var(--human)"><span>5m42s</span></div>
+        <div class="bseg" style="width:15.2%;background:var(--ok)"><span>4m06s</span></div>
+      </div>
+      <div class="bbracket" aria-hidden="true">
+        <div style="width:14.1%"></div>
+        <div class="br" style="width:70.7%"><span class="wide">19m 02s from acknowledgement to rollback</span><span class="thin">19m 02s ack &rarr; rollback</span></div>
+        <div style="width:15.2%"></div>
+      </div>
+
+      <div class="blegend">
+        <div class="bl"><span class="dot" style="background:var(--neutral)"></span>
+          <span><b>Undetected</b> — pool exhausted, alert window still filling</span><span class="dur">2m38s</span></div>
+        <div class="bl"><span class="dot" style="background:var(--ink-3)"></span>
+          <span><b>Page &rarr; acknowledgement</b> by m.declercq</span><span class="dur">1m10s</span></div>
+        <div class="bl"><span class="dot" style="background:var(--warn);background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.35) 0 4px,transparent 4px 8px)"></span>
+          <span><b>Wrong lead</b> — NordPay status page, support ticket, PSP failover draft</span><span class="dur">13m20s</span></div>
+        <div class="bl"><span class="dot" style="background:var(--human)"></span>
+          <span><b>Real cause found &rarr; decision to roll back</b></span><span class="dur">5m42s</span></div>
+        <div class="bl"><span class="dot" style="background:var(--ok)"></span>
+          <span><b>Rollback &rarr; error rate back to baseline</b></span><span class="dur">4m06s</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TIMELINE ============ -->
+  <section class="sect">
+    <div class="sect-head">
+      <h2>Sequence</h2>
+      <span class="hint">Left column: what the system did. Right column: what people did. Striped cards are the wrong lead.</span>
+    </div>
+
+    <div class="tl" id="timeline">
+      <div class="tl-headrow">
+        <div class="tl-h l">System &mdash; svc-checkout</div>
+        <div class="tl-h m">UTC</div>
+        <div class="tl-h r">Response &mdash; #inc-2419</div>
+      </div>
+
+      <div class="ev sys" id="e1">
+        <div class="time"><span>14:02:11</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="pinno">1</span><span class="glyph">&#9670;</span><span class="lane">System &middot; deploy</span></div>
+          <div class="ctitle">Deploy <span class="mono">v2026.7.214</span> rolls out to production</div>
+          <div class="cdesc">Argo CD auto-sync from <span class="mono">main</span>, commit <span class="mono">4f9c1ab</span>.
+            12/12 pods healthy by 14:02:40. Merge of PR&nbsp;#4471 <i>&ldquo;chore: consolidate datasource config across services&rdquo;</i>
+            by <span class="who">r.okafor</span>, approved by <span class="who">t.lindqvist</span>.
+            The merge silently reinstated a stale value: <b>maximum-pool-size 20 &rarr; 5</b>.</div>
+          <div class="snip">hikaricp_connections_max{service="svc-checkout"}
+  240 <span class="hl">&rarr;</span> 60   (12 pods &times; 20 <span class="hl">&rarr;</span> 12 pods &times; 5)
+no alert rule is bound to this series</div>
+        </div></div>
+      </div>
+
+      <div class="gap">
+        <span class="big">38 min</span>
+        <span class="txt"><b>Nothing happens.</b> 180&ndash;220 checkouts/min, p99 latency 241&nbsp;ms, pool utilisation 3 of 5 per pod.
+          The deploy is not linked to anything, and by 14:40 it has scrolled off the 30-minute default window of the deploy panel.</span>
+      </div>
+
+      <div class="ev sys" id="e2">
+        <div class="time"><span>14:40:00</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="pinno">2</span><span class="glyph">&#9632;</span><span class="lane">System &middot; trigger</span></div>
+          <div class="ctitle">CronJob <span class="mono">billing-reconcile</span> starts</div>
+          <div class="cdesc">Schedule <span class="mono">40 14 * * *</span>. Four reconcile workers open long-lived
+            transactions against <b>the same datasource as checkout</b>. Within 22 seconds all 5 connections per pod
+            are held and the wait queue starts growing.</div>
+          <div class="snip"><span class="hl">14:40:22.881</span> WARN [reconcile-worker-3] HikariPool
+  Connection is not available, request
+  timed out after 30000ms
+  (<span class="hl">total=5, active=5, idle=0, waiting=17</span>)</div>
+        </div></div>
+      </div>
+
+      <div class="ev sys" id="e2b">
+        <div class="time"><span>14:41:05</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="glyph">&#9650;</span><span class="lane">System &middot; impact</span></div>
+          <div class="ctitle">First customer-visible failure</div>
+          <div class="cdesc">Checkout error rate crosses 1%. Every failure is the same shape: the order is never
+            written, the payment authorisation is never attempted, the customer sees a generic retry screen.</div>
+          <div class="snip"><span class="hl">14:41:05.402</span> ERROR CheckoutController
+  POST /api/v1/checkout/confirm -&gt; <span class="hl">503</span>
+  trace 9f4c2e1a7b0d5386  cart crt_8823017
+Caused by: java.sql.SQLTransientConnection
+  Exception: HikariPool-1 - Connection is
+  not available</div>
+        </div></div>
+      </div>
+
+      <div class="ev hum" id="e3">
+        <div class="time"><span>14:43:00</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="pinno">3</span><span class="glyph">&#9650;</span><span class="lane">Response &middot; alert</span></div>
+          <div class="ctitle">Alert <span class="mono">CheckoutErrorRateHigh</span> fires &rarr; page</div>
+          <div class="cdesc">Rule: error rate &gt; 2% over a 5-minute window. Error rate at fire time: 9.1%.
+            Detection took <b>2 min 38 s</b> from pool exhaustion — the 5-minute window is most of that.</div>
+        </div></div>
+      </div>
+
+      <div class="ev hum wrong" id="e4">
+        <div class="time"><span>14:44:10</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="pinno">4</span><span class="glyph">&#10007;</span><span class="lane">Response &middot; wrong lead begins</span></div>
+          <div class="ctitle">On-call acks, opens the NordPay status page first</div>
+          <div class="cdesc"><span class="who">m.declercq</span> (SRE, on-call) acknowledges and follows the runbook's
+            first step, &ldquo;check third-party status&rdquo;. NordPay has had a notice open since <b>13:20</b>:
+            <i>&ldquo;Elevated latency on 3-D Secure step, EU region.&rdquo;</i> It is real, it is unrelated, and it is
+            the only thing on any dashboard that looks like an explanation.</div>
+        </div></div>
+      </div>
+
+      <div class="ev hum wrong" id="e4b">
+        <div class="time"><span>14:46:30</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="glyph">&#10007;</span><span class="lane">Response &middot; wrong lead</span></div>
+          <div class="ctitle">Second responder joins and confirms the same theory</div>
+          <div class="cdesc"><span class="who">j.serrano</span> (payments) joins <span class="mono">#inc-2419</span>.
+            Two people now anchored on the same wrong cause. No one has looked at 5xx stack traces yet — the
+            error <i>rate</i> panel was up, the error <i>detail</i> panel was not.</div>
+          <div class="snip">14:48:12 j.serrano
+  opened NordPay support ticket #PS-88213
+14:52:04 m.declercq
+  error rate 32.6% &mdash; drafting failover to
+  secondary PSP, need approval
+14:55:41 j.serrano
+  NordPay says the 3DS latency is EU-only,
+  <span class="hl">their auth success rate is normal</span></div>
+        </div></div>
+      </div>
+
+      <div class="ev hum" id="e5">
+        <div class="time"><span>14:57:30</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="pinno">5</span><span class="glyph">&#8635;</span><span class="lane">Response &middot; pivot</span></div>
+          <div class="ctitle">&ldquo;Did anything ship around 14:00?&rdquo;</div>
+          <div class="cdesc"><span class="who">a.mbeki</span> (platform) reads the channel and asks the question that
+            ends the wrong lead. It takes <b>90 seconds</b> to answer: one deploy, 14:02, PR&nbsp;#4471.</div>
+        </div></div>
+      </div>
+
+      <div class="ev sys" id="e5b">
+        <div class="time"><span>14:59:04</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="glyph">&#9679;</span><span class="lane">System &middot; evidence</span></div>
+          <div class="ctitle">Pool metric lines up exactly with the deploy</div>
+          <div class="cdesc"><span class="mono">hikaricp_connections_max</span> steps 240&rarr;60 at 14:02:31 and
+            <span class="mono">hikaricp_connections_pending</span> goes 0&rarr;214 at 14:40:24. Two clean step
+            changes, both on the same series nobody had graphed.</div>
+        </div></div>
+      </div>
+
+      <div class="ev hum fix" id="e6">
+        <div class="time"><span>15:03:12</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="pinno">6</span><span class="glyph">&#9670;</span><span class="lane">Response &middot; fix</span></div>
+          <div class="ctitle">Rollback to <span class="mono">v2026.7.209</span></div>
+          <div class="cdesc">Decision at 15:01 by <span class="who">m.declercq</span> as incident commander; rollback
+            to commit <span class="mono">8e2d70c</span> executed by <span class="who">a.mbeki</span>.
+            Rolling restart of 12 pods completed 15:05:40. A forward fix was considered and rejected — rollback was
+            already tested and 4 minutes faster.</div>
+          <div class="snip">$ argocd app rollback svc-checkout 209
+Rollback in progress ......... Synced
+15:05:40  12/12 healthy
+          hikaricp_connections_max = <span class="hl">240</span></div>
+        </div></div>
+      </div>
+
+      <div class="ev hum fix" id="e7">
+        <div class="time"><span>15:07:18</span></div>
+        <div class="card"><div class="cbody">
+          <div class="cmeta"><span class="pinno">7</span><span class="glyph">&#10003;</span><span class="lane">Response &middot; recovered</span></div>
+          <div class="ctitle">Error rate back to 0.2% — incident mitigated</div>
+          <div class="cdesc">Wait queue drains, in-flight requests complete. <span class="mono">billing-reconcile</span>
+            finishes normally at 15:12:47 — with a pool of 20 it never contended.
+            Monitoring held until 15:37; NordPay ticket #PS-88213 withdrawn.</div>
+        </div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CAUSE ============ -->
+  <section class="sect">
+    <div class="sect-head">
+      <h2>The change</h2>
+      <span class="hint">1 changed line in a 340-line diff, reintroduced by a three-way merge.</span>
+    </div>
+    <div class="two">
+      <div class="panel">
+        <h3>Diff &mdash; services/checkout/src/main/resources/application-prod.yml</h3>
+        <pre class="diff"><span class="ln hdr">@@ -31,7 +31,7 @@ spring:</span><span class="ln">   datasource:</span><span class="ln">     hikari:</span><span class="ln del">-      maximum-pool-size: 20</span><span class="ln add">+      maximum-pool-size: 5</span><span class="ln">       connection-timeout: 30000</span><span class="ln">       leak-detection-threshold: 0</span><span class="ln">   jpa:</span></pre>
+        <dl class="kv">
+          <dt>PR</dt><dd><span class="mono">#4471</span> — chore: consolidate datasource config across services</dd>
+          <dt>Author</dt><dd>r.okafor &middot; approved by t.lindqvist at 13:51</dd>
+          <dt>Merged</dt><dd>13:58:04 by <span class="mono">ci-bot</span> (squash) &rarr; <span class="mono">4f9c1ab</span></dd>
+          <dt>Diff size</dt><dd>340 lines across 11 files; this hunk is +1 / &minus;1</dd>
+          <dt>How</dt><dd>The prod override had been raised to 20 in PR&nbsp;#4102 (Feb). The branch was cut before that
+            and the three-way merge resolved in favour of the stale side. The change was never intentional and is not
+            mentioned in the PR description.</dd>
+        </dl>
+      </div>
+
+      <div class="panel">
+        <h3>Signals &mdash; before / during</h3>
+        <div class="tscroll">
+        <table>
+          <thead><tr><th>Series</th><th>Baseline</th><th>Peak</th><th></th></tr></thead>
+          <tbody>
+            <tr><td class="mono">checkout_error_rate</td><td class="n">0.1%</td><td class="n">34.0%</td><td class="n"><span class="up">&#9650; 340&times;</span></td></tr>
+            <tr><td class="mono">hikaricp_connections_max</td><td class="n">240</td><td class="n">60</td><td class="n"><span class="dn">&#9660; &minus;75%</span></td></tr>
+            <tr><td class="mono">hikaricp_connections_pending</td><td class="n">0</td><td class="n">214</td><td class="n"><span class="up">&#9650;</span></td></tr>
+            <tr><td class="mono">http_p99 /checkout/confirm</td><td class="n">241 ms</td><td class="n">30.1 s</td><td class="n"><span class="up">&#9650; 125&times;</span></td></tr>
+            <tr><td class="mono">orders_created_total (rate)</td><td class="n">204/min</td><td class="n">135/min</td><td class="n"><span class="dn">&#9660; &minus;34%</span></td></tr>
+            <tr><td class="mono">nordpay_auth_success_rate</td><td class="n">98.7%</td><td class="n">98.6%</td><td class="n">&mdash; flat</td></tr>
+          </tbody>
+        </table>
+        </div>
+        <p style="margin-top:11px;font-size:.81rem;color:var(--ink-2);line-height:1.45">
+          The last row is the one that mattered: <b>NordPay's own success rate never moved.</b> It was on a dashboard the
+          whole time, two panels away from the one being watched.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ LOGS ============ -->
+  <section class="sect">
+    <div class="sect-head">
+      <h2>Log excerpt</h2>
+      <span class="hint">svc-checkout-7d9f4b8c6-x2klm &middot; 14:40:22 &rarr; 14:41:06 &middot; trimmed</span>
+    </div>
+    <div class="panel">
+      <pre class="log"><span class="ts">14:40:22.881</span> <span class="wa">WARN </span> [reconcile-worker-3] c.z.hikari.pool.HikariPool
+              HikariPool-1 - Connection is not available, request timed out after
+              30000ms (<span class="em">total=5, active=5, idle=0, waiting=17</span>)
+<span class="ts">14:40:24.106</span> <span class="wa">WARN </span> [reconcile-worker-1] c.z.hikari.pool.HikariPool
+              HikariPool-1 - Thread starvation or clock leap detected (housekeeper delta=41s)
+<span class="ts">14:40:53.402</span> <span class="er">ERROR</span> [http-nio-8080-exec-7] c.v.checkout.OrderService
+              Failed to persist order <span class="em">ord_01JZQ7K3M8VN</span> - could not begin transaction
+              org.springframework.transaction.CannotCreateTransactionException:
+                Could not open JPA EntityManager for transaction
+              Caused by: java.sql.SQLTransientConnectionException:
+                <span class="er">HikariPool-1 - Connection is not available, request timed out after 30000ms</span>
+<span class="ts">14:41:05.402</span> <span class="er">ERROR</span> [http-nio-8080-exec-2] c.v.checkout.CheckoutController
+              POST /api/v1/checkout/confirm -&gt; <span class="er">503</span> in 30014ms
+              trace=9f4c2e1a7b0d5386 cart=crt_8823017 user=usr_449201
+<span class="ts">14:41:06.219</span> <span class="er">ERROR</span> [http-nio-8080-exec-9] c.v.checkout.CheckoutController
+              POST /api/v1/checkout/confirm -&gt; <span class="er">503</span> in 30008ms
+              trace=1c07ab93de4f2205 cart=crt_8823044 user=usr_113877</pre>
+      <p style="margin-top:11px;font-size:.81rem;color:var(--ink-2);line-height:1.45">
+        Note what is <b>absent</b>: no NordPay call appears in any failing trace. The request never got far enough to
+        talk to the payment provider. A single look at one stack trace would have ruled NordPay out at 14:45.
+      </p>
+    </div>
+  </section>
+
+  <!-- ============ FACTORS ============ -->
+  <section class="sect">
+    <div class="sect-head">
+      <h2>Why it happened, and why it took so long</h2>
+      <span class="hint">Five contributing factors — the first caused it, the rest set the clock.</span>
+    </div>
+    <ol class="factors">
+      <li><b>A three-way merge reintroduced a stale value.</b> +1/&minus;1 inside a 340-line refactor. Review was
+        genuine but the reviewer was reading the refactor, not the numbers.</li>
+      <li><b>Nothing alerts on pool capacity.</b> <span class="mono">hikaricp_connections_max</span> is scraped and
+        graphed but has no rule; <span class="mono">connections_pending</span> has none either. The only alert that
+        fired was the customer-facing symptom, 2m38s late.</li>
+      <li><b>The 38-minute latency broke the causal link.</b> By the time anyone looked, the deploy panel's default
+        30-minute window no longer showed it. &ldquo;Nothing shipped recently&rdquo; was technically what the tool said.</li>
+      <li><b>An unrelated third-party notice acted as a decoy.</b> The runbook's first step is &ldquo;check third-party
+        status&rdquo;. It returned a plausible hit, and two responders anchored on it for 13 minutes. The disconfirming
+        evidence — NordPay's flat auth success rate — was available the whole time.</li>
+      <li><b>The batch job shares checkout's datasource.</b> Even with pool size 20 this is a latent coupling;
+        it is what turned a bad config into an outage at a specific minute rather than gradually.</li>
+    </ol>
+  </section>
+
+  <!-- ============ ACTIONS ============ -->
+  <section class="sect">
+    <div class="sect-head">
+      <h2>Follow-ups</h2>
+      <span class="hint">6 items &middot; 1 done &middot; 2 in progress &middot; 3 open</span>
+    </div>
+    <div class="panel">
+      <div class="tscroll">
+      <table>
+        <thead><tr><th>ID</th><th>Action</th><th>Owner</th><th>Due</th><th>State</th></tr></thead>
+        <tbody>
+          <tr><td class="n">ALRT-1</td><td>Alert on <span class="mono">hikaricp_connections_pending &gt; 0 for 2m</span> and on any step change in <span class="mono">connections_max</span></td><td class="n">m.declercq</td><td class="n">08-07</td><td><span class="act-state prog">&#9679; In progress</span></td></tr>
+          <tr><td class="n">PRC-2</td><td>Reorder the incident runbook: &ldquo;what deployed in the last 60 minutes?&rdquo; becomes step 1, before third-party status pages</td><td class="n">t.lindqvist</td><td class="n">08-05</td><td><span class="act-state done">&#10003; Done</span></td></tr>
+          <tr><td class="n">OBS-3</td><td>Deploy panel default window 30 &rarr; 120 minutes; pin deploy markers onto the checkout error-rate graph</td><td class="n">a.mbeki</td><td class="n">08-07</td><td><span class="act-state prog">&#9679; In progress</span></td></tr>
+          <tr><td class="n">CI-4</td><td>Post resolved config <i>values</i> (not just file names) for <span class="mono">application-*.yml</span> into <span class="mono">#deploys</span> on every prod sync</td><td class="n">a.mbeki</td><td class="n">08-14</td><td><span class="act-state open">&#9675; Open</span></td></tr>
+          <tr><td class="n">CI-5</td><td>Fail CI when a merge changes a <span class="mono">-prod.yml</span> value without a <span class="mono">config-change</span> label on the PR</td><td class="n">r.okafor</td><td class="n">08-21</td><td><span class="act-state open">&#9675; Open</span></td></tr>
+          <tr><td class="n">ARC-6</td><td>Give <span class="mono">billing-reconcile</span> its own datasource and pool (cap 8) so batch work cannot contend with checkout</td><td class="n">j.serrano</td><td class="n">08-28</td><td><span class="act-state open">&#9675; Open</span></td></tr>
+        </tbody>
+      </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    INC-2419 &middot; svc-checkout &middot; opened 2026-07-31 14:43:00 UTC &middot; mitigated 15:07:18 UTC &middot; closed 15:41 UTC<br>
+    Commander m.declercq &middot; scribe a.mbeki &middot; reconstructed from Loki logs, Prometheus (30 s scrape), Argo CD history and #inc-2419 transcript.
+  </footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ---- data: checkout error rate %, one sample per minute, 14:00 .. 15:20 ---- */
+  var ERR = [
+    0.1,0.1,0.2,0.1,0.1,0.1,0.1,0.2,0.1,0.1,
+    0.1,0.1,0.1,0.2,0.1,0.1,0.1,0.1,0.1,0.2,
+    0.1,0.1,0.1,0.1,0.2,0.1,0.1,0.1,0.1,0.1,
+    0.2,0.1,0.1,0.1,0.1,0.2,0.1,0.1,0.1,0.1,
+    0.3,
+    1.2,4.8,9.1,14.0,18.6,22.3,25.1,27.4,29.6,30.8,
+    31.9,32.6,33.1,33.5,33.8,34.0,33.6,33.9,33.4,
+    33.7,33.2,32.8,33.0,24.5,12.1,3.4,0.4,0.2,0.1,
+    0.1,0.1,0.2,0.1,0.1,0.1,0.1,0.2,0.1,0.1,0.1
+  ];
+  var T_START = 14*60;                 /* 14:00 */
+  var N = ERR.length;                  /* 81 samples -> 14:00 .. 15:20 */
+  var ATT = 205;                       /* checkout attempts per minute */
+
+  var PINS = [
+    {m:14*60+2 , n:1, id:'e1', lbl:'deploy v2026.7.214'},
+    {m:14*60+40, n:2, id:'e2', lbl:'batch job starts'},
+    {m:14*60+43, n:3, id:'e3', lbl:'alert fires'},
+    {m:14*60+44, n:4, id:'e4', lbl:'wrong lead begins'},
+    {m:14*60+57, n:5, id:'e5', lbl:'pivot to deploy'},
+    {m:15*60+3 , n:6, id:'e6', lbl:'rollback'},
+    {m:15*60+7 , n:7, id:'e7', lbl:'recovered'}
+  ];
+
+  /* gantt lanes. kind -> visual treatment */
+  var LANE_SYS = [
+    {a:14*60+0 , b:14*60+2 , k:'neutral', t:'NORMAL'},
+    {a:14*60+2 , b:14*60+40, k:'warn'   , t:'LATENT — bad pool size live, no symptom (38 min)'},
+    {a:14*60+40, b:15*60+7 , k:'bad'    , t:'DEGRADED — pool exhausted, checkout 503 (26 min)'},
+    {a:15*60+7 , b:15*60+20, k:'ok'     , t:'RECOVERED'}
+  ];
+  var LANE_TEAM = [
+    {a:14*60+0 , b:14*60+43, k:'blank'  , t:'unaware — no signal'},
+    {a:14*60+43, b:14*60+44, k:'human'  , t:''},
+    {a:14*60+44, b:14*60+57, k:'stripe' , t:'WRONG LEAD — NordPay status page (13 min)'},
+    {a:14*60+57, b:15*60+3 , k:'human'  , t:'real cause → decide'},
+    {a:15*60+3 , b:15*60+7 , k:'ok'     , t:'rollback'},
+    {a:15*60+7 , b:15*60+20, k:'blank'  , t:'monitoring'}
+  ];
+
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  var svg = document.getElementById('chart');
+  var roT = document.getElementById('ro-t'),
+      roE = document.getElementById('ro-e'),
+      roO = document.getElementById('ro-o');
+
+  var geo = null; /* filled by render() */
+
+  function el(name, attrs, text){
+    var n = document.createElementNS(SVGNS, name);
+    for(var k in attrs){ if(attrs[k]!==null && attrs[k]!==undefined) n.setAttribute(k, attrs[k]); }
+    if(text!==undefined && text!==null) n.textContent = text;
+    return n;
+  }
+  function hhmm(m){
+    var h = Math.floor(m/60)%24, mm = m%60;
+    return (h<10?'0':'')+h+':'+(mm<10?'0':'')+mm;
+  }
+  function cssv(name){
+    return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  }
+
+  function render(){
+    var host = svg.parentElement;
+    var W = Math.max(300, Math.round(host.clientWidth - 24));
+    var narrow = W < 560;
+
+    var padL = narrow ? 26 : 58,
+        padR = narrow ? 19 : 14,
+        padT = 26,                       /* room for pin badges */
+        plotH = narrow ? 116 : 158,
+        axisH = 16,
+        rowH  = narrow ? 20 : 23,
+        rowGap = 6,
+        labelH = narrow ? 13 : 0,        /* in-lane headers, narrow layout only */
+        laneTop = padT + plotH + axisH + 12 + labelH,
+        teamTop = laneTop + rowH + rowGap + labelH,
+        laneBottom = teamTop + rowH,
+        H = laneBottom + 14;
+
+    var plotW = W - padL - padR;
+    var yMax = 36;
+
+    var x = function(m){ return padL + (m - T_START) / (N - 1) * plotW; };
+    var y = function(v){ return padT + plotH - (v / yMax) * plotH; };
+
+    geo = {W:W, H:H, padL:padL, plotW:plotW, padT:padT, plotH:plotH,
+           laneBottom: laneBottom, x:x, y:y, narrow:narrow};
+
+    while(svg.firstChild) svg.removeChild(svg.firstChild);
+    svg.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    svg.setAttribute('width', W);
+    svg.setAttribute('height', H);
+    svg.style.width = '100%';
+    svg.style.height = 'auto';
+
+    /* ---- defs: stripe pattern for the wrong-lead block ---- */
+    var defs = el('defs');
+    var pat = el('pattern', {id:'stripe', width:8, height:8,
+                             patternUnits:'userSpaceOnUse', patternTransform:'rotate(45)'});
+    pat.appendChild(el('rect', {width:8, height:8, fill:cssv('--warn-soft')}));
+    pat.appendChild(el('rect', {width:4, height:8, fill:cssv('--warn'), opacity:.55}));
+    defs.appendChild(pat);
+    svg.appendChild(defs);
+
+    /* ---- y grid + labels ---- */
+    [0,10,20,30].forEach(function(v){
+      svg.appendChild(el('line', {class:'ax-grid', x1:padL, x2:padL+plotW, y1:y(v), y2:y(v)}));
+      svg.appendChild(el('text', {class:'ax-txt', x:padL-6, y:y(v)+3, 'text-anchor':'end'},
+                        narrow ? String(v) : v+'%'));
+    });
+
+    /* baseline reference */
+    svg.appendChild(el('line', {class:'base-line', x1:padL, x2:padL+plotW, y1:y(0.1), y2:y(0.1)}));
+
+    /* ---- area + line ---- */
+    var d = '', da = 'M ' + x(T_START).toFixed(1) + ' ' + y(0).toFixed(1);
+    for(var i=0;i<N;i++){
+      var px = x(T_START+i).toFixed(1), py = y(ERR[i]).toFixed(1);
+      d  += (i===0 ? 'M ' : ' L ') + px + ' ' + py;
+      da += ' L ' + px + ' ' + py;
+    }
+    da += ' L ' + x(T_START+N-1).toFixed(1) + ' ' + y(0).toFixed(1) + ' Z';
+    svg.appendChild(el('path', {class:'area', d:da}));
+    svg.appendChild(el('path', {class:'line', d:d}));
+
+    /* peak annotation */
+    var pkI = 56, pkX = x(T_START+pkI), pkY = y(ERR[pkI]);
+    svg.appendChild(el('circle', {cx:pkX, cy:pkY, r:3, fill:cssv('--sig')}));
+    /* on narrow the pin row sits where the label would go, so drop it inside the plateau */
+    svg.appendChild(el('text', {class:'ax-txt b',
+      x: narrow ? pkX : pkX + 6,
+      y: narrow ? pkY + 15 : pkY - 4,
+      'text-anchor': narrow ? 'middle' : 'start'}, 'peak 34.0%'));
+
+    /* ---- x axis ---- */
+    svg.appendChild(el('line', {class:'ax-line', x1:padL, x2:padL+plotW, y1:y(0), y2:y(0)}));
+    var step = narrow ? 20 : 10;
+    for(var m = T_START; m <= T_START + N - 1; m += step){
+      svg.appendChild(el('text', {class:'ax-txt', x:x(m), y:y(0)+13, 'text-anchor':'middle'}, hhmm(m)));
+    }
+
+    /* ---- gantt lanes ---- */
+    var fills = {
+      neutral:{f:cssv('--neutral-soft'), s:cssv('--neutral'),  c:cssv('--ink-2')},
+      warn   :{f:cssv('--warn-soft'),    s:cssv('--warn'),     c:cssv('--warn')},
+      bad    :{f:cssv('--sig-soft'),     s:cssv('--sig'),      c:cssv('--sig')},
+      ok     :{f:cssv('--ok-soft'),      s:cssv('--ok'),       c:cssv('--ok')},
+      human  :{f:cssv('--human-soft'),   s:cssv('--human'),    c:cssv('--human')},
+      blank  :{f:'none',                 s:cssv('--rule'),     c:cssv('--ink-3')},
+      stripe :{f:'url(#stripe)',         s:cssv('--warn'),     c:cssv('--warn')}
+    };
+
+    function drawLane(items, top, label){
+      if(!narrow){
+        svg.appendChild(el('text', {class:'lane-lbl', x:padL-6, y:top+rowH/2}, label));
+      }
+      items.forEach(function(b){
+        var bx = x(b.a), bw = Math.max(2, x(b.b) - x(b.a));
+        var st = fills[b.k];
+        svg.appendChild(el('rect', {x:bx, y:top, width:bw, height:rowH, rx:3,
+                                    fill:st.f, stroke:st.s, 'stroke-width':1.5,
+                                    'stroke-dasharray': b.k==='blank' ? '3 3' : null}));
+        if(b.t){
+          /* measure for real, then fall back to a short form, then to nothing */
+          var t = el('text', {class:'blk-txt', x:bx+7, y:top+rowH/2, fill:st.c}, b.t);
+          svg.appendChild(t);
+          if(t.getComputedTextLength() > bw - 12){
+            t.textContent = b.t.split(' — ')[0];
+            if(t.getComputedTextLength() > bw - 10) svg.removeChild(t);
+          }
+        }
+      });
+    }
+    if(narrow){
+      svg.appendChild(el('text', {class:'ax-txt b', x:padL, y:laneTop-5, 'text-anchor':'start'},
+                        'SYSTEM — what was actually happening'));
+      svg.appendChild(el('text', {class:'ax-txt b', x:padL, y:teamTop-5, 'text-anchor':'start'},
+                        'TEAM — what was being investigated'));
+    }
+    drawLane(LANE_SYS,  laneTop, 'SYSTEM');
+    drawLane(LANE_TEAM, teamTop, 'TEAM');
+
+    /* ---- pins (with simple horizontal decluttering) ---- */
+    var minGap = narrow ? 20 : 22,
+        pinMax = padL + plotW - 10,
+        bxs = PINS.map(function(p){ return x(p.m); }), q;
+    for(q = 1; q < bxs.length; q++){                       /* spread right */
+      if(bxs[q] < bxs[q-1] + minGap) bxs[q] = bxs[q-1] + minGap;
+    }
+    if(bxs[bxs.length-1] > pinMax){                        /* pull the tail back in */
+      bxs[bxs.length-1] = pinMax;
+      for(q = bxs.length-2; q >= 0; q--){
+        if(bxs[q] > bxs[q+1] - minGap) bxs[q] = bxs[q+1] - minGap;
+      }
+    }
+    var pinLayer = el('g');
+    PINS.forEach(function(p, pi){
+      var tx = x(p.m);
+      var bx = bxs[pi];
+      /* dashed vertical at the true time */
+      pinLayer.appendChild(el('line', {class:'pinline', x1:tx, x2:tx, y1:padT-2, y2:geo.laneBottom}));
+      /* connector if the badge had to move */
+      if(Math.abs(bx - tx) > 1){
+        pinLayer.appendChild(el('line', {class:'pinline', x1:tx, x2:bx, y1:padT-2, y2:12}));
+      }
+      var g = el('g', {class:'pin', 'data-id':p.id, tabindex:'0', role:'button',
+                       'aria-label':'Event '+p.n+', '+hhmm(p.m)+', '+p.lbl});
+      g.appendChild(el('circle', {class:'pindot', cx:bx, cy:12, r:9}));
+      g.appendChild(el('text',   {class:'pintxt', x:bx, y:12}, String(p.n)));
+      g.style.cursor = 'pointer';
+      g.addEventListener('click', function(){ jump(p.id); });
+      g.addEventListener('keydown', function(e){
+        if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); jump(p.id); }
+      });
+      pinLayer.appendChild(g);
+    });
+    svg.appendChild(pinLayer);
+
+    /* ---- scrub layer ---- */
+    var sc = el('g', {id:'scrub', opacity:0, 'pointer-events':'none'});
+    sc.appendChild(el('line', {class:'cross', id:'sc-line', x1:0, x2:0, y1:padT-2, y2:y(0)}));
+    sc.appendChild(el('circle', {class:'crossdot', id:'sc-dot', cx:0, cy:0, r:4}));
+    svg.appendChild(sc);
+
+    var hit = el('rect', {x:padL, y:0, width:plotW, height:svg.getAttribute('height'),
+                          fill:'transparent', style:'cursor:crosshair'});
+    svg.appendChild(hit);
+    hit.addEventListener('pointermove', onScrub);
+    hit.addEventListener('pointerdown', onScrub);
+    hit.addEventListener('pointerleave', clearScrub);
+  }
+
+  function onScrub(e){
+    if(!geo) return;
+    var r = svg.getBoundingClientRect();
+    var scale = geo.W / r.width;
+    var px = (e.clientX - r.left) * scale;
+    var i = Math.round((px - geo.padL) / geo.plotW * (N - 1));
+    if(i < 0) i = 0; if(i > N-1) i = N-1;
+
+    var m = T_START + i, v = ERR[i];
+    var gx = geo.x(m), gy = geo.y(v);
+    var sc = document.getElementById('scrub');
+    document.getElementById('sc-line').setAttribute('x1', gx);
+    document.getElementById('sc-line').setAttribute('x2', gx);
+    document.getElementById('sc-dot').setAttribute('cx', gx);
+    document.getElementById('sc-dot').setAttribute('cy', gy);
+    sc.setAttribute('opacity', 1);
+
+    roT.textContent = hhmm(m);
+    roE.className = '';
+    roE.textContent = v.toFixed(1) + '% errors';
+    var failed = Math.round(v/100 * ATT);
+    roO.className = 'dim';
+    roO.textContent = failed > 0
+      ? '≈ ' + failed + ' failed checkout' + (failed===1?'':'s') + ' this minute'
+      : 'no meaningful failures';
+  }
+  function clearScrub(){
+    var sc = document.getElementById('scrub');
+    if(sc) sc.setAttribute('opacity', 0);
+    roT.textContent = '——:——';
+    roE.className = 'dim';
+    roE.textContent = 'move across the chart for a per-minute reading';
+    roO.textContent = '';
+  }
+
+  function jump(id){
+    var t = document.getElementById(id);
+    if(!t) return;
+    var card = t.querySelector('.cbody');
+    t.scrollIntoView({behavior:'smooth', block:'center'});
+    if(card){
+      card.classList.remove('flash');
+      void card.offsetWidth;
+      card.classList.add('flash');
+    }
+  }
+
+  /* clicking a timeline card with a pin number highlights its pin */
+  document.querySelectorAll('.ev').forEach(function(ev){
+    var no = ev.querySelector('.pinno');
+    if(!no) return;
+    ev.querySelector('.cbody').style.cursor = 'pointer';
+    ev.querySelector('.cbody').addEventListener('click', function(){
+      var pin = svg.querySelector('.pin[data-id="' + ev.id + '"]');
+      if(!pin) return;
+      svg.querySelectorAll('.pindot').forEach(function(c){ c.classList.remove('hot'); });
+      svg.querySelectorAll('.pintxt').forEach(function(c){ c.classList.remove('hot'); });
+      pin.querySelector('.pindot').classList.add('hot');
+      pin.querySelector('.pintxt').classList.add('hot');
+      document.querySelector('.chartcard').scrollIntoView({behavior:'smooth', block:'center'});
+    });
+  });
+
+  render();
+  clearScrub();
+
+  var rt;
+  window.addEventListener('resize', function(){
+    clearTimeout(rt);
+    rt = setTimeout(function(){ render(); clearScrub(); }, 120);
+  });
+  if(window.matchMedia){
+    var mq = window.matchMedia('(prefers-color-scheme: dark)');
+    if(mq.addEventListener) mq.addEventListener('change', function(){ render(); clearScrub(); });
+  }
+})();
+</script>
+</body>
+</html>

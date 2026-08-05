@@ -1,0 +1,791 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bundle autopsy — main chunk 284 KB → 511 KB</title>
+<style>
+:root{
+  --bg:#faf9f7; --panel:#ffffff; --panel-2:#f4f2ee;
+  --ink:#14161b; --ink-2:#3d434f; --muted:#6b7280;
+  --line:#e3e0da; --line-2:#cfcbc2;
+  --bad:#b03e18; --bad-bg:#fbeee8;
+  --good:#0d6b52; --good-bg:#e8f4ef;
+  --neutral:#4c5361; --neutral-bg:#eeefF1;
+  --shadow:0 1px 2px rgba(20,22,27,.05), 0 8px 24px -12px rgba(20,22,27,.14);
+  --mono:ui-monospace,"SF Mono",SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+  --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,"Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#0c0d10; --panel:#14161b; --panel-2:#1a1d23;
+    --ink:#eceae5; --ink-2:#bcc0c8; --muted:#8b929e;
+    --line:#24272e; --line-2:#333842;
+    --bad:#ff8f5e; --bad-bg:#2a1a12;
+    --good:#4fd1a5; --good-bg:#10251f;
+    --neutral:#a8aeb9; --neutral-bg:#1f2229;
+    --shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.8);
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0; background:var(--bg); color:var(--ink);
+  font-family:var(--sans); font-size:15px; line-height:1.5;
+  -webkit-font-smoothing:antialiased;
+}
+.wrap{max-width:1080px; margin:0 auto; padding:20px 16px 72px}
+@media(min-width:760px){ .wrap{padding:34px 28px 96px} }
+
+/* ---------- masthead ---------- */
+.mast{display:flex; flex-wrap:wrap; gap:8px 14px; align-items:baseline;
+  font-family:var(--mono); font-size:11.5px; letter-spacing:.04em;
+  color:var(--muted); text-transform:uppercase; margin-bottom:22px}
+.mast b{color:var(--ink-2); font-weight:600}
+.mast .sep{opacity:.45}
+
+h1{font-size:clamp(25px,5.4vw,40px); line-height:1.12; letter-spacing:-.022em;
+  margin:0 0 12px; font-weight:640; max-width:24ch; text-wrap:balance}
+h1 .em{color:var(--bad)}
+.dek{font-size:clamp(15px,2.4vw,17.5px); color:var(--ink-2); max-width:62ch; margin:0 0 26px}
+.dek b{color:var(--ink); font-weight:620}
+
+/* ---------- headline numbers ---------- */
+.kpis{display:grid; gap:10px; grid-template-columns:1fr 1fr; margin:0 0 12px}
+@media(min-width:700px){ .kpis{grid-template-columns:repeat(4,1fr); gap:12px} }
+.kpi{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:13px 14px 14px; box-shadow:var(--shadow); position:relative; overflow:hidden}
+.kpi .lab{font-family:var(--mono); font-size:10.5px; letter-spacing:.07em;
+  text-transform:uppercase; color:var(--muted); display:block; margin-bottom:7px}
+.kpi .num{font-family:var(--mono); font-size:clamp(22px,4.6vw,28px); font-weight:600;
+  letter-spacing:-.02em; line-height:1; display:block}
+.kpi .num small{font-size:.5em; font-weight:500; color:var(--muted); letter-spacing:0; margin-left:3px}
+.kpi .sub{font-size:12px; color:var(--muted); margin-top:6px; display:block; line-height:1.35}
+.kpi.now .num{color:var(--bad)}
+.kpi.after .num{color:var(--good)}
+.kpi::after{content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--line-2)}
+.kpi.now::after{background:var(--bad)}
+.kpi.after::after{background:var(--good)}
+
+.notice{display:flex; gap:10px; align-items:flex-start; background:var(--panel-2);
+  border:1px solid var(--line); border-left:3px solid var(--bad); border-radius:10px;
+  padding:12px 14px; font-size:14px; color:var(--ink-2); margin:14px 0 40px; line-height:1.45}
+.notice .mk{font-family:var(--mono); font-weight:700; color:var(--bad); flex:none}
+.notice b{color:var(--ink)}
+
+/* ---------- section shell ---------- */
+section{margin:0 0 42px}
+.shead{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap;
+  border-bottom:1px solid var(--line); padding-bottom:9px; margin-bottom:18px}
+.shead h2{font-size:13px; font-family:var(--mono); letter-spacing:.09em; text-transform:uppercase;
+  margin:0; font-weight:650}
+.shead .n{font-family:var(--mono); font-size:11px; color:var(--muted);
+  border:1px solid var(--line-2); border-radius:20px; padding:1px 8px}
+.shead p{margin:0; font-size:13.5px; color:var(--muted); flex:1 1 240px}
+
+/* ---------- chart ---------- */
+.chartcard{background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow); overflow:hidden}
+#chart{display:block; width:100%}
+#chart svg{display:block; width:100%; touch-action:pan-y}
+.readout{border-top:1px solid var(--line); background:var(--panel-2);
+  padding:11px 14px; display:grid; gap:3px 14px; font-family:var(--mono); font-size:12.5px;
+  grid-template-columns:1fr auto; align-items:center}
+.readout .l1{display:flex; gap:9px; align-items:baseline; min-width:0}
+.readout .hash{color:var(--ink); font-weight:600}
+.readout .date{color:var(--muted); font-size:11.5px}
+.readout .subj{grid-column:1/-1; color:var(--ink-2); overflow:hidden;
+  text-overflow:ellipsis; white-space:nowrap; font-family:var(--sans); font-size:13px}
+.readout .sz{text-align:right; white-space:nowrap; font-weight:600}
+.readout .d{font-weight:600; padding-left:9px}
+.d.up{color:var(--bad)} .d.dn{color:var(--good)} .d.flat{color:var(--muted)}
+.hint{font-size:12px; color:var(--muted); padding:8px 2px 0; font-family:var(--mono)}
+
+/* ---------- attribution ---------- */
+.attr{display:grid; gap:9px}
+.row{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  padding:12px 14px; box-shadow:var(--shadow)}
+.row .top{display:flex; gap:10px; align-items:baseline; flex-wrap:wrap; margin-bottom:9px}
+.rank{font-family:var(--mono); font-size:11px; font-weight:700; width:20px; height:20px;
+  border-radius:50%; display:grid; place-items:center; flex:none; align-self:center;
+  border:1.5px solid currentColor}
+.row.avoid .rank{color:var(--bad)}
+.row .name{font-weight:620; font-size:15px; letter-spacing:-.01em}
+.row .pkg{font-family:var(--mono); font-size:11.5px; color:var(--muted)}
+.row .amt{margin-left:auto; font-family:var(--mono); font-weight:650; font-size:16px; white-space:nowrap}
+.row.avoid .amt{color:var(--bad)}
+.row.saved .amt{color:var(--good)}
+.chip{font-family:var(--mono); font-size:9.5px; letter-spacing:.09em; text-transform:uppercase;
+  padding:2px 7px; border-radius:4px; font-weight:700; white-space:nowrap; align-self:center}
+.chip.avoid{color:var(--bad); background:var(--bad-bg); border:1px solid var(--bad)}
+.chip.exp{color:var(--neutral); background:var(--neutral-bg); border:1px dotted var(--line-2)}
+.chip.saved{color:var(--good); background:var(--good-bg); border:1px dashed var(--good)}
+.track{height:16px; background:var(--panel-2); border:1px solid var(--line);
+  border-radius:4px; position:relative; overflow:hidden}
+.bar{height:100%; border-radius:3px 0 0 3px}
+.bar.avoid{background:var(--bad);
+  background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.34) 0 3px,transparent 3px 7px)}
+.bar.exp{background:var(--neutral)}
+.bar.saved{background:transparent; border:1.5px dashed var(--good); border-radius:3px}
+.row .why{font-size:13.5px; color:var(--ink-2); margin:9px 0 0; line-height:1.45}
+.row .why code{font-family:var(--mono); font-size:12px; background:var(--panel-2);
+  border:1px solid var(--line); border-radius:4px; padding:1px 5px}
+.pct{font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:5px; display:block}
+
+/* ---------- fixes ---------- */
+.fixes{display:grid; gap:12px}
+@media(min-width:900px){ .fixes{grid-template-columns:repeat(3,1fr)} }
+.fix{background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  box-shadow:var(--shadow); display:flex; flex-direction:column; overflow:hidden}
+.fix .fh{padding:14px 15px 0}
+.fix .flag{display:flex; align-items:center; gap:8px; margin-bottom:10px}
+.fix .flag .rank{color:var(--good)}
+.fix .flag .t{font-family:var(--mono); font-size:10.5px; letter-spacing:.07em;
+  text-transform:uppercase; color:var(--muted)}
+.fix h3{margin:0 0 4px; font-size:16.5px; letter-spacing:-.015em; font-weight:640; line-height:1.25}
+.fix .save{font-family:var(--mono); font-size:27px; font-weight:650; color:var(--good);
+  letter-spacing:-.02em; line-height:1.1; margin:10px 0 2px}
+.fix .save small{font-size:.45em; color:var(--muted); font-weight:500; letter-spacing:0}
+.meta{display:grid; grid-template-columns:auto 1fr; gap:4px 12px; margin:12px 0 0;
+  font-size:12.5px; padding-top:11px; border-top:1px dashed var(--line)}
+.meta dt{font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); padding-top:1px}
+.meta dd{margin:0; color:var(--ink-2)}
+.meta dd b{color:var(--ink); font-weight:600}
+pre{margin:13px 0 0; background:var(--panel-2); border-top:1px solid var(--line);
+  padding:12px 15px 14px; font-family:var(--mono); font-size:11.5px; line-height:1.62;
+  overflow-x:auto; white-space:pre; flex:1}
+pre .rm{color:var(--bad)} pre .ad{color:var(--good)} pre .cm{color:var(--muted)}
+.fix .where{font-family:var(--mono); font-size:11px; color:var(--muted);
+  padding:9px 15px; border-top:1px solid var(--line); background:var(--panel)}
+
+/* ---------- projection ---------- */
+.proj{background:var(--panel); border:1px solid var(--line); border-radius:14px;
+  padding:16px 15px 14px; box-shadow:var(--shadow)}
+.pbar{display:flex; height:46px; border-radius:6px; overflow:hidden;
+  border:1px solid var(--line-2); position:relative}
+.seg{position:relative; display:grid; place-items:center; min-width:0;
+  font-family:var(--mono); font-size:10.5px; font-weight:700; letter-spacing:.02em}
+.seg span{padding:0 4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.seg.keep{background:var(--panel-2); color:var(--ink-2);
+  border-right:1px solid var(--line-2)}
+.seg.cut{background:var(--bad); color:#fff;
+  background-image:repeating-linear-gradient(135deg,rgba(255,255,255,.3) 0 3px,transparent 3px 7px);
+  border-right:1px solid rgba(255,255,255,.5)}
+@media (prefers-color-scheme: dark){ .seg.cut{color:#1a0d06} }
+.seg.cut:last-child{border-right:none}
+.seg .sm{display:none}
+@media(max-width:719px){ .seg .lg{display:none} .seg .sm{display:block} }
+.plegend{display:grid; gap:5px; margin-top:13px;
+  font-family:var(--mono); font-size:11.5px; color:var(--ink-2)}
+.plegend div{display:flex; gap:8px; align-items:baseline}
+.plegend b{flex:none; width:15px; height:15px; border-radius:50%; border:1.5px solid var(--bad);
+  color:var(--bad); font-size:9.5px; font-weight:700; display:grid; place-items:center; align-self:center}
+.plegend i{font-style:normal; color:var(--muted)}
+.plegend .kb{margin-left:auto; color:var(--good); font-weight:650; white-space:nowrap}
+.plegend .note{margin-top:5px; padding-top:7px; border-top:1px dotted var(--line);
+  color:var(--muted); display:block; line-height:1.5}
+.pends{display:flex; justify-content:space-between; font-family:var(--mono);
+  font-size:11px; color:var(--muted); margin-bottom:7px}
+.pnote{margin:14px 0 0; padding-top:12px; border-top:1px dashed var(--line);
+  font-size:14px; color:var(--ink-2); line-height:1.5}
+.pnote b{color:var(--good); font-family:var(--mono); font-weight:650}
+
+/* ---------- table ---------- */
+.tools{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:12px}
+.tools button{font-family:var(--mono); font-size:11.5px; letter-spacing:.03em;
+  background:var(--panel); color:var(--ink-2); border:1px solid var(--line-2);
+  border-radius:20px; padding:5px 12px; cursor:pointer}
+.tools button[aria-pressed="true"]{background:var(--ink); color:var(--bg); border-color:var(--ink)}
+.tablecard{background:var(--panel); border:1px solid var(--line); border-radius:12px;
+  box-shadow:var(--shadow); overflow:hidden}
+.scroll{max-height:430px; overflow:auto; -webkit-overflow-scrolling:touch}
+table{border-collapse:collapse; width:100%; font-family:var(--mono); font-size:12px}
+thead th{position:sticky; top:0; background:var(--panel-2); z-index:2;
+  text-align:left; font-size:10px; letter-spacing:.07em; text-transform:uppercase;
+  color:var(--muted); font-weight:600; padding:9px 10px; border-bottom:1px solid var(--line-2)}
+tbody td{padding:7px 10px; border-bottom:1px solid var(--line); vertical-align:top}
+tbody tr:last-child td{border-bottom:none}
+td.h{color:var(--ink); font-weight:600; white-space:nowrap}
+td.dt{color:var(--muted); white-space:nowrap}
+td.sj{font-family:var(--sans); font-size:13px; color:var(--ink-2); min-width:200px}
+td.n{text-align:right; white-space:nowrap}
+td.dl{text-align:right; white-space:nowrap; font-weight:650}
+tr.big td{background:var(--bad-bg)}
+tr.big td.sj{color:var(--ink); font-weight:560}
+tr.cut td{background:var(--good-bg)}
+.tag{display:inline-block; font-size:9px; letter-spacing:.08em; font-weight:700;
+  border:1px solid currentColor; border-radius:3px; padding:0 4px; margin-left:7px;
+  vertical-align:1px}
+.tag.b{color:var(--bad)} .tag.g{color:var(--good)}
+th.n,th.dl{text-align:right}
+
+footer{margin-top:46px; padding-top:16px; border-top:1px solid var(--line);
+  font-family:var(--mono); font-size:11.5px; color:var(--muted); line-height:1.75}
+footer b{color:var(--ink-2); font-weight:600}
+footer .fr{display:flex; gap:8px}
+footer .fk{flex:none; width:96px; text-transform:uppercase; letter-spacing:.05em; opacity:.75}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="mast">
+    <b>acme/console</b><span class="sep">/</span>main<span class="sep">·</span>
+    <span>dist/assets/index-*.js</span><span class="sep">·</span>
+    <span>gzip, main chunk</span><span class="sep">·</span>
+    <span>18 Jun – 30 Jul 2026 · 47 commits</span>
+  </div>
+
+  <h1>Three import statements cost <span class="em">228&nbsp;KB</span>. Six weeks of features cost 23.</h1>
+  <p class="dek">The main chunk went from <b>284.1 KB</b> to <b>511.3 KB</b> gzipped without a single alarm firing.
+  Bisecting all 47 commits attributes <b>100% of the net growth</b> to three dependency mistakes — a date
+  formatter, a barrel import, and an un-split admin chart. All three are recoverable in about a day.</p>
+
+  <div class="kpis">
+    <div class="kpi">
+      <span class="lab">18 Jun · a3f81c2</span>
+      <span class="num">284.1<small>KB</small></span>
+      <span class="sub">last known-good size</span>
+    </div>
+    <div class="kpi now">
+      <span class="lab">30 Jul · HEAD</span>
+      <span class="num">511.3<small>KB</small></span>
+      <span class="sub">▲ +227.2 KB &nbsp;(+80.0%)</span>
+    </div>
+    <div class="kpi">
+      <span class="lab">Cost to users</span>
+      <span class="num">+1.4<small>s</small></span>
+      <span class="sub">est. time-to-interactive, mid-tier Android on 4G (+1.02 MB parsed JS)</span>
+    </div>
+    <div class="kpi after">
+      <span class="lab">After the 3 fixes</span>
+      <span class="num">286.8<small>KB</small></span>
+      <span class="sub">▼ −224.5 KB recovered</span>
+    </div>
+  </div>
+
+  <div class="notice">
+    <span class="mk">!</span>
+    <span>No size budget is configured in <code>vite.config.ts</code>, and CI has no bundle check — which is why
+    a <b>+128 KB single-commit jump on 20 Jun</b> merged without comment. A regression gate is the fourth fix,
+    and the only one that stops this recurring.</span>
+  </div>
+
+  <!-- ===================== CLIMB ===================== -->
+  <section>
+    <div class="shead">
+      <span class="n">01</span>
+      <h2>The climb</h2>
+      <p>Main-chunk size after every commit. Three cliffs, everything else is flat.</p>
+    </div>
+    <div class="chartcard">
+      <div id="chart"></div>
+      <div class="readout" id="readout" aria-live="polite">
+        <div class="l1"><span class="hash" id="ro-hash">c60f8a3</span><span class="date" id="ro-date">30 Jul 2026</span></div>
+        <div class="sz"><span id="ro-size">511.3 KB</span><span class="d flat" id="ro-delta">±0.0</span></div>
+        <div class="subj" id="ro-subj">chore: release v4.12.0</div>
+      </div>
+    </div>
+    <p class="hint" id="hint">Hover or tap the chart to inspect a commit · ← → to step</p>
+  </section>
+
+  <!-- ===================== ATTRIBUTION ===================== -->
+  <section>
+    <div class="shead">
+      <span class="n">02</span>
+      <h2>Where the weight went</h2>
+      <p>+227.2 KB net, decomposed. Bars are to scale against the largest contributor.</p>
+    </div>
+    <div class="attr">
+
+      <div class="row avoid">
+        <div class="top">
+          <span class="rank">1</span>
+          <span class="name">moment.js, plus all 123 locales</span>
+          <span class="chip avoid">▲ Avoidable</span>
+          <span class="amt">+128.4 KB</span>
+        </div>
+        <div class="track"><div class="bar avoid" style="width:100%"></div></div>
+        <span class="pct">56.5% of net growth · landed whole in f47b21e, 20 Jun</span>
+        <p class="why">One function — <code>formatRelative()</code> in the activity feed — imports
+        <code>moment@2.29.4</code>. Rollup cannot tree-shake it (dynamic <code>require</code> of the locale
+        directory), so every locale from <code>af</code> to <code>zh-tw</code> ships. Locales alone are 88.1 KB
+        of the 128.4. The app only ever renders English.</p>
+      </div>
+
+      <div class="row avoid">
+        <div class="top">
+          <span class="rank">2</span>
+          <span class="name">Icon library imported as a barrel</span>
+          <span class="chip avoid">▲ Avoidable</span>
+          <span class="amt">+61.2 KB</span>
+        </div>
+        <div class="track"><div class="bar avoid" style="width:47.7%"></div></div>
+        <span class="pct">26.9% of net growth · landed whole in 4f10d83, 26 Jun</span>
+        <p class="why">14 files do <code>import { Check } from 'lucide-react'</code>. The package index
+        re-exports all <b>902</b> icons, and the re-export chain defeats tree-shaking under the current
+        <code>optimizeDeps</code> config. <b>34 icons are actually used</b> — 3.8% of what ships.</p>
+      </div>
+
+      <div class="row avoid">
+        <div class="top">
+          <span class="rank">3</span>
+          <span class="name">Charting library on the critical path</span>
+          <span class="chip avoid">▲ Avoidable</span>
+          <span class="amt">+38.5 KB</span>
+        </div>
+        <div class="track"><div class="bar avoid" style="width:30.0%"></div></div>
+        <span class="pct">16.9% of net growth · landed whole in 33a9f0d, 30 Jun</span>
+        <p class="why"><code>recharts@2.7.2</code> (which drags in <code>d3-scale</code>,
+        <code>d3-shape</code>, <code>d3-array</code>) is used by exactly one component: the seat-usage chart on
+        <code>/admin/seats</code>. It is statically imported, so it sits in the main chunk. Route analytics:
+        <b>1.4% of sessions</b> ever open that page.</p>
+      </div>
+
+      <div class="row">
+        <div class="top">
+          <span class="rank" style="color:var(--neutral)">4</span>
+          <span class="name">Genuine feature growth</span>
+          <span class="chip exp">● Expected</span>
+          <span class="amt">+22.7 KB</span>
+        </div>
+        <div class="track"><div class="bar exp" style="width:17.7%"></div></div>
+        <span class="pct">10.0% of net growth · spread across 29 commits, none above +1.8 KB</span>
+        <p class="why">Saved views, the command palette, SSO domain verification, CSV export, the audit-log
+        viewer, snooze, attachment previews. This is what six weeks of shipping is supposed to look like:
+        <b>~3.8 KB per week</b>. Nothing here needs fixing.</p>
+      </div>
+
+      <div class="row saved">
+        <div class="top">
+          <span class="rank" style="color:var(--good)">5</span>
+          <span class="name">Build &amp; refactor savings already banked</span>
+          <span class="chip saved">▼ Recovered</span>
+          <span class="amt">−23.6 KB</span>
+        </div>
+        <div class="track"><div class="bar saved" style="width:18.4%"></div></div>
+        <span class="pct">offsetting · 4 build commits + refactor noise</span>
+        <p class="why">Dropping <code>lodash.debounce</code> (−2.8), Rollup <code>treeshake: 'smallest'</code>
+        (−7.2), dropping pre-ES2020 targets (−6.4), and esbuild identifier minification (−6.2). Good work that
+        was entirely swallowed by item 1.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ===================== FIXES ===================== -->
+  <section>
+    <div class="shead">
+      <span class="n">03</span>
+      <h2>What you get back</h2>
+      <p>Ordered by KB per hour of work. All three are independent — ship them in any order.</p>
+    </div>
+    <div class="fixes">
+
+      <article class="fix">
+        <div class="fh">
+          <div class="flag"><span class="rank">1</span><span class="t">Drop moment entirely</span></div>
+          <h3>Use native <code style="font-family:var(--mono);font-size:.85em">Intl</code> for relative times</h3>
+          <div class="save">−128.4 <small>KB</small></div>
+          <dl class="meta">
+            <dt>Effort</dt><dd><b>~2 h</b> · one file, 41 lines</dd>
+            <dt>Risk</dt><dd><b>Low</b> · 9 snapshot tests already assert the output strings</dd>
+            <dt>Blast</dt><dd>1 module, 14 downstream call sites unchanged</dd>
+            <dt>Fallback</dt><dd>If you want moment's API, <code>dayjs@1.11.11</code> + relativeTime is 2.9 KB (−125.5)</dd>
+          </dl>
+        </div>
+<pre><span class="cm">// src/lib/time/formatRelative.ts</span>
+<span class="rm">- import moment from 'moment'</span>
+<span class="rm">- export const formatRelative = (d: Date) =></span>
+<span class="rm">-   moment(d).fromNow()</span>
+<span class="ad">+ const rtf = new Intl.RelativeTimeFormat(</span>
+<span class="ad">+   undefined, { numeric: 'auto' })</span>
+<span class="ad">+ const U = [[60,'second'],[3600,'minute'],</span>
+<span class="ad">+   [86400,'hour'],[604800,'day']] as const</span>
+<span class="ad">+ export const formatRelative = (d: Date) => {</span>
+<span class="ad">+   const s = (d.getTime() - Date.now()) / 1000</span>
+<span class="ad">+   /* pick unit, then rtf.format(n, unit) */</span>
+<span class="ad">+ }</span></pre>
+        <div class="where">removes moment from package.json · Intl is baseline in all supported browsers</div>
+      </article>
+
+      <article class="fix">
+        <div class="fh">
+          <div class="flag"><span class="rank">2</span><span class="t">Stop shipping 868 unused icons</span></div>
+          <h3>Deep-import the 34 icons you use</h3>
+          <div class="save">−57.6 <small>KB</small></div>
+          <dl class="meta">
+            <dt>Effort</dt><dd><b>~3 h</b> · 14 files, codemod-able</dd>
+            <dt>Risk</dt><dd><b>Low</b> · pure import rewrite, no runtime change</dd>
+            <dt>Blast</dt><dd>Keeps 3.6 KB — the icons actually rendered</dd>
+            <dt>Guard</dt><dd>Add the ESLint rule below or it silently regresses on the next PR</dd>
+          </dl>
+        </div>
+<pre><span class="cm">// any component</span>
+<span class="rm">- import { Check, ChevronDown, Search }</span>
+<span class="rm">-   from 'lucide-react'</span>
+<span class="ad">+ import Check from</span>
+<span class="ad">+   'lucide-react/dist/esm/icons/check'</span>
+<span class="ad">+ import ChevronDown from</span>
+<span class="ad">+   'lucide-react/dist/esm/icons/chevron-down'</span>
+
+<span class="cm">// .eslintrc — prevent regression</span>
+<span class="ad">+ 'no-restricted-imports': ['error', {</span>
+<span class="ad">+   paths: [{ name: 'lucide-react',</span>
+<span class="ad">+     message: 'Deep-import the icon.' }] }]</span></pre>
+        <div class="where">alternative: <code>unplugin-icons</code> if you prefer keeping the named-import ergonomics</div>
+      </article>
+
+      <article class="fix">
+        <div class="fh">
+          <div class="flag"><span class="rank">3</span><span class="t">Split the admin-only chart</span></div>
+          <h3>Lazy-load <code style="font-family:var(--mono);font-size:.85em">recharts</code> behind the route</h3>
+          <div class="save">−38.5 <small>KB</small></div>
+          <dl class="meta">
+            <dt>Effort</dt><dd><b>~30 min</b> · 12 lines</dd>
+            <dt>Risk</dt><dd><b>Very low</b> · needs a Suspense skeleton on <code>/admin/seats</code></dd>
+            <dt>Blast</dt><dd>Moves, not deletes: new <code>admin-seats.[hash].js</code> async chunk</dd>
+            <dt>Who pays</dt><dd>Only the 1.4% of sessions that open the page, on demand</dd>
+          </dl>
+        </div>
+<pre><span class="cm">// src/routes/admin/SeatsPage.tsx</span>
+<span class="rm">- import SeatUsageChart</span>
+<span class="rm">-   from './SeatUsageChart'</span>
+<span class="ad">+ import { lazy, Suspense } from 'react'</span>
+<span class="ad">+ const SeatUsageChart = lazy(() =></span>
+<span class="ad">+   import('./SeatUsageChart'))</span>
+
+  &lt;Suspense fallback={&lt;ChartSkeleton /&gt;}&gt;
+    &lt;SeatUsageChart data={seats} /&gt;
+  &lt;/Suspense&gt;</pre>
+        <div class="where">recharts stays a dependency · it just leaves the critical path</div>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ===================== PROJECTION ===================== -->
+  <section>
+    <div class="shead">
+      <span class="n">04</span>
+      <h2>The bundle today, to scale</h2>
+      <p>Hatched blocks are deletable. Solid block is everything you actually need.</p>
+    </div>
+    <div class="proj">
+      <div class="pends"><span>0 KB</span><span>511.3 KB · HEAD</span></div>
+      <div class="pbar" role="img" aria-label="511.3 KB total: 286.8 KB kept, 128.4 KB moment, 57.6 KB icons, 38.5 KB recharts">
+        <div class="seg keep" style="width:56.09%"><span class="lg">KEEP · 286.8 KB</span><span class="sm">KEEP 286.8</span></div>
+        <div class="seg cut"  style="width:25.11%"><span class="lg">1 · 128.4</span><span class="sm">1</span></div>
+        <div class="seg cut"  style="width:11.27%"><span class="lg">2 · 57.6</span><span class="sm">2</span></div>
+        <div class="seg cut"  style="width:7.53%"><span class="lg">3 · 38.5</span><span class="sm">3</span></div>
+      </div>
+      <div class="plegend">
+        <div><b>1</b><span>moment.js + locales</span><span class="kb">−128.4 KB</span></div>
+        <div><b>2</b><span>lucide-react barrel</span><span class="kb">−57.6 KB</span></div>
+        <div><b>3</b><span>recharts, admin-only</span><span class="kb">−38.5 KB</span></div>
+        <span class="note"><i>solid</i> = app + real features, incl. the 22.7 KB shipped since 18 Jun ·
+        <i>hatched</i> = 224.5 KB, 43.9% of today's bundle, recoverable</span>
+      </div>
+      <p class="pnote">Ship all three and the main chunk lands at <b>286.8 KB</b> — <b>+2.7 KB</b> against where
+      you stood six weeks ago, with every feature from those six weeks still in it. Then add a
+      <code style="font-family:var(--mono);font-size:.9em">size-limit</code> gate at <b>300 KB</b> so the next
+      +128 KB commit fails CI instead of shipping.</p>
+    </div>
+  </section>
+
+  <!-- ===================== COMMITS ===================== -->
+  <section>
+    <div class="shead">
+      <span class="n">05</span>
+      <h2>Per-commit ledger</h2>
+      <p>Every commit bisected and measured. Δ is against the previous commit.</p>
+    </div>
+    <div class="tools">
+      <button type="button" data-f="all" aria-pressed="true">All 47</button>
+      <button type="button" data-f="movers" aria-pressed="false">Movers ≥ 0.5 KB</button>
+      <button type="button" data-f="culprits" aria-pressed="false">The 3 cliffs</button>
+    </div>
+    <div class="tablecard">
+      <div class="scroll">
+        <table>
+          <thead><tr>
+            <th>#</th><th>Commit</th><th>Date</th><th>Subject</th><th class="n">Size</th><th class="dl">Δ KB</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <div class="fr"><span class="fk">Method</span><span><b>git bisect</b> across 47 commits, <code>a3f81c2..c60f8a3</code>; clean <code>pnpm install --frozen-lockfile &amp;&amp; pnpm build</code> per commit on node 20.14.0.</span></div>
+    <div class="fr"><span class="fk">Measured</span><span><code>gzip -9 dist/assets/index-*.js</code> — main chunk only; async chunks and CSS excluded. Attribution cross-checked with <b>rollup-plugin-visualizer 5.12.0</b>.</span></div>
+    <div class="fr"><span class="fk">Caveat</span><span>The −57.6 KB icon figure assumes the current 34-icon usage; each additional icon adds ~0.11 KB. TTI estimate is modelled, not field-measured — no RUM on this app yet.</span></div>
+  </footer>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+
+/* hash, date(ISO), subject, delta KB, tag */
+var C = [
+["a3f81c2","2026-06-18","chore(deps): bump vite to 5.3.1",null,"base"],
+["7b29d04","2026-06-18","feat(inbox): sticky column headers",0.5,null],
+["c14e8a9","2026-06-19","fix(auth): token refresh race on tab focus",0.2,null],
+["2d6f7b1","2026-06-19","feat(inbox): bulk select checkbox column",1.0,null],
+["9e0c3a5","2026-06-20","refactor: replace lodash.debounce with native",-2.8,"save"],
+["f47b21e","2026-06-20","feat(feed): relative timestamps in activity feed",128.4,"c1"],
+["5c8d902","2026-06-23","test: activity feed snapshots",0.0,null],
+["81ba3f6","2026-06-23","fix(feed): timezone off-by-one on day boundary",0.2,null],
+["e93147c","2026-06-24","feat(settings): notification preferences panel",1.2,null],
+["6af2be8","2026-06-24","chore(deps): @tanstack/react-query 5.51.1",0.6,null],
+["0d7c15b","2026-06-25","style: unify button sizing tokens",-0.3,null],
+["b2e964a","2026-06-25","feat(inbox): command palette",1.6,null],
+["4f10d83","2026-06-26","feat(ui): migrate icon set to lucide-react",61.2,"c2"],
+["a7c3e51","2026-06-26","fix(ui): icon stroke width regression",0.0,null],
+["cc82097","2026-06-27","feat(billing): plan comparison table",1.6,null],
+["1e5db44","2026-06-30","perf: memoize inbox row renderer",-0.1,null],
+["33a9f0d","2026-06-30","feat(admin): seat usage chart",38.5,"c3"],
+["9b41c76","2026-07-01","fix(admin): chart tooltip clipping at viewport edge",0.1,null],
+["7ec20f8","2026-07-01","build: rollup treeshake preset 'smallest'",-7.2,"save"],
+["d51908b","2026-07-02","feat(inbox): saved views",1.8,null],
+["46e0aa3","2026-07-02","fix(inbox): saved view rename focus trap",0.1,null],
+["8c7f2b0","2026-07-03","chore(deps): bump zod to 3.23.8",0.4,null],
+["be13d95","2026-07-04","feat(feed): filter activity by actor",1.1,null],
+["f0a4c68","2026-07-07","refactor: split api client per resource",0.3,null],
+["22d6e17","2026-07-07","fix(billing): proration copy on downgrade",0.0,null],
+["74b3ca9","2026-07-08","feat(settings): SSO domain verification",1.5,null],
+["05fe881","2026-07-08","test: sso verification e2e",0.0,null],
+["9d2c40a","2026-07-09","build: drop legacy targets, es2020 baseline",-6.4,"save"],
+["3ab77e2","2026-07-09","fix(auth): logout clears query cache",0.1,null],
+["e6c1f53","2026-07-10","feat(inbox): persist thread collapse state",0.9,null],
+["c8907d6","2026-07-11","chore(deps): bump react-router to 6.25.0",0.7,null],
+["1f4e2b8","2026-07-14","feat(reports): CSV export",0.9,null],
+["55a3907","2026-07-14","fix(reports): escape quotes in CSV export",0.1,null],
+["b7d1064","2026-07-15","feat(admin): audit log viewer",1.3,null],
+["90ce4f2","2026-07-16","perf: virtualize audit log list",0.8,null],
+["2e58ba1","2026-07-17","fix(admin): audit log date range filter",0.1,null],
+["aa4f739","2026-07-18","refactor: consolidate toast provider",-0.4,null],
+["6b0d825","2026-07-21","feat(inbox): snooze threads",1.6,null],
+["d3f9c07","2026-07-22","fix(inbox): snooze respects user timezone",0.1,null],
+["7f26e94","2026-07-23","build: esbuild minify identifiers",-6.2,"save"],
+["4c81ad6","2026-07-24","feat(settings): API key rotation",1.2,null],
+["e2b5f80","2026-07-25","fix(settings): key copy fallback over http",0.2,null],
+["08a7c31","2026-07-28","feat(feed): grouped notifications",1.0,null],
+["5d90e46","2026-07-29","chore(deps): bump vite to 5.4.2",-0.2,null],
+["fb3e207","2026-07-29","fix(feed): grouping key collision on retry",0.0,null],
+["91c4d78","2026-07-30","feat(inbox): attachment previews",1.5,null],
+["c60f8a3","2026-07-30","chore: release v4.12.0",0.0,null]
+];
+
+/* cumulative sizes */
+var BASE = 284.1, size = [], run = BASE, i;
+for(i=0;i<C.length;i++){ if(i>0) run = Math.round((run + C[i][3])*10)/10; size.push(run); }
+
+var MON = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function fmtDate(iso){ var p = iso.split("-"); return (+p[2]) + " " + MON[+p[1]-1] + " " + p[0]; }
+function fmtShort(iso){ var p = iso.split("-"); return (+p[2]) + " " + MON[+p[1]-1]; }
+function sgn(v){ return (v>0?"+":v<0?"−":"±") + Math.abs(v).toFixed(1); }
+
+var CULPRIT = { c1:{n:"1",lab:"moment.js  +128.4"}, c2:{n:"2",lab:"lucide barrel  +61.2"}, c3:{n:"3",lab:"recharts  +38.5"} };
+
+/* ---------------- chart ---------------- */
+var host = document.getElementById("chart");
+var cur = C.length - 1, geom = null;
+
+function css(v){ return getComputedStyle(document.documentElement).getPropertyValue(v).trim(); }
+
+function draw(){
+  var W = Math.max(300, host.clientWidth || 320);
+  var wide = W >= 680;
+  var H = wide ? 340 : 262;
+  var padL = wide ? 46 : 36, padR = 12, padT = wide ? 84 : 30, padB = wide ? 32 : 40;
+  var pw = W - padL - padR, ph = H - padT - padB;
+  var y0 = 265, y1 = 530;
+  var X = function(k){ return padL + (pw * k) / (C.length - 1); };
+  var Y = function(v){ return padT + ph - ((v - y0) / (y1 - y0)) * ph; };
+  geom = {X:X, padL:padL, pw:pw, padT:padT, ph:ph, H:H, W:W, wide:wide};
+
+  var ink=css("--ink"), muted=css("--muted"), line=css("--line"),
+      line2=css("--line-2"), bad=css("--bad"), panel=css("--panel");
+
+  var s = [];
+  s.push('<svg viewBox="0 0 '+W+' '+H+'" width="'+W+'" height="'+H+'" role="img" '+
+         'aria-label="Main chunk size across 47 commits, rising from 284.1 to 511.3 kilobytes in three steps">');
+  s.push('<defs><linearGradient id="fill" x1="0" y1="0" x2="0" y2="1">'+
+         '<stop offset="0" stop-color="'+bad+'" stop-opacity=".20"/>'+
+         '<stop offset="1" stop-color="'+bad+'" stop-opacity="0"/></linearGradient>'+
+         '<pattern id="hat" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">'+
+         '<rect width="6" height="6" fill="'+bad+'" opacity=".06"/>'+
+         '<line x1="0" y1="0" x2="0" y2="6" stroke="'+bad+'" stroke-width="1.6" opacity=".16"/></pattern></defs>');
+
+  /* gridlines */
+  var g, gy;
+  for(g=300; g<=500; g+=50){
+    gy = Y(g);
+    s.push('<line x1="'+padL+'" y1="'+gy.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+gy.toFixed(1)+
+           '" stroke="'+line+'" stroke-width="1"/>');
+    s.push('<text x="'+(padL-7)+'" y="'+(gy+3.5).toFixed(1)+'" text-anchor="end" fill="'+muted+
+           '" font-family="ui-monospace,monospace" font-size="'+(wide?10.5:9.5)+'">'+g+'</text>');
+  }
+
+  /* baseline reference at 284.1 */
+  var by = Y(BASE);
+  s.push('<line x1="'+padL+'" y1="'+by.toFixed(1)+'" x2="'+(W-padR)+'" y2="'+by.toFixed(1)+
+         '" stroke="'+line2+'" stroke-width="1.2" stroke-dasharray="2 4"/>');
+  s.push('<text x="'+(W-padR)+'" y="'+(by-6).toFixed(1)+'" text-anchor="end" fill="'+muted+
+         '" font-family="ui-monospace,monospace" font-size="'+(wide?10:9)+'">baseline 284.1</text>');
+
+  /* stepped path */
+  var d = "M"+X(0).toFixed(1)+","+Y(size[0]).toFixed(1), a;
+  for(i=1;i<C.length;i++){
+    d += "L"+X(i).toFixed(1)+","+Y(size[i-1]).toFixed(1);
+    d += "L"+X(i).toFixed(1)+","+Y(size[i]).toFixed(1);
+  }
+  a = d + "L"+X(C.length-1).toFixed(1)+","+(padT+ph)+"L"+X(0).toFixed(1)+","+(padT+ph)+"Z";
+  s.push('<path d="'+a+'" fill="url(#fill)"/>');
+  s.push('<path d="'+d+'" fill="none" stroke="'+bad+'" stroke-width="'+(wide?2.1:1.8)+
+         '" stroke-linejoin="miter" stroke-linecap="square"/>');
+
+  /* culprit markers + labels */
+  var rows = wide ? [padT-64, padT-42, padT-20] : [padT-40, padT-26, padT-12];
+  var ri = 0;
+  for(i=0;i<C.length;i++){
+    var tg = C[i][4];
+    if(!CULPRIT[tg]) continue;
+    var mx = X(i), topY = Y(size[i]), botY = Y(size[i-1]);
+    var ly = rows[ri];
+    /* leader — only where there is a label to lead to */
+    if(wide){
+      s.push('<line x1="'+mx.toFixed(1)+'" y1="'+(ly+5)+'" x2="'+mx.toFixed(1)+'" y2="'+(topY-9).toFixed(1)+
+             '" stroke="'+bad+'" stroke-width="1" stroke-dasharray="2 3" opacity=".65"/>');
+    }
+    /* highlight the cliff */
+    s.push('<line x1="'+mx.toFixed(1)+'" y1="'+botY.toFixed(1)+'" x2="'+mx.toFixed(1)+'" y2="'+topY.toFixed(1)+
+           '" stroke="'+bad+'" stroke-width="'+(wide?4:3)+'" opacity=".28" stroke-linecap="round"/>');
+    /* numbered node */
+    s.push('<circle cx="'+mx.toFixed(1)+'" cy="'+topY.toFixed(1)+'" r="'+(wide?9:7.5)+'" fill="'+panel+
+           '" stroke="'+bad+'" stroke-width="1.8"/>');
+    s.push('<text x="'+mx.toFixed(1)+'" y="'+(topY + (wide?3.6:3)).toFixed(1)+'" text-anchor="middle" fill="'+bad+
+           '" font-family="ui-monospace,monospace" font-weight="700" font-size="'+(wide?11:9.5)+'">'+CULPRIT[tg].n+'</text>');
+    if(wide){
+      var anchor = (mx > W*0.72) ? "end" : "start";
+      var tx = (anchor==="end") ? mx-7 : mx+7;
+      s.push('<text x="'+tx.toFixed(1)+'" y="'+(ly+4)+'" text-anchor="'+anchor+'" fill="'+bad+
+             '" font-family="ui-monospace,monospace" font-size="11.5" font-weight="650">'+CULPRIT[tg].lab+'</text>');
+    }
+    ri++;
+  }
+
+  /* x labels */
+  var ticks = wide ? [0,8,16,24,32,40,46] : [0,16,32,46];
+  for(g=0; g<ticks.length; g++){
+    var k = ticks[g], tx2 = X(k), an = k===0 ? "start" : (k===46 ? "end" : "middle");
+    s.push('<text x="'+tx2.toFixed(1)+'" y="'+(padT+ph+17)+'" text-anchor="'+an+'" fill="'+muted+
+           '" font-family="ui-monospace,monospace" font-size="'+(wide?10:9)+'">'+fmtShort(C[k][1])+'</text>');
+  }
+  s.push('<text x="'+padL+'" y="'+(padT+ph+29)+'" fill="'+muted+
+         '" font-family="ui-monospace,monospace" font-size="9" opacity=".8">KB gzip ↑ &nbsp; 47 commits →</text>');
+
+  /* crosshair */
+  s.push('<g id="xh"><line id="xhl" x1="0" y1="'+padT+'" x2="0" y2="'+(padT+ph)+'" stroke="'+ink+
+         '" stroke-width="1" opacity=".35"/><circle id="xhd" cx="0" cy="0" r="3.6" fill="'+ink+'"/></g>');
+  s.push('<rect id="hit" x="'+padL+'" y="'+padT+'" width="'+pw+'" height="'+ph+'" fill="transparent"/>');
+  s.push('</svg>');
+  host.innerHTML = s.join("");
+  bind();
+  select(cur);
+}
+
+function bind(){
+  var svg = host.firstChild;
+  if(!svg) return;
+  svg.setAttribute("tabindex","0");
+  var move = function(ev){
+    var r = svg.getBoundingClientRect();
+    var px = ((ev.touches ? ev.touches[0].clientX : ev.clientX) - r.left) * (geom.W / r.width);
+    var k = Math.round(((px - geom.padL) / geom.pw) * (C.length - 1));
+    k = Math.max(0, Math.min(C.length - 1, k));
+    if(k !== cur){ select(k); }
+    if(ev.touches) ev.preventDefault();
+  };
+  svg.addEventListener("mousemove", move);
+  svg.addEventListener("touchstart", move, {passive:false});
+  svg.addEventListener("touchmove", move, {passive:false});
+  svg.addEventListener("keydown", function(ev){
+    if(ev.key === "ArrowRight"){ select(Math.min(C.length-1, cur+1)); ev.preventDefault(); }
+    if(ev.key === "ArrowLeft"){ select(Math.max(0, cur-1)); ev.preventDefault(); }
+  });
+}
+
+function select(k){
+  cur = k;
+  var c = C[k], sz = size[k], dv = k===0 ? null : c[3];
+  var svg = host.firstChild;
+  if(svg){
+    var y0=265,y1=530;
+    var yy = geom.padT + geom.ph - ((sz - y0)/(y1-y0))*geom.ph;
+    var xx = geom.X(k);
+    var l = svg.querySelector("#xhl"), dd = svg.querySelector("#xhd");
+    if(l){ l.setAttribute("x1", xx); l.setAttribute("x2", xx); }
+    if(dd){ dd.setAttribute("cx", xx); dd.setAttribute("cy", yy); }
+  }
+  document.getElementById("ro-hash").textContent = c[0] + (k===C.length-1 ? "  HEAD" : "");
+  document.getElementById("ro-date").textContent = fmtDate(c[1]);
+  document.getElementById("ro-subj").textContent = c[2];
+  document.getElementById("ro-size").textContent = sz.toFixed(1) + " KB";
+  var el = document.getElementById("ro-delta");
+  if(dv === null){ el.textContent = "baseline"; el.className = "d flat"; }
+  else if(dv > 0.05){ el.textContent = "▲ " + sgn(dv); el.className = "d up"; }
+  else if(dv < -0.05){ el.textContent = "▼ " + sgn(dv); el.className = "d dn"; }
+  else { el.textContent = "± 0.0"; el.className = "d flat"; }
+}
+
+draw();
+var rt;
+window.addEventListener("resize", function(){ clearTimeout(rt); rt = setTimeout(draw, 140); });
+
+/* ---------------- table ---------------- */
+var tbody = document.getElementById("tbody");
+function rows(filter){
+  var out = [], k;
+  for(k=0;k<C.length;k++){
+    var c = C[k], dv = c[3], tg = c[4], big = !!CULPRIT[tg];
+    if(filter === "culprits" && !big) continue;
+    if(filter === "movers" && !(dv === null || Math.abs(dv) >= 0.5)) continue;
+    var cls = big ? "big" : (tg === "save" ? "cut" : "");
+    var dcell;
+    if(dv === null) dcell = '<span style="color:var(--muted)">base</span>';
+    else if(dv > 0.05) dcell = '<span style="color:var(--bad)">▲ '+sgn(dv)+'</span>';
+    else if(dv < -0.05) dcell = '<span style="color:var(--good)">▼ '+sgn(dv)+'</span>';
+    else dcell = '<span style="color:var(--muted)">± 0.0</span>';
+    var tag = big ? '<span class="tag b">CLIFF '+CULPRIT[tg].n+'</span>'
+                  : (tg === "save" ? '<span class="tag g">SAVED</span>' : "");
+    out.push('<tr class="'+cls+'"><td class="dt">'+(k+1)+'</td><td class="h">'+c[0]+'</td>'+
+             '<td class="dt">'+fmtShort(c[1])+'</td><td class="sj">'+c[2]+tag+'</td>'+
+             '<td class="n">'+size[k].toFixed(1)+'</td><td class="dl">'+dcell+'</td></tr>');
+  }
+  tbody.innerHTML = out.join("");
+}
+rows("all");
+var btns = document.querySelectorAll(".tools button");
+Array.prototype.forEach.call(btns, function(b){
+  b.addEventListener("click", function(){
+    Array.prototype.forEach.call(btns, function(x){ x.setAttribute("aria-pressed", x === b ? "true" : "false"); });
+    rows(b.getAttribute("data-f"));
+  });
+});
+
+/* keep chart colours correct when the OS theme flips */
+if(window.matchMedia){
+  var mq = window.matchMedia("(prefers-color-scheme: dark)");
+  if(mq.addEventListener) mq.addEventListener("change", draw);
+  else if(mq.addListener) mq.addListener(draw);
+}
+})();
+</script>
+</body>
+</html>

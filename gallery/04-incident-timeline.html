@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The outage lasted 26 minutes. The wrong theory lasted 19. — acme INC-2208</title>
+<link rel="stylesheet" href="/_vetrina/kit.css">
+<style>
+  /* Only what the kit does not cover: a measured void between the two tracks,
+     a caption anchored to the mark, and a readable label on hatching. */
+
+  /* The 19 minutes as a drawn measure sitting in the space between the tracks:
+     two dashed jambs on the shared axis, a rule between them, the span in text. */
+  .v-gapband {
+    position: relative;
+    block-size: var(--v-6);
+    margin-block: var(--v-1);
+  }
+  .v-gapband-span {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: calc(var(--a, 0) * 100%);
+    inline-size: calc((var(--b, 0) - var(--a, 0)) * 100%);
+    border-inline: var(--v-hair) dashed var(--v-urgent);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--v-t-1);
+    letter-spacing: .1em;
+    color: var(--v-urgent);
+    white-space: nowrap;
+  }
+  .v-gapband-span::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    inset-block-start: 50%;
+    border-block-start: var(--v-hair) dashed var(--v-urgent);
+  }
+  .v-gapband-span > span {
+    position: relative;
+    background: var(--v-ground);
+    padding-inline: var(--v-2);
+  }
+
+  /* A caption pinned to the same 0..1 axis as the mark it explains. */
+  .v-mark-note {
+    position: relative;
+    block-size: 3em;
+    font-size: var(--v-t-1);
+    letter-spacing: .04em;
+    color: var(--v-fg-2);
+  }
+  .v-mark-note > span {
+    position: absolute;
+    inset-block-start: 0;
+    inset-inline-start: calc(var(--a, 0) * 100%);
+    max-inline-size: min(52%, 20rem);
+    line-height: 1.4;
+  }
+
+  /* .v-seg draws its label in --v-ground, which is invisible against hatching
+     that is mostly page. Knock the label out instead. */
+  .v-seg.is-gap { padding-inline: 0; display: flex; align-items: center; justify-content: center; }
+  .v-knock {
+    background: var(--v-ground);
+    color: var(--v-urgent);
+    font-weight: 600;
+    padding-inline: var(--v-2);
+    border-radius: 1px;
+  }
+
+  /* Two labels of full length can meet in the middle on a narrow phone. */
+  .v-track-labels { flex-wrap: wrap; gap: var(--v-1) var(--v-3); }
+</style>
+</head>
+<body>
+<main class="v-wrap">
+
+  <p class="v-kicker"><span class="v-dot" aria-hidden="true"></span> acme &middot; incident INC-2208 &middot; post-mortem</p>
+
+  <h1 class="v-headline">The outage lasted 26 minutes. The wrong theory lasted 19.</h1>
+
+  <p class="v-standfirst">
+    <code>acme/checkout</code> returned 500s to roughly one cart in three for 26 minutes.
+    The cause was a database connection pool cut from 20 to 5 by a config merge in
+    <code>acme/identity</code>. Nobody looked at it until minute 22, because the only
+    recent change on the checkout deploy board was a payment provider adapter &mdash; and
+    rolling that back at 14:19 changed nothing at all.
+  </p>
+
+  <ul class="v-meta">
+    <li>2026-08-04 &middot; 14:06&ndash;14:32 UTC</li>
+    <li>SEV2</li>
+    <li>acme/checkout &middot; acme/identity</li>
+    <li>surfaced in acme/storefront-web</li>
+    <li>2 responders</li>
+  </ul>
+
+  <!-- ══ The dominant element: two tracks, one clock ══════════════════ -->
+  <section class="v-hero" aria-label="Dual-track timeline, 14:00 to 14:40 UTC">
+
+    <div class="v-axis" aria-hidden="true">
+      <span>14:00</span><span>14:10</span><span>14:20</span><span>14:30</span><span>14:40</span>
+    </div>
+
+    <div class="v-track-labels">
+      <span>SYSTEM &middot; acme/checkout</span>
+      <span>5xx FROM 14:06 TO 14:32</span>
+    </div>
+
+    <div class="v-track">
+      <div class="v-seg" style="--a:0;--b:.15">&#9679; HEALTHY 0.02% 5xx</div>
+      <div class="v-seg is-urgent" style="--a:.15;--b:.80">&#10007; 26 MIN DEGRADED &middot; 41% 5xx PEAK</div>
+      <div class="v-seg" style="--a:.80;--b:1">&#9679; RECOVERED</div>
+      <div class="v-mark" style="--a:.475" aria-hidden="true"></div>
+    </div>
+
+    <p class="v-mark-note"><span style="--a:.475">14:19 &mdash; wrong fix shipped. 5xx flat at 39%.</span></p>
+
+    <div class="v-gapband">
+      <div class="v-gapband-span" style="--a:.225;--b:.70"><span>14:09 &rarr; 14:28</span></div>
+    </div>
+
+    <div class="v-track">
+      <div class="v-seg is-idle" style="--a:.15;--b:.225">&#9675; 3 MIN UNSEEN &middot; PAGE AT 14:08</div>
+      <div class="v-seg is-gap" style="--a:.225;--b:.70"><span class="v-knock">19 MIN &middot; WRONG CAUSE</span></div>
+      <div class="v-seg" style="--a:.70;--b:.75">&#9670; CAUSE FOUND 14:28</div>
+      <div class="v-seg" style="--a:.75;--b:.80">&#10003; POOL 5&rarr;20 AT 14:30</div>
+    </div>
+
+    <div class="v-track-labels">
+      <span>RESPONDERS &middot; 2 on call</span>
+      <span>ON THE REAL CAUSE FROM 14:28</span>
+    </div>
+  </section>
+
+  <p class="v-section-note">
+    Both tracks run on the same clock, 14:00 to 14:40 UTC. The hatched band is not missing
+    data: it is 19 minutes in which two engineers worked continuously, on the wrong service.
+    The two solid segments on the right are everything that actually ended the incident.
+  </p>
+
+  <!-- ══ The two-second read ═════════════════════════════════════════ -->
+  <div class="v-stats">
+    <div class="v-stat">
+      <div class="v-stat-label">Degraded</div>
+      <div class="v-stat-num">26<span class="v-unit">min</span></div>
+      <p class="v-stat-qual">14:06:12 to 14:32:04.</p>
+    </div>
+    <div class="v-stat is-urgent">
+      <div class="v-stat-label">On the wrong cause</div>
+      <div class="v-stat-num">19<span class="v-unit">min</span></div>
+      <p class="v-stat-qual">73% of the outage, spent inside acme/checkout.</p>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Everything else</div>
+      <div class="v-stat-num">7<span class="v-unit">min</span></div>
+      <p class="v-stat-qual">Detection, the real diagnosis, the fix and recovery, added together.</p>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">DB pool after merge</div>
+      <div class="v-stat-num">5<span class="v-unit">was 20</span></div>
+      <p class="v-stat-qual">Shared by checkout and identity. 48 workers wanted one.</p>
+    </div>
+    <div class="v-stat">
+      <div class="v-stat-label">Failed carts</div>
+      <div class="v-stat-num">1,412</div>
+      <p class="v-stat-qual">Checkout attempts that got a 500 in the window.</p>
+    </div>
+  </div>
+
+  <!-- ══ Dense evidence ══════════════════════════════════════════════ -->
+  <section class="v-section v-dense">
+    <div class="v-section-head">
+      <h2>Both clocks, minute by minute</h2>
+      <span class="v-count">14 entries &middot; UTC</span>
+    </div>
+    <p class="v-section-note">
+      Left column is what the system did. Right column is what people did. They are the same
+      minutes, which is the point.
+    </p>
+
+    <table class="v-table">
+      <thead>
+        <tr><th scope="col">Time</th><th scope="col">System</th><th scope="col">Responders</th></tr>
+      </thead>
+      <tbody>
+        <tr><td class="v-data">13:41</td><td>Deploy #4471 to <code>acme/checkout</code>: payment adapter v2.3. No error change.</td><td>&mdash;</td></tr>
+        <tr><td class="v-data">13:52</td><td>PR #2208 merged in <code>acme/identity</code>, touching the shared DB chart: pool 20 &rarr; 5.</td><td>&mdash;</td></tr>
+        <tr><td class="v-data">14:04</td><td>Checkout pods roll on a routine autoscale event and pick up pool = 5.</td><td>&mdash;</td></tr>
+        <tr><td class="v-data">14:06</td><td>Connection wait timeouts. 5xx 0.02% &rarr; 18%.</td><td>&mdash;</td></tr>
+        <tr><td class="v-data">14:08</td><td>5xx 38%.</td><td>Page fires: <code>checkout-5xx-burst</code>.</td></tr>
+        <tr><td class="v-data">14:09</td><td>5xx 39%.</td><td>r.okonjo acks, opens the checkout deploy board.</td></tr>
+        <tr><td class="v-data">14:11</td><td>5xx 39%.</td><td>Narrows to deploy #4471. Payment adapter becomes the theory.</td></tr>
+        <tr><td class="v-data">14:14</td><td><code>acme/storefront-web</code> shows a generic retry card; support queue +38 tickets.</td><td>Reading adapter logs for provider timeouts. None found.</td></tr>
+        <tr><td class="v-data">14:16</td><td>5xx 41%, the peak.</td><td>m.haas joins. Both engineers on the adapter.</td></tr>
+        <tr><td class="v-data">14:19</td><td>5xx 39%. <b>Unchanged.</b></td><td>Adapter rolled back to v2.2.</td></tr>
+        <tr><td class="v-data">14:22</td><td>5xx 40%.</td><td>Rollback confirmed complete. Theory kept anyway.</td></tr>
+        <tr><td class="v-data">14:28</td><td>5xx 40%.</td><td>m.haas greps merges outside <code>acme/checkout</code>. Finds pool = 5.</td></tr>
+        <tr><td class="v-data">14:30</td><td>Pool restored to 20; identity and checkout redeploy.</td><td>Fix applied.</td></tr>
+        <tr><td class="v-data">14:32</td><td>5xx 0.02%. Recovered.</td><td>Incident closed.</td></tr>
+      </tbody>
+    </table>
+  </section>
+
+  <!-- ══ Why the void existed ════════════════════════════════════════ -->
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>Why the wrong theory held for 19 minutes</h2>
+      <span class="v-count">3 reasons</span>
+    </div>
+
+    <article class="v-card is-urgent v-rise">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#9650;</span>
+        <h3>The only change anyone could see was in the service that was failing</h3>
+        <span class="v-tag">cost: 19 min</span>
+      </div>
+      <p>
+        The deploy board a responder opens from the page is scoped to <code>acme/checkout</code>.
+        The change that caused the incident was merged in <code>acme/identity</code> and never
+        appeared on it. From 14:09 the search space excluded the answer.
+      </p>
+      <p class="v-why">
+        <b>Why it matters:</b> the adapter deploy was 25 minutes old and completely innocent. It
+        was the best available suspect only because it was the sole visible one.
+      </p>
+    </article>
+
+    <article class="v-card is-warn v-rise">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#9670;</span>
+        <h3>The rollback disproved the theory at 14:19 and the theory survived it</h3>
+        <span class="v-tag">cost: 9 min</span>
+      </div>
+      <p>
+        Error rate was 39% before the adapter rollback and 39% after it. That is a clean
+        negative result at minute 13 of 26. The next nine minutes went to confirming the
+        rollback had really landed, then to re-reading the adapter logs.
+      </p>
+      <p class="v-why">
+        <b>Why it matters:</b> this is the cheapest 9 minutes on the page. No new tooling was
+        needed to recover them, only the habit of dropping a theory the evidence has already
+        killed.
+      </p>
+    </article>
+
+    <article class="v-card v-rise">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#9632;</span>
+        <h3>Pool saturation was at 100% the whole time, on a dashboard nobody opened</h3>
+        <span class="v-tag">not visible</span>
+      </div>
+      <p>
+        Connection pool utilisation is graphed in the identity dashboard, not the checkout one.
+        It went to 100% at 14:06:12 and stayed there for 26 minutes, four seconds before the
+        first 500.
+      </p>
+    </article>
+  </section>
+
+  <!-- ══ The change itself ═══════════════════════════════════════════ -->
+  <section class="v-section">
+    <div class="v-section-head">
+      <h2>The actual change</h2>
+      <span class="v-count">acme/identity &middot; PR #2208</span>
+    </div>
+
+    <div class="v-split">
+      <div>
+        <p class="v-prose">
+          One line in a chart that <code>acme/checkout</code> imports and
+          <code>acme/identity</code> owns. Merged 13:52, titled
+          <em>chore: align pool defaults with the sample config</em>, reviewed by one person,
+          labelled config-only. It was correct for identity, whose pods are small and many.
+          Checkout runs 48 workers per pod.
+        </p>
+<pre><code>  charts/_shared/db/values.yaml
+
+- DB_POOL_MAX: 20
++ DB_POOL_MAX: 5
+</code></pre>
+      </div>
+
+      <div>
+        <div class="v-axis" aria-hidden="true"><span>0</span><span>connections</span><span>48</span></div>
+        <div class="v-bars">
+          <div class="v-bar">
+            <span class="v-bar-label">Workers wanting a connection at peak</span>
+            <span class="v-bar-track" style="--v:1" aria-hidden="true"></span>
+            <span class="v-bar-value">48</span>
+          </div>
+          <div class="v-bar">
+            <span class="v-bar-label">Pool before the merge</span>
+            <span class="v-bar-track" style="--v:.417" aria-hidden="true"></span>
+            <span class="v-bar-value">20</span>
+          </div>
+          <div class="v-bar is-urgent">
+            <span class="v-bar-label">Pool after the merge</span>
+            <span class="v-bar-track" style="--v:.104" aria-hidden="true"></span>
+            <span class="v-bar-value">5</span>
+          </div>
+        </div>
+        <p class="v-section-note">
+          Checkout survived from 14:04 to 14:06 on cached connections. The pool was exhausted
+          the moment the first sustained traffic arrived.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══ Air ═════════════════════════════════════════════════════════ -->
+  <section class="v-section v-air">
+    <div class="v-section-head">
+      <h2>What would have cut the 19 minutes</h2>
+      <span class="v-count">3 actions</span>
+    </div>
+
+    <article class="v-card is-ok">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#10003;</span>
+        <h3>Put every merge touching a shared chart on the checkout deploy board</h3>
+        <span class="v-tag">&minus;17 min</span>
+      </div>
+      <p>
+        PR #2208 would have been the second entry on the board at 14:09, one line under the
+        adapter deploy, with the diff visible. Owner: platform. Two days of work.
+      </p>
+    </article>
+
+    <article class="v-card is-ok">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#10003;</span>
+        <h3>Graph pool saturation beside the 5xx rate, not in another service's dashboard</h3>
+        <span class="v-tag">&minus;12 min</span>
+      </div>
+      <p>
+        A flat line at 100% next to the error rate names the failure mode without naming the
+        change. Owner: checkout. One afternoon.
+      </p>
+    </article>
+
+    <article class="v-card is-ok">
+      <div class="v-card-head">
+        <span class="v-glyph" aria-hidden="true">&#10003;</span>
+        <h3>Treat a fix that does not move the metric as a disproof, on a 3-minute timer</h3>
+        <span class="v-tag">&minus;9 min</span>
+      </div>
+      <p>
+        The adapter rollback landed at 14:19 and the error rate did not move. Make that a
+        checkpoint in the incident template: if the metric is flat three minutes after a fix,
+        the theory is dead and the search widens. Owner: incident process. Costs nothing.
+      </p>
+    </article>
+  </section>
+
+  <footer class="v-footer">
+    <p>
+      acme is fictional and so is this incident. <code>acme/checkout</code>,
+      <code>acme/identity</code> and <code>acme/storefront-web</code> are invented repositories,
+      and every timestamp, error rate and name on this page was made up to demonstrate the
+      shape. Nothing here describes a real outage at a real company.
+    </p>
+    <p>INC-2208 &middot; written 15:40 UTC, 2026-08-04 &middot; one page, no network.</p>
+  </footer>
+
+</main>
+</body>
+</html>

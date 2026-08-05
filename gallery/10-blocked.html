@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gregario — anonymous rides on sign-up: pick a rule</title>
+<link rel="stylesheet" href="/_vetrina/kit.css">
+<style>
+  /* The whole page is one question. It should land above the fold on a laptop,
+     so the frame starts higher and the sections sit closer than the kit's
+     default rhythm. Nothing here overrides a token, only the spacing. */
+  .v-wrap { padding-block: clamp(var(--v-5), 4vw, var(--v-7)) var(--v-6); }
+  .q { max-width: 26ch; margin-block-start: var(--v-4); }
+  .lede { margin-block-start: var(--v-4); }
+  .v-meta { margin-block-start: var(--v-4); }
+  .opts { margin-block-start: var(--v-6); }
+  .opts .v-section-note { margin-block: var(--v-3) var(--v-4); }
+
+  /* Three options, side by side on a laptop, stacked on a phone. The kit's
+     .v-cols does the collapsing; this only adds the rule above each one. */
+  .opt { border-block-start: var(--v-hair) solid var(--v-line-strong); padding-block-start: var(--v-3); }
+  .opt h3 {
+    font-size: var(--v-t-4);
+    font-weight: 600;
+    margin: 0;
+    letter-spacing: -0.01em;
+  }
+  .opt h3 .key {
+    font-size: var(--v-t-1);
+    letter-spacing: .16em;
+    color: var(--v-fg-3);
+    margin-inline-end: var(--v-2);
+  }
+  .opt p { font-family: var(--v-prose); font-size: var(--v-t-3); line-height: 1.55; color: var(--v-fg-2); margin: var(--v-3) 0 0; }
+  .opt p.cost { color: var(--v-fg-3); font-size: var(--v-t-2); }
+</style>
+</head>
+
+<body>
+<main class="v-wrap">
+
+  <p class="v-kicker">
+    <span><span class="v-dot"></span> Gregario · identity</span>
+    <span>■ Blocked — waiting on a human</span>
+    <span>3 days</span>
+  </p>
+
+  <h1 class="v-headline q">When a rider signs up after riding anonymously, which rides move to the new account?</h1>
+
+  <p class="v-standfirst lede">
+    Everything else on the branch is written and green. This is the last thing left and I can't
+    decide it for you: it's a product call about whose rides are whose, not a technical one.
+    It is ambiguous in exactly two cases — the same phone has held two anonymous sessions, or the
+    email already exists with rides of its own. Pick a rule below and I'll implement it as written.
+  </p>
+
+  <ul class="v-meta">
+    <li>Branch <code>feat/auth-anon-merge</code></li>
+    <li>Blocked since 1 Aug, 14:20</li>
+    <li>412 local rides across 137 devices affected</li>
+    <li>Waiting: <code>server/src/auth/merge.ts</code>, <code>app/src/sync/outbox.ts</code>, <code>drizzle/0007_ride_owner.sql</code></li>
+  </ul>
+
+  <section class="v-section opts">
+    <div class="v-section-head">
+      <h2>Three rules, pick one</h2>
+      <span class="v-count">A · B · C</span>
+    </div>
+    <p class="v-section-note">
+      All three are the same amount of work, roughly a day. They differ only in who ends up owning
+      a ride when the answer isn't obvious.
+    </p>
+
+    <div class="v-cols">
+
+      <div class="opt">
+        <h3><span class="key">A</span>The device wins</h3>
+        <p>Every anonymous ride on the phone attaches to the new account, no prompt.</p>
+        <p class="cost">Nobody ever loses a ride. On a borrowed or shared phone you silently inherit
+          a stranger's rides, and there is no way to hand them back.</p>
+        <p class="cost">If the email already has rides: keep both sets, dedupe by ride id, last write wins.</p>
+      </div>
+
+      <div class="opt">
+        <h3><span class="key">B</span>The session wins</h3>
+        <p>Only rides from the anonymous session signed in at that moment attach.</p>
+        <p class="cost">Predictable and never wrong about ownership. Rides from an earlier anonymous
+          session on the same phone stay local and are gone at the next reinstall — about 60 of the 412.</p>
+        <p class="cost">If the email already has rides: the server's rides stand, local extras attach around them.</p>
+      </div>
+
+      <div class="opt">
+        <h3><span class="key">C</span>Ask the rider</h3>
+        <p>Sign-up lists the local rides by date and distance; the rider ticks the ones that are theirs.</p>
+        <p class="cost">Correct in every case. Costs a new screen in the sign-up flow and asks a question
+          at the moment people are least willing to answer one; expect drop-off.</p>
+        <p class="cost">If the email already has rides: the clash is shown and the rider resolves it.</p>
+      </div>
+
+    </div>
+  </section>
+
+  <p class="v-footer">
+    Nothing to click here — this page is published and read, it doesn't send anything back.
+    Reply in <code>#gregario-auth</code> or on PR&nbsp;#128 with just the letter.
+    If I hear nothing by Thursday I'll ship <strong>B</strong> behind a flag, because it is the
+    one that can still be changed. Widening B to A later is an additive write, but only until
+    those 60 rides are lost to a reinstall, so it is reversible for weeks and not forever.
+    A is not reversible at all: its dedupe is last-write-wins over rides the account already
+    had, and that overwrite cannot be undone.
+  </p>
+
+</main>
+</body>
+</html>

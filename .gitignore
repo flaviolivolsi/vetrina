@@ -1,0 +1,24 @@
+# The window lives at ~/vetrina, not in the repo. This covers anyone running with
+# `--root .vetrina`. Pages are disposable by design; one worth keeping gets promoted
+# out with `vetrina keep` and built properly.
+.vetrina/
+
+node_modules/
+dist/
+build/
+*.log
+
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Remotion render output. Regenerate with `cd video && npx remotion render`
+video/out/
+
+# Astro / Vercel
+.astro/
+.vercel/
+
+# Strategy notes. Private for now, moved out of docs/ deliberately.
+private/
