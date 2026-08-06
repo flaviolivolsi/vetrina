@@ -1,6 +1,6 @@
 {
   "name": "vetrina-cli",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A window your coding agents publish into. Chat only ever grows; a page is rewritten in place.",
   "type": "module",
   "bin": {
