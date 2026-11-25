@@ -136,7 +136,7 @@ helper with one more line, then mark a form:
 
 <form data-vetrina-answers>
   <fieldset class="v-q">
-    <legend>Which cache?</legend>
+    <legend>Which cache should the API use?</legend>
     <label class="v-choice"><input type="radio" name="cache" value="redis" checked>
       <span>Redis <span class="v-pick">my pick</span><small>already in the stack</small></span></label>
     <label class="v-choice"><input type="radio" name="cache" value="none">
