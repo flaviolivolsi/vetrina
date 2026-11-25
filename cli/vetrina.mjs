@@ -413,6 +413,10 @@ const TYPES = {
   '.ico': 'image/x-icon',
   '.txt': 'text/plain; charset=utf-8',
   '.woff2': 'font/woff2',
+  '.mp4': 'video/mp4',
+  '.webm': 'video/webm',
+  '.mp3': 'audio/mpeg',
+  '.vtt': 'text/vtt; charset=utf-8',
 };
 
 // ── Answers ─────────────────────────────────────────────────────────
@@ -791,15 +795,41 @@ async function handle(req, res) {
     return;
   }
 
+  // Byte ranges, so a video can seek (and Safari will play it at all: it asks
+  // for `bytes=0-1` first and gives up on a plain 200). One range only; a
+  // malformed or multi-part header is ignored and the whole file is sent, an
+  // unsatisfiable one is a 416 as the spec says.
+  let range = null;
+  const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');
+  if (m && (m[1] !== '' || m[2] !== '')) {
+    const size = st.size;
+    let start = m[1] === '' ? size - Number(m[2]) : Number(m[1]);
+    let end = m[1] === '' || m[2] === '' ? size - 1 : Math.min(Number(m[2]), size - 1);
+    if (start < 0) start = 0;
+    if (start >= size || start > end) {
+      res.writeHead(416, { 'content-range': `bytes */${size}` }).end();
+      return;
+    }
+    range = { start, end, size };
+  }
+
   // Wait for the file to actually open before committing to a 200. Writing the
   // headers first means an unreadable file can only be reported by hanging up,
   // which looks like a broken server rather than a broken file.
-  const stream = createReadStream(real);
+  const stream = createReadStream(real, range ? { start: range.start, end: range.end } : {});
   stream.once('open', () => {
-    res.writeHead(200, {
+    const headers = {
       'content-type': TYPES[ext] ?? 'application/octet-stream',
       'cache-control': 'no-store',
-    });
+      'accept-ranges': 'bytes',
+    };
+    if (range) {
+      headers['content-range'] = `bytes ${range.start}-${range.end}/${range.size}`;
+      headers['content-length'] = String(range.end - range.start + 1);
+    } else {
+      headers['content-length'] = String(st.size);
+    }
+    res.writeHead(range ? 206 : 200, headers);
     stream.pipe(res);
   });
   stream.on('error', () => {
