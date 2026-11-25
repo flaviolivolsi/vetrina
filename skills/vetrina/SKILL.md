@@ -154,7 +154,8 @@ numbered list in chat that they have to answer by retyping. Needs vetrina-cli >=
 <script src="/_vetrina/answers.js"></script>
 <form data-vetrina-answers>
   <fieldset class="v-q">
-    <legend>Which cache?</legend>
+    <legend>Which cache should the API use?</legend>
+    <p>Today every request hits Postgres; p95 is 340 ms.</p>
     <label class="v-choice"><input type="radio" name="cache" value="redis" checked>
       <span>Redis <span class="v-pick">my pick</span><small>why, in one line</small></span></label>
     <label class="v-choice"><input type="radio" name="cache" value="none"><span>No cache</span></label>
@@ -167,6 +168,17 @@ numbered list in chat that they have to answer by retyping. Needs vetrina-cli >=
 </form>
 ```
 
+- **Every `legend` is a question the human can answer, ending in `?`.** Not a topic label
+  ("Auction fares", "Voice", a quoted line with no verb). Write the decision itself: "How
+  should the auction act show fares?", "Should the coda end on the line X?"
+- **Give the context under the question, in one or two sentences:** what the thing is,
+  where it sits in the work, what happens today. The human reads the page cold, from a
+  phone, hours later; a quoted line or a code name means nothing without where it lives.
+- **Options are answers to that question,** phrased so each reads as a complete reply
+  ("Yes, keep it", "Cut it and say X instead"). Who suggested what goes in `<small>`,
+  never in place of the reason.
+- **Read each question back as the human:** could someone who skipped this session pick
+  an option and know what will happen? If not, add context, not more options.
 - **Prefill your own pick and say it is yours** (`checked` plus `v-pick`). A checked box
   alone reads as already decided. Radio for one-of, checkbox for any-of.
 - **A note textarea per question, and one free-notes box at the end.** The answer you did
