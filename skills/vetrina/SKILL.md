@@ -145,6 +145,43 @@ curl -sf -o /dev/null http://127.0.0.1:7777/ || (npx -y vetrina-cli >/dev/null 2
 A tab that changes silently is a tab nobody looks at. And never make the page the only
 place an answer lives - if they asked a question, answer it in chat too.
 
+## Decision pages
+
+When you have questions for the human, put them on the page as a form instead of a
+numbered list in chat that they have to answer by retyping. Needs vetrina-cli >= 0.4.0.
+
+```html
+<script src="/_vetrina/answers.js"></script>
+<form data-vetrina-answers>
+  <fieldset class="v-q">
+    <legend>Which cache?</legend>
+    <label class="v-choice"><input type="radio" name="cache" value="redis" checked>
+      <span>Redis <span class="v-pick">my pick</span><small>why, in one line</small></span></label>
+    <label class="v-choice"><input type="radio" name="cache" value="none"><span>No cache</span></label>
+    <textarea class="v-note" name="cache_note" placeholder="Anything to add"></textarea>
+  </fieldset>
+  <!-- one fieldset per question, then a free-notes box -->
+  <fieldset class="v-q"><legend>Anything else</legend>
+    <textarea class="v-note" name="notes"></textarea></fieldset>
+  <div class="v-actions"><button class="v-submit">Send answers</button></div>
+</form>
+```
+
+- **Prefill your own pick and say it is yours** (`checked` plus `v-pick`). A checked box
+  alone reads as already decided. Radio for one-of, checkbox for any-of.
+- **A note textarea per question, and one free-notes box at the end.** The answer you did
+  not offer is usually the one that matters.
+- **Stable `name`s.** They are the keys you will read back.
+- **Tell them in chat**, one line: the URL, how many questions, that Send saves it for you.
+- **Read** `~/vetrina/<space>/<name>.answers.json`: `{ savedAt, page, answers }`. Checkbox
+  groups are arrays, radios a value or `null`, notes strings. Only trust it if `savedAt`
+  is newer than when you asked; for a new round, delete the old file before republishing.
+  Check it when they say they answered - nothing notifies you.
+
+On an older daemon (`curl -s <url>/_vetrina/answers.js` 404s) the form saves nothing. Use
+the same form with a "Copy answers" button that puts the answers on the clipboard as text,
+and ask them to paste it into chat.
+
 ## Rewriting
 
 Rewrite as the work moves; the open tab updates on its own. Rewrite because the *work*
