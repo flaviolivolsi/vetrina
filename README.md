@@ -106,6 +106,7 @@ Everyone else is building a better frame. This is a bet that there should not be
 - **Live reload** over server-sent events, injected into every page. The agent rewrites as work lands; the tab in your hand updates without a refresh.
 - **Binds to your tailnet if you have one, else loopback.** Never `0.0.0.0`. There is no application-level auth, so the bind address is the entire security model. A public bind is refused rather than warned about.
 - **An optional kit**, linked with one line and inlined at serve time, so a saved page is still self-contained. Its layout primitives have no width to get wrong, because every layout bug found in testing was something that could not shrink inside something that could not scroll.
+- **Pages can ask.** A form marked `data-vetrina-answers` saves the human's picks and notes to `<name>.answers.json` beside the page, and the agent reads that file instead of waiting for someone to retype their answers into chat. Since 0.4.0.
 
 ## If your agents forget
 

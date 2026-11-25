@@ -31,7 +31,8 @@
  * Set `--v` to a 0..1 fraction of whatever the row's scale is. The kit does not
  * compute scales; the agent already knows the numbers.
  *
- * Nothing here loads a font, an image, or a script.
+ * Nothing here loads a font, an image, or a script. The form atoms near the end
+ * are only styling; saving answers is answers.js, a separate opt-in.
  *
  * MIT, same as the rest of vetrina. This file is designed to be inlined into
  * pages you keep, so the licence deliberately attaches no conditions to them.
@@ -186,7 +187,7 @@ body {
    their contents. Everything the kit lays out opts out of that. */
 :where(.v-wrap, .v-grid, .v-cols, .v-pair, .v-split, .v-stats, .v-bars, .v-bar,
        .v-wf, .v-wf-row, .v-card-head, .v-kicker, .v-meta, .v-section-head,
-       .v-chips, .v-axis, .v-track-labels) > * { min-inline-size: 0; }
+       .v-chips, .v-axis, .v-track-labels, .v-choice, .v-actions) > * { min-inline-size: 0; }
 
 :where(a) { color: inherit; }
 :where(a):focus-visible,
@@ -819,6 +820,188 @@ body {
   font-weight: 600;
 }
 
+/* ── Questions ───────────────────────────────────────────────────────
+   For a page that hands a decision back. Atoms again: a question, a choice, a
+   note, a button, a status. Whether it is a matrix of options or one yes/no is
+   the agent's call.
+
+     <form data-vetrina-answers>
+       <fieldset class="v-q">
+         <legend>Which cache?</legend>
+         <label class="v-choice"><input type="radio" name="cache" value="redis" checked>
+           <span>Redis <span class="v-pick">my pick</span><small>already in the stack</small></span></label>
+         <label class="v-choice"><input type="radio" name="cache" value="none">
+           <span>No cache<small>slower, one fewer moving part</small></span></label>
+         <textarea class="v-note" name="cache_note" placeholder="Anything to add"></textarea>
+       </fieldset>
+       <div class="v-actions"><button class="v-submit">Send answers</button></div>
+     </form>
+
+   The agent's own pick is prefilled AND says so in words (`v-pick`), because a
+   checked radio alone reads as "already decided", not "suggested".
+
+   Sizes are for a thumb on a 390px phone: every target is at least 48px tall,
+   and every field is 16px text, below which iOS zooms the page on focus and
+   leaves it zoomed. Chosen is carried by the native control, a heavier border
+   and bold text, so it survives without colour. */
+
+.v-q {
+  border: 0;
+  margin: 0;
+  padding: var(--v-5) 0;
+  min-inline-size: 0;              /* fieldsets default to min-content */
+  border-block-end: var(--v-hair) solid var(--v-line);
+  display: grid;
+  gap: var(--v-2);
+}
+.v-q > legend {
+  float: left;                     /* lets the legend sit inside the grid */
+  inline-size: 100%;
+  padding: 0;
+  margin-block-end: var(--v-2);
+  font-size: var(--v-t-4);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+}
+.v-q > legend + * { clear: both; }
+.v-q :where(p) {
+  font-family: var(--v-prose);
+  font-size: var(--v-t-3);
+  color: var(--v-fg-2);
+  margin: 0 0 var(--v-2);
+}
+
+.v-choice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--v-3);
+  min-block-size: 48px;
+  padding: var(--v-3) var(--v-4);
+  border: var(--v-hair) solid var(--v-line);
+  border-radius: var(--v-radius);
+  background: var(--v-surface);
+  cursor: pointer;
+  font-family: var(--v-prose);
+  font-size: var(--v-t-4);
+  line-height: 1.4;
+}
+.v-choice > input {
+  flex: none;
+  inline-size: 1.25rem;
+  block-size: 1.25rem;
+  margin: 0.05rem 0 0;
+  accent-color: var(--v-fg);
+}
+.v-choice > span { flex: 1; overflow-wrap: anywhere; }
+.v-choice small {
+  display: block;
+  font-size: var(--v-t-2);
+  color: var(--v-fg-3);
+  margin-block-start: var(--v-1);
+}
+.v-choice:hover { border-color: var(--v-line-strong); }
+.v-choice:has(:checked) {
+  border: 2px solid var(--v-fg);
+  padding: calc(var(--v-3) - 1px) calc(var(--v-4) - 1px);
+  background: var(--v-raised);
+  font-weight: 600;
+}
+.v-choice:has(:checked) small { font-weight: 400; }
+.v-choice:has(:focus-visible) { outline: 2px solid var(--v-live); outline-offset: 2px; }
+.v-choice:has(:disabled) { opacity: .6; cursor: not-allowed; }
+
+/* The agent's recommendation, in words. */
+.v-pick {
+  display: inline-block;
+  margin-inline-start: var(--v-2);
+  padding: 0 var(--v-2);
+  border: var(--v-hair) solid var(--v-line-strong);
+  border-radius: var(--v-radius);
+  font-family: var(--v-mono);
+  font-size: var(--v-t-1);
+  font-weight: 400;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--v-fg-2);
+  vertical-align: 0.1em;
+}
+.v-pick::before { content: "\25B2\00a0"; }   /* ▲, so it is a shape too */
+
+.v-note {
+  display: block;
+  inline-size: 100%;
+  max-inline-size: 100%;
+  min-block-size: 5.5rem;
+  margin-block-start: var(--v-2);
+  padding: var(--v-3);
+  font-family: var(--v-prose);
+  font-size: 16px;
+  line-height: 1.5;
+  color: var(--v-fg);
+  background: var(--v-surface);
+  border: var(--v-hair) solid var(--v-line-strong);
+  border-radius: var(--v-radius);
+  resize: vertical;
+}
+.v-note::placeholder { color: var(--v-fg-3); }
+.v-note:focus-visible { outline: 2px solid var(--v-live); outline-offset: 1px; }
+.v-note[readonly] { background: var(--v-sunken); font-family: var(--v-mono); font-size: var(--v-t-3); }
+
+/* Submit stays in reach: sticky at the bottom of the screen while the form is
+   on it, so the last question is not a scroll away from the button. */
+.v-actions {
+  position: sticky;
+  inset-block-end: 0;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--v-2) var(--v-4);
+  padding-block: var(--v-4);
+  background: var(--v-ground);
+  border-block-start: var(--v-hair) solid var(--v-line);
+}
+
+.v-submit {
+  font: inherit;
+  font-size: var(--v-t-3);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  min-block-size: 48px;
+  padding: var(--v-3) var(--v-5);
+  color: var(--v-ground);
+  background: var(--v-fg);
+  border: 2px solid var(--v-fg);
+  border-radius: var(--v-radius);
+  cursor: pointer;
+}
+.v-submit:hover { background: var(--v-fg-2); border-color: var(--v-fg-2); }
+.v-submit:focus-visible { outline: 2px solid var(--v-live); outline-offset: 2px; }
+.v-submit:disabled { opacity: .55; cursor: progress; }
+@media (max-width: 560px) {
+  .v-actions .v-submit { flex: 1 1 100%; }
+}
+
+/* answers.js writes a glyph and a word into this; colour comes last. */
+.v-status {
+  margin: 0;
+  font-size: var(--v-t-2);
+  letter-spacing: .04em;
+  color: var(--v-fg-3);
+}
+.v-status[data-state="saved"] { color: var(--v-ok); font-weight: 600; }
+.v-status[data-state="error"] { color: var(--v-urgent); font-weight: 600; }
+
+/* The fallback when saving failed: the answers as copyable text. */
+.v-dump {
+  flex: 1 1 100%;
+  display: grid;
+  gap: var(--v-2);
+}
+.v-dump > p { margin: 0; font-family: var(--v-prose); font-size: var(--v-t-3); color: var(--v-fg-2); }
+
 /* ── Footer ──────────────────────────────────────────────────────────── */
 
 .v-footer {
@@ -879,13 +1062,14 @@ body {
   }
   .v-bar-track::before, .v-wf-neg::before, .v-wf-pos::before { background: CanvasText; }
   .v-card.is-urgent, .v-card.is-warn { border-inline-start-width: 4px; }
+  .v-choice:has(:checked) { border-width: 3px; }
 }
 
 /* ── Print ───────────────────────────────────────────────────────────── */
 
 @media print {
   body { background: #fff; color: #000; }
-  .v-chips { display: none; }
+  .v-chips, .v-actions { display: none; }
   /* Background fills are dropped by most print settings, so a chart on paper is
      decoration and the numbers are the point. They are already in the markup as
      text; this makes sure the table carrying them is visible and its header

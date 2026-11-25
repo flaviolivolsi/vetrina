@@ -125,6 +125,47 @@ table. An incident is a timeline. A prompt audit is the rendered string with the
 marked in place. That is the point: the page is shaped like the task, which is the one
 thing a general dashboard shipped to everybody structurally cannot be.
 
+## Pages that ask
+
+Since 0.4.0 a page can hand a decision back and get the answer back on disk. Load the
+helper with one more line, then mark a form:
+
+```html
+<link rel="stylesheet" href="/_vetrina/kit.css">
+<script src="/_vetrina/answers.js"></script>
+
+<form data-vetrina-answers>
+  <fieldset class="v-q">
+    <legend>Which cache?</legend>
+    <label class="v-choice"><input type="radio" name="cache" value="redis" checked>
+      <span>Redis <span class="v-pick">my pick</span><small>already in the stack</small></span></label>
+    <label class="v-choice"><input type="radio" name="cache" value="none">
+      <span>No cache</span></label>
+    <textarea class="v-note" name="cache_note" placeholder="Anything to add"></textarea>
+  </fieldset>
+  <div class="v-actions"><button class="v-submit">Send answers</button></div>
+</form>
+```
+
+Submit writes `~/vetrina/<space>/<name>.answers.json`, which is what the agent reads:
+
+```json
+{ "savedAt": "2026-11-25T15:11:00.847Z", "page": "demo/decide.html",
+  "answers": { "cache": "redis", "cache_note": "" } }
+```
+
+A checkbox group is always an array, a radio group is its value or `null`, anything else is
+a string. The helper is inlined at serve time like the kit. It restores saved answers on
+load, keeps a draft in the browser so a live reload mid-answer loses nothing, and when it
+cannot save (page opened off disk, daemon down) it shows the answers as text with a copy
+button. Saving does not reload the tab and answers files are not listed in the index.
+
+Behind it is `POST /__vetrina/answers/<space>/<name>.html` (and `GET` to read back). It only
+writes beside a page that already exists, only a JSON object, only up to 64 KB, atomically,
+with the same path and symlink containment as serving. It requires `application/json` and a
+same-origin `Origin`, so another site open in your browser cannot post to it. It is still
+unauthenticated: anyone who can reach the bind address can answer your agent's questions.
+
 ## Not a vault
 
 A page written about your work contains your work: file paths, source, architecture, log

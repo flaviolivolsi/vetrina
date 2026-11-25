@@ -17,13 +17,18 @@
  * whoever wrote it (project, agent, session). Flat files at the root work
  * too and land in a space called "loose".
  *
+ * A page can also ask. A form marked `data-vetrina-answers` saves what the
+ * human picked to `<root>/<space>/<name>.answers.json`, next to the page, and
+ * the agent that asked reads that file. See the answers section below.
+ *
  * Plain Node, no dependencies, so the first run needs nothing installed.
  */
 
 import { createServer } from 'node:http';
 import { watch, createReadStream } from 'node:fs';
-import { readdir, stat, readFile, mkdir, realpath, open } from 'node:fs/promises';
-import { join, extname, relative, dirname, resolve, sep } from 'node:path';
+import { readdir, stat, readFile, mkdir, realpath, open, rename, unlink } from 'node:fs/promises';
+import { join, extname, relative, dirname, basename, resolve, sep } from 'node:path';
+import { randomBytes } from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { homedir, networkInterfaces } from 'node:os';
 import { render as renderQR } from './qr.mjs';
@@ -47,7 +52,8 @@ if (args.includes('--help') || args.includes('-h')) {
     --no-qr       do not print the QR code
 
   Publish by writing an HTML file into <root>/<space>/<name>.html.
-  That is the entire API.
+  That is the entire API. A page with a <form data-vetrina-answers> gets
+  the human's answers back in <root>/<space>/<name>.answers.json.
 
   Tailscale is optional. With a tailnet, vetrina binds it and your phone can
   read the window from anywhere. Without one it binds loopback, and you can
@@ -149,6 +155,19 @@ const KIT = await readFile(KIT_PATH, 'utf8').catch(() => null);
 
 const KIT_LINK_RE =
   /<link\b[^>]*href=["']\/_vetrina\/kit\.css["'][^>]*>/gi;
+
+// The answers helper rides the same mechanism: one script tag, inlined at
+// serve time, so a saved page still restores and still offers the copy
+// fallback. It is only inlined if it cannot end the script element it is put
+// in, or start a fake one that would confuse insideScript() below; otherwise
+// the tag is left alone and the route serves the file as before.
+const ANSWERS_JS_PATH = join(dirname(fileURLToPath(import.meta.url)), 'answers.js');
+const ANSWERS_JS_HREF = '/_vetrina/answers.js';
+const ANSWERS_JS = await readFile(ANSWERS_JS_PATH, 'utf8').catch(() => null);
+const ANSWERS_JS_INLINE = ANSWERS_JS && !/<\/?script|<!--|<\/body/i.test(ANSWERS_JS);
+
+const ANSWERS_SCRIPT_RE =
+  /<script\b[^>]*\bsrc=["']\/_vetrina\/answers\.js["'][^>]*>\s*<\/script\s*>/gi;
 
 /**
  * Serve-time rewriting is string surgery on someone else's HTML, and the two
@@ -264,7 +283,19 @@ async function listPages() {
 const clients = new Set();
 let reloadTimer = null;
 
-watch(ROOT, { recursive: true }, () => {
+/**
+ * An answers file, or the temp file it is written through. Saving answers must
+ * not reload the page that saved them: the reload would land while the human
+ * is still looking at "Saved", and on a page with several questions, while
+ * they are already typing the next note. Nothing about the page changed, so
+ * there is nothing to show.
+ */
+const ANSWERS_FILE_RE = /\.answers\.json(\.\d+\.[0-9a-f]+\.tmp)?$/i;
+
+watch(ROOT, { recursive: true }, (_event, filename) => {
+  // filename can be null on some platforms. Then we cannot tell, and a
+  // needless reload is the cheaper mistake.
+  if (filename && ANSWERS_FILE_RE.test(String(filename))) return;
   // fs.watch is chatty; one nudge per burst is plenty.
   if (reloadTimer) clearTimeout(reloadTimer);
   reloadTimer = setTimeout(() => {
@@ -384,6 +415,213 @@ const TYPES = {
   '.woff2': 'font/woff2',
 };
 
+// ── Answers ─────────────────────────────────────────────────────────
+// A page can ask, and the answer lands next to it on disk:
+//
+//   GET  /__vetrina/answers/<space>/<name>.html  → the saved answers, or 404
+//   POST /__vetrina/answers/<space>/<name>.html  → save a JSON object
+//
+// The `.html` is optional, so the helper can post to the prefix plus its own
+// location.pathname. The file is `<space>/<name>.answers.json`, shaped
+// `{ savedAt, page, answers }`, which is what the asking agent reads.
+//
+// This is the only route that writes, so it is the narrowest one. It can only
+// write a sibling of a page that already exists, only that one filename, only
+// a JSON object, only 64 KB of it. Containment is checked exactly as for
+// serving, on the string path and again on the real one.
+const ANSWERS_PREFIX = '/__vetrina/answers/';
+const ANSWERS_MAX = 64 * 1024;
+
+const json = (res, status, body) => {
+  res.writeHead(status, { 'content-type': TYPES['.json'], 'cache-control': 'no-store' });
+  res.end(JSON.stringify(body) + '\n');
+};
+
+const contained = (p, root) => p === root || p.startsWith(root + sep);
+
+/**
+ * Find the page an answers request is about, and where its answers live.
+ * Returns { page, target } or { status, error }.
+ */
+async function answersTarget(pathname) {
+  let rel;
+  try {
+    rel = decodeURIComponent(pathname.slice(ANSWERS_PREFIX.length)).replace(/^\/+/, '');
+  } catch {
+    return { status: 400, error: 'bad path' };
+  }
+  if (!rel || rel.includes('\0')) return { status: 400, error: 'bad path' };
+  if (!/\.html$/i.test(rel)) rel += '.html';
+
+  // Same two-step containment as the file route below, for the same reasons:
+  // resolve() catches `..`, realpath() catches the symlink that resolve()
+  // cannot see.
+  const full = resolve(ROOT, rel);
+  if (!contained(full, ROOT)) return { status: 403, error: 'nope' };
+
+  let real;
+  try {
+    real = await realpath(full);
+  } catch {
+    return { status: 404, error: 'no such page' };
+  }
+  if (!contained(real, REAL_ROOT)) return { status: 403, error: 'nope' };
+  try {
+    if (!(await stat(real)).isFile()) return { status: 404, error: 'no such page' };
+  } catch {
+    return { status: 404, error: 'no such page' };
+  }
+
+  // The answers sit beside the page as the request named it, not beside
+  // wherever a symlinked page points. The page being contained says nothing
+  // about its directory, though: `space -> /etc` with `space/x.html` linked
+  // back into the root passes every check above. So the directory we are
+  // about to write into is contained on its own account.
+  const dir = dirname(full);
+  try {
+    if (!contained(await realpath(dir), REAL_ROOT)) return { status: 403, error: 'nope' };
+  } catch {
+    return { status: 404, error: 'no such page' };
+  }
+
+  const target = join(dir, basename(full).replace(/\.html$/i, '') + '.answers.json');
+  return { page: relative(ROOT, full).split(sep).join('/'), target };
+}
+
+/**
+ * Read the body, at most ANSWERS_MAX bytes. Resolves to a Buffer, or null if
+ * it was too big, in which case the 413 has already been sent. A lying or
+ * absent content-length is not trusted; the bytes are counted as they come.
+ */
+function readBody(req, res) {
+  return new Promise((done, fail) => {
+    const tooBig = () => {
+      // Answer first, then hang up, so the client sees why rather than a reset.
+      res.writeHead(413, { 'content-type': 'text/plain', connection: 'close' });
+      res.end(`answers are capped at ${ANSWERS_MAX / 1024} KB`, () => req.destroy());
+      done(null);
+    };
+    if (Number(req.headers['content-length']) > ANSWERS_MAX) return tooBig();
+    const chunks = [];
+    let size = 0;
+    req.on('data', (c) => {
+      size += c.length;
+      if (size > ANSWERS_MAX) {
+        req.removeAllListeners('data');
+        req.removeAllListeners('end');
+        req.pause();
+        tooBig();
+        return;
+      }
+      chunks.push(c);
+    });
+    req.on('end', () => done(Buffer.concat(chunks)));
+    req.on('error', fail);
+  });
+}
+
+/**
+ * Write via a temp file in the same directory and rename over the target, so
+ * the agent reading the file sees the old answers or the new ones, never half
+ * of either. The temp file is created exclusively ('wx'), so a planted symlink
+ * at that name is refused rather than followed, and rename() replaces a link
+ * at the target rather than writing through it.
+ */
+async function writeAtomic(target, text) {
+  const tmp = join(
+    dirname(target),
+    `.${basename(target)}.${process.pid}.${randomBytes(6).toString('hex')}.tmp`,
+  );
+  let fh;
+  try {
+    fh = await open(tmp, 'wx', 0o600);
+    await fh.writeFile(text, 'utf8');
+    await fh.sync();
+    await fh.close();
+    fh = null;
+    await rename(tmp, target);
+  } catch (err) {
+    await fh?.close().catch(() => {});
+    await unlink(tmp).catch(() => {});
+    throw err;
+  }
+}
+
+async function handleAnswers(req, res, url) {
+  if (req.method !== 'GET' && req.method !== 'HEAD' && req.method !== 'POST') {
+    res.writeHead(405, { allow: 'GET, HEAD, POST', 'content-type': 'text/plain' });
+    res.end('GET or POST');
+    return;
+  }
+
+  const t = await answersTarget(url.pathname);
+  if (t.error) return json(res, t.status, { error: t.error });
+
+  if (req.method !== 'POST') {
+    // The answers file is held to the same standard as a page: if something
+    // swapped it for a link out of the root, it is not served.
+    try {
+      const real = await realpath(t.target);
+      if (!contained(real, REAL_ROOT) || !(await stat(real)).isFile()) throw new Error('not ours');
+      const body = await readFile(real, 'utf8');
+      res.writeHead(200, { 'content-type': TYPES['.json'], 'cache-control': 'no-store' });
+      res.end(req.method === 'HEAD' ? undefined : body);
+    } catch {
+      json(res, 404, { error: 'no answers yet' });
+    }
+    return;
+  }
+
+  // There is no auth, so the question is who else could make a browser send
+  // this. Any site the human visits can fire a cross-origin POST at a tailnet
+  // address, but only a "simple" one: a form or a text/plain fetch. Requiring
+  // application/json forces a CORS preflight, which this server never answers,
+  // so the browser refuses to send. The Origin check is the second lock for
+  // clients that do send the header. Neither stops DNS rebinding, which
+  // defeats Origin for every route here, writes included; the bind address is
+  // still the security model, and what a write can do is kept small instead.
+  const type = String(req.headers['content-type'] ?? '').split(';')[0].trim().toLowerCase();
+  if (type !== 'application/json') {
+    return json(res, 415, { error: 'send application/json' });
+  }
+  const origin = req.headers.origin;
+  if (origin && origin !== 'null') {
+    let host;
+    try {
+      host = new URL(origin).host;
+    } catch {
+      host = null;
+    }
+    if (host !== req.headers.host) return json(res, 403, { error: 'cross-origin' });
+  }
+
+  const raw = await readBody(req, res);
+  if (raw === null) return;
+
+  let answers;
+  try {
+    answers = JSON.parse(raw.toString('utf8'));
+  } catch {
+    return json(res, 400, { error: 'not JSON' });
+  }
+  if (!answers || typeof answers !== 'object' || Array.isArray(answers)) {
+    return json(res, 400, { error: 'answers must be a JSON object' });
+  }
+
+  const record = { savedAt: new Date().toISOString(), page: t.page, answers };
+  try {
+    await writeAtomic(t.target, JSON.stringify(record, null, 2) + '\n');
+  } catch (err) {
+    console.error(`  could not save answers for ${t.page}: ${err?.message ?? err}`);
+    return json(res, 500, { error: 'could not save' });
+  }
+  json(res, 200, {
+    ok: true,
+    savedAt: record.savedAt,
+    file: relative(ROOT, t.target).split(sep).join('/'),
+  });
+}
+
 // ── Server ──────────────────────────────────────────────────────────
 
 /**
@@ -432,6 +670,21 @@ async function handle(req, res) {
     }
     res.writeHead(200, { 'content-type': TYPES['.css'], 'cache-control': 'no-store' });
     res.end(KIT);
+    return;
+  }
+
+  if (url.pathname === ANSWERS_JS_HREF) {
+    if (!ANSWERS_JS) {
+      res.writeHead(404).end('no answers helper');
+      return;
+    }
+    res.writeHead(200, { 'content-type': TYPES['.js'], 'cache-control': 'no-store' });
+    res.end(ANSWERS_JS);
+    return;
+  }
+
+  if (url.pathname.startsWith(ANSWERS_PREFIX)) {
+    await handleAnswers(req, res, url);
     return;
   }
 
@@ -514,6 +767,20 @@ async function handle(req, res) {
         return `<style data-vetrina-kit>\n${KIT}\n</style>`;
       });
       KIT_LINK_RE.lastIndex = 0;
+    }
+
+    // Same again for the answers helper. The replacement is a function, not a
+    // string, so a `$&` or `$'` in the script is not read as a pattern.
+    if (ANSWERS_JS_INLINE) {
+      ANSWERS_SCRIPT_RE.lastIndex = 0;
+      let first = true;
+      html = html.replace(ANSWERS_SCRIPT_RE, (match, offset, whole) => {
+        if (insideScript(whole, offset)) return match;
+        if (!first) return '';
+        first = false;
+        return `<script data-vetrina-answers-js>\n${ANSWERS_JS}\n</script>`;
+      });
+      ANSWERS_SCRIPT_RE.lastIndex = 0;
     }
 
     const at = lastIndexOutsideScript(html, '</body>');
