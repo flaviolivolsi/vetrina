@@ -162,7 +162,7 @@ numbered list in chat that they have to answer by retyping. Needs vetrina-cli >=
     <textarea class="v-note" name="cache_note" placeholder="Anything to add"></textarea>
   </fieldset>
   <!-- one fieldset per question, then a free-notes box -->
-  <fieldset class="v-q"><legend>Anything else</legend>
+  <fieldset class="v-q"><legend>Anything else I should know?</legend>
     <textarea class="v-note" name="notes"></textarea></fieldset>
   <div class="v-actions"><button class="v-submit">Send answers</button></div>
 </form>
